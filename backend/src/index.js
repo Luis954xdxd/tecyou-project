@@ -16,7 +16,11 @@ app.use(express.json()); // Permite que el servidor entienda datos en formato JS
 app.get('/', (req, res) => {
   res.send('El servidor de ¡Tec! ¡you! está funcionando correctamente ');
 });
+// Importar rutas
+const userRoutes = require('./routes/userRoutes');
 
+// Usar rutas
+app.use('/api/users', userRoutes);
 // 5. Encendido del servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
