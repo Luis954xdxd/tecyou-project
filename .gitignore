@@ -1,0 +1,16 @@
+# Dependencias de Node.js (Frontend y Backend)
+**/node_modules/
+package-lock.json
+
+# Archivos de Python (AI Services)
+**/__pycache__/
+*.py[cod]
+venv/
+
+# Seguridad y Variables de Entorno (¡MUY IMPORTANTE!)
+.env
+*.log
+
+# Archivos del Sistema
+.DS_Store
+Thumbs.db
