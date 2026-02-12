@@ -1,16 +1,69 @@
-# Dependencias de Node.js (Frontend y Backend)
+# ==========================================
+# ¡Tec! ¡you! - Archivo .gitignore Global
+# ==========================================
+
+# --- Dependencias de Node.js (Frontend y Backend) ---
+node_modules/
 **/node_modules/
 package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.stylelintcache
 
-# Archivos de Python (AI Services)
+# --- Entorno de Python (AI Services - Google Gemini) ---
 **/__pycache__/
 *.py[cod]
+*$py.class
 venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Seguridad y Variables de Entorno (¡MUY IMPORTANTE!)
+# --- Seguridad y Privacidad (CRÍTICO) ---
+# Nunca subir llaves de API de Gemini ni contraseñas de PostgreSQL
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.log
 
-# Archivos del Sistema
+# --- Archivos de Base de Datos ---
+# Ignorar archivos temporales o de bloqueo de PostgreSQL si se generan localmente
+*.sql.gz
+*.sql.bak
+.pids
+*.pid
+*.seed
+*.pid.lock
+
+# --- Construcción y Salida (Builds) ---
+/dist
+/build
+out/
+.next/
+.nuxt/
+bin/
+obj/
+
+# --- Archivos del Sistema y Editores ---
 .DS_Store
+.DS_Store?
 Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# --- Logs y Reportes ---
+logs
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+coverage/
+.nyc_output/
