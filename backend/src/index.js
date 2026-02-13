@@ -18,9 +18,10 @@ app.get('/', (req, res) => {
 });
 // Importar rutas
 const userRoutes = require('./routes/userRoutes');
-
+const recognitionRoutes = require('./routes/recognitionRoutes');
 // Usar rutas
 app.use('/api/users', userRoutes);
+app.use('/api/recognitions', recognitionRoutes);
 // 5. Encendido del servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
