@@ -1,52 +1,96 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-function RecognitionForm({ onRecognitionSent }) {
-  // Estado para capturar los datos del formulario
+function RecognitionForm({ onRecognitionSent, senderId }) {
+  // Ajustamos el estado para usar 'receiver_control_number' en lugar de 'receiver_id'
   const [formData, setFormData] = useState({
-    sender_id: '',
-    receiver_id: '',
+    receiver_control_number: '',
     message: '',
     category: 'Colaboración'
   });
 
-  // Función para actualizar el estado conforme el usuario escribe
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Función para enviar los datos al Backend
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Evita que la página se recargue
+    e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/recognitions/send', formData);
+      // Enviamos el objeto con los nombres exactos que espera el Backend
+      await axios.post('http://localhost:5000/api/recognitions/send', {
+        sender_id: senderId,
+        receiver_control_number: formData.receiver_control_number,
+        message: formData.message,
+        category: formData.category
+      });
+
       alert("¡Reconocimiento enviado con éxito!");
-      onRecognitionSent(); // Llama a la función para refrescar el muro
-      // Limpia el formulario
-      setFormData({ sender_id: '', receiver_id: '', message: '', category: 'Colaboración' });
+      onRecognitionSent(); // Refresca el muro automáticamente
+      
+      // Limpiamos el formulario
+      setFormData({ 
+        receiver_control_number: '', 
+        message: '', 
+        category: 'Colaboración' 
+      });
     } catch (error) {
       console.error("Error al enviar:", error);
-      alert("Hubo un error al enviar el reconocimiento.");
+      // Mostramos el error específico del servidor (ej: si el compañero no existe)
+      alert(error.response?.data?.error || "Error al enviar. Verifica los datos.");
     }
   };
 
   return (
-    <form className="recognition-form" onSubmit={handleSubmit}>
-      <h3>Enviar Nuevo Reconocimiento</h3>
-      <input type="number" name="sender_id" placeholder="Tu ID de Usuario" value={formData.sender_id} onChange={handleChange} required />
-      <input type="number" name="receiver_id" placeholder="ID del Compañero" value={formData.receiver_id} onChange={handleChange} required />
-      <select name="category" value={formData.category} onChange={handleChange}>
-        <option value="Colaboración">Colaboración</option>
-        <option value="Académico">Académico</option>
-        <option value="Apoyo">Apoyo Extracurricular</option>
-        <option value="Actitud">Actitud Positiva</option>
-      </select>
-      <textarea name="message" placeholder="Escribe tu mensaje aquí..." value={formData.message} onChange={handleChange} required />
-      <button type="submit">Enviar Reconocimiento</button>
-    </form>
+    <div className="recognition-form">
+      <h3> Motiva a un compañero</h3>
+      <form onSubmit={handleSubmit}>
+        
+        <div className="input-group-custom">
+          <label>Número de Control del Compañero:</label>
+          <input 
+            type="number" 
+            name="receiver_control_number" 
+            className="form-control" 
+            placeholder="Ej: 220113032" 
+            value={formData.receiver_control_number} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+
+        <div className="input-group-custom">
+          <label>Categoría del Logro:</label>
+          <select 
+            name="category" 
+            className="form-control" 
+            value={formData.category} 
+            onChange={handleChange}
+          >
+            <option value="Colaboración">🤝 Colaboración</option>
+            <option value="Académico">📚 Académico</option>
+            <option value="Liderazgo">⭐ Liderazgo</option>
+            <option value="Creatividad">💡 Creatividad</option>
+          </select>
+        </div>
+
+        <div className="input-group-custom">
+          <label>Tu Mensaje:</label>
+          <textarea 
+            name="message" 
+            className="form-control" 
+            placeholder="Escribe algo inspirador..." 
+            value={formData.message} 
+            onChange={handleChange} 
+            required 
+          />
+        </div>
+
+        <button type="submit" className="btn-submit">
+          Enviar Reconocimiento 
+        </button>
+
+      </form>
+    </div>
   );
 }
 

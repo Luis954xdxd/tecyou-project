@@ -1,38 +1,259 @@
-.App {
-  text-align: center;
+/* --- VARIABLES GLOBALES (Identidad TSJ) --- */
+:root {
+  --tec-green: #0400e6;     /* Verde institucional */
+  --tec-green-light: #1a35ce;
+  --tec-gold: #9577aa;      /* Dorado institucional */
+  --tec-gold-light: #d4b475;
+  --bg-gray: #f4f7f6;       /* Fondo suave inspirado en comunidades IT */
+  --text-dark: #1a1a1a;
+  --text-muted: #525252;
+  --white: #ffffff;
+  --error-red: #da1e28;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --border-radius: 4px;     /* Bordes menos redondeados para look profesional */
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* --- RESET Y BASE --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-gray);
+  color: var(--text-dark);
+  line-height: 1.6;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* --- PANTALLA DE LOGIN --- */
+.login-page {
+  height: 100vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  align-items: center;
+  background: linear-gradient(135deg, var(--tec-green) 0%, #0d3311 100%);
+}
+
+.login-card {
+  background: var(--white);
+  padding: 45px;
+  width: 420px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border-top: 6px solid var(--tec-gold);
+  text-align: left;
+}
+
+.login-header h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: var(--tec-green);
+}
+
+.login-header p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-dark);
+}
+
+input[type="email"], 
+input[type="number"], 
+textarea, 
+select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  font-size: 15px;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--tec-green);
+}
+
+.btn-primary {
+  width: 100%;
+  background-color: var(--tec-green);
+  color: var(--white);
+  padding: 14px;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-primary:hover {
+  background-color: var(--tec-green-light);
+}
+
+/* --- NAVEGACIÓN PRINCIPAL --- */
+.main-nav {
+  background: #161616; /* Color oscuro profesional inspirado en IBM [cite: 17] */
   color: white;
+  padding: 0 5%;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.App-link {
-  color: #61dafb;
+.nav-content {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.logo-text {
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+.logo-text strong {
+  color: var(--tec-gold);
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid #525252;
+  color: white;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* --- DASHBOARD / ESTRUCTURA --- */
+.dashboard {
+  display: grid;
+  grid-template-columns: 380px 1fr; /* Sidebar fija y Feed flexible [cite: 25, 26] */
+  gap: 40px;
+  padding: 40px 5%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* --- SIDEBAR Y FORMULARIO --- */
+.sidebar {
+  background: var(--white);
+  padding: 30px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  height: fit-content;
+}
+
+.recognition-form h3 {
+  margin-bottom: 20px;
+  color: var(--tec-green);
+  border-bottom: 2px solid var(--bg-gray);
+  padding-bottom: 10px;
+}
+
+/* --- FEED / MURO DE ACTIVIDAD --- */
+.feed-header {
+  margin-bottom: 25px;
+}
+
+.feed-header h2 {
+  font-size: 24px;
+  color: var(--text-dark);
+}
+
+/* --- TARJETAS DE RECONOCIMIENTO (Estilo Community ) --- */
+.recognition-card {
+  background: var(--white);
+  margin-bottom: 16px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.recognition-card:hover {
+  transform: translateY(-2px);
+}
+
+.card-accent {
+  width: 6px;
+  background-color: var(--tec-green);
+}
+
+.card-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.badge-category {
+  background: #e5e5e5;
+  color: #393939;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.main-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.message-text {
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 4px;
+  font-style: italic;
+  color: #444;
+  border-left: 3px solid #ddd;
+}
+
+.error-msg {
+  color: var(--error-red);
+  background: #fff1f1;
+  padding: 10px;
+  font-size: 13px;
+  margin-bottom: 15px;
+  border-left: 4px solid var(--error-red);
+}
+
+/* Responsividad básica */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
   }
-  to {
-    transform: rotate(360deg);
+  .login-card {
+    width: 90%;
   }
 }

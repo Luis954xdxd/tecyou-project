@@ -1,32 +1,43 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db'); // Traemos la conexión a la base de datos
+const pool = require('../db');
 
-// Ruta para registrar un nuevo usuario (Estudiante/Docente)
-router.post('/register', async (req, res) => {
+// Función para validar el correo institucional del TSJ Zapopan
+const isValidInstitutionalEmail = (email) => {
+    // Expresión regular: busca "za", luego dígitos (número de control) y el dominio oficial
+    const regex = /^za\d+@zapopan\.tecmm\.edu\.mx$/;
+    return regex.test(email);
+};
+
+router.post('/login', async (req, res) => {
     try {
-        const { fullname, email, role } = req.body;
-        
-        // Insertamos los datos en la tabla 'users' que creamos en el schema.sql
-        const newUser = await pool.query(
-            "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
-            [fullname, email, role]
-        );
+        const { email } = req.body;
 
-        res.json(newUser.rows[0]); // Devolvemos el usuario creado para confirmar
+        // Validar formato de correo antes de consultar la base de datos
+        if (!isValidInstitutionalEmail(email)) {
+            return res.status(400).json({ 
+                error: "Acceso denegado. Solo se permiten correos institucionales (@zapopan.tecmm.edu.mx)." 
+            });
+        }
+
+        // Buscar si el usuario ya existe
+        const user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+
+        if (user.rows.length > 0) {
+            res.json(user.rows[0]);
+        } else {
+            // Si el correo es válido pero no existe, lo registramos (Auto-registro inicial)
+            // Extraemos un nombre temporal del correo o pedimos que se complete después
+            const tempName = email.split('@')[0]; 
+            const newUser = await pool.query(
+                "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
+                [tempName, email, 'student']
+            );
+            res.json(newUser.rows[0]);
+        }
     } catch (err) {
         console.error(err.message);
-        res.status(500).send("Error en el servidor al registrar usuario");
-    }
-});
-
-// Ruta para obtener a todos los usuarios (útil para el buscador de la red social)
-router.get('/all', async (req, res) => {
-    try {
-        const allUsers = await pool.query("SELECT * FROM users");
-        res.json(allUsers.rows);
-    } catch (err) {
-        console.error(err.message);
+        res.status(500).send("Error en el proceso de autenticación");
     }
 });
 

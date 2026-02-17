@@ -1,28 +1,32 @@
-// 1. Importación de librerías
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
-const pool = require('./db'); // Importamos la conexión que hicimos antes
+const pool = require('./db');
+const userRoutes = require('./routes/userRoutes');
+const recognitionRoutes = require('./routes/recognitionRoutes');
 
-// 2. Inicialización de la aplicación
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 3. Middlewares (Software intermedio)
-app.use(cors()); // Permite que React se comunique con este servidor
-app.use(express.json()); // Permite que el servidor entienda datos en formato JSON
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
-// 4. Ruta de prueba (Endpoint)
-app.get('/', (req, res) => {
-  res.send('El servidor de ¡Tec! ¡you! está funcionando correctamente ');
-});
-// Importar rutas
-const userRoutes = require('./routes/userRoutes');
-const recognitionRoutes = require('./routes/recognitionRoutes');
-// Usar rutas
+// Rutas de la API
 app.use('/api/users', userRoutes);
 app.use('/api/recognitions', recognitionRoutes);
-// 5. Encendido del servidor
+
+// Prueba de vida del servidor
+app.get('/', (req, res) => {
+  res.send('Servidor de ¡Tec! ¡you! activo y operando 🎓');
+});
+
+// Manejo de errores global
+app.use((err, req, res, next) => {
+  console.error(" Error detectado:", err.stack);
+  res.status(500).send('Algo salió mal en el servidor.');
+});
+
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+  console.log(` Servidor listo en: http://localhost:${PORT}`);
 });
