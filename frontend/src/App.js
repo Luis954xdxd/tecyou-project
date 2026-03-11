@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
@@ -12,7 +12,23 @@ function App() {
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
   const [selectedReactions, setSelectedReactions] = useState({});
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileTags, setProfileTags] = useState(['Comunidad TSJ', 'Reconocimiento positivo']);
+
+  const [draftDisplayName, setDraftDisplayName] = useState('');
+  const [draftProfileBio, setDraftProfileBio] = useState('');
+  const [draftProfileTags, setDraftProfileTags] = useState('');
+
+  const fileInputRef = useRef(null);
+  const navMenuRef = useRef(null);
 
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '👍' },
@@ -52,10 +68,36 @@ function App() {
   };
 
   useEffect(() => {
+    if (user) fetchFeed();
+  }, [user]);
+
+  useEffect(() => {
     if (user) {
-      fetchFeed();
+      setDisplayName(user.fullname || '');
+      setProfileBio(
+        'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.'
+      );
     }
   }, [user]);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 420);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (navMenuRef.current && !navMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -77,30 +119,13 @@ function App() {
 
   const getCategoryMeta = (category) => {
     const categories = {
-      Colaboración: {
-        icon: '🤝',
-        className: 'category-colaboracion',
-      },
-      Académico: {
-        icon: '📚',
-        className: 'category-academico',
-      },
-      Liderazgo: {
-        icon: '⭐',
-        className: 'category-liderazgo',
-      },
-      Creatividad: {
-        icon: '💡',
-        className: 'category-creatividad',
-      },
+      Colaboración: { icon: '🤝', className: 'category-colaboracion' },
+      Académico: { icon: '📚', className: 'category-academico' },
+      Liderazgo: { icon: '⭐', className: 'category-liderazgo' },
+      Creatividad: { icon: '💡', className: 'category-creatividad' },
     };
 
-    return (
-      categories[category] || {
-        icon: '✨',
-        className: 'category-default',
-      }
-    );
+    return categories[category] || { icon: '✨', className: 'category-default' };
   };
 
   const categoryCounts = useMemo(() => {
@@ -112,9 +137,7 @@ function App() {
     };
 
     recognitions.forEach((rec) => {
-      if (counts[rec.category] !== undefined) {
-        counts[rec.category] += 1;
-      }
+      if (counts[rec.category] !== undefined) counts[rec.category] += 1;
     });
 
     return counts;
@@ -123,59 +146,33 @@ function App() {
   const featuredCategory = useMemo(() => {
     const entries = Object.entries(categoryCounts);
     if (!entries.length) return 'Sin datos';
-
-    const top = entries.reduce((max, current) =>
-      current[1] > max[1] ? current : max
-    );
-
+    const top = entries.reduce((max, current) => (current[1] > max[1] ? current : max));
     return top[1] === 0 ? 'Sin datos' : top[0];
   }, [categoryCounts]);
 
-  const featuredRecognitions = useMemo(() => {
-    return [...recognitions].slice(0, 3);
-  }, [recognitions]);
+  const featuredRecognitions = useMemo(() => [...recognitions].slice(0, 3), [recognitions]);
 
   const maxCategoryCount = useMemo(() => {
     const values = Object.values(categoryCounts);
     return Math.max(...values, 1);
   }, [categoryCounts]);
 
-  const categorySummary = useMemo(() => {
-    return [
-      {
-        name: 'Colaboración',
-        value: categoryCounts.Colaboración,
-        icon: '🤝',
-        className: 'category-colaboracion',
-      },
-      {
-        name: 'Académico',
-        value: categoryCounts.Académico,
-        icon: '📚',
-        className: 'category-academico',
-      },
-      {
-        name: 'Liderazgo',
-        value: categoryCounts.Liderazgo,
-        icon: '⭐',
-        className: 'category-liderazgo',
-      },
-      {
-        name: 'Creatividad',
-        value: categoryCounts.Creatividad,
-        icon: '💡',
-        className: 'category-creatividad',
-      },
-    ];
-  }, [categoryCounts]);
+  const categorySummary = useMemo(
+    () => [
+      { name: 'Colaboración', value: categoryCounts.Colaboración, icon: '🤝', className: 'category-colaboracion' },
+      { name: 'Académico', value: categoryCounts.Académico, icon: '📚', className: 'category-academico' },
+      { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '⭐', className: 'category-liderazgo' },
+      { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '💡', className: 'category-creatividad' },
+    ],
+    [categoryCounts]
+  );
 
   const filteredRecognitions = useMemo(() => {
-    return recognitions.filter((rec) => {
+    const filtered = recognitions.filter((rec) => {
       const matchesCategory =
         selectedCategory === 'Todas' || rec.category === selectedCategory;
 
       const query = searchTerm.trim().toLowerCase();
-
       const matchesSearch =
         query === '' ||
         rec.sender_name?.toLowerCase().includes(query) ||
@@ -185,32 +182,62 @@ function App() {
 
       return matchesCategory && matchesSearch;
     });
-  }, [recognitions, selectedCategory, searchTerm]);
 
-  const categoryOptions = [
-    'Todas',
-    'Colaboración',
-    'Académico',
-    'Liderazgo',
-    'Creatividad',
-  ];
+    const sorted = [...filtered];
+
+    switch (sortBy) {
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        break;
+      case 'az':
+        sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
+        break;
+      case 'category':
+        sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
+        break;
+      case 'recent':
+      default:
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+    }
+
+    return sorted;
+  }, [recognitions, selectedCategory, searchTerm, sortBy]);
+
+  const activeFilterLabels = useMemo(() => {
+    const labels = [];
+    if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
+    if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
+    if (sortBy !== 'recent') {
+      const map = {
+        oldest: 'Orden: más antiguas',
+        az: 'Orden: A-Z',
+        category: 'Orden: categoría',
+      };
+      labels.push(map[sortBy]);
+    }
+    return labels;
+  }, [selectedCategory, searchTerm, sortBy]);
+
+  const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
+
+  const recognitionsSentByUser = useMemo(() => {
+    if (!user) return 0;
+    return recognitions.filter((rec) => rec.sender_name === user.fullname).length;
+  }, [recognitions, user]);
+
+  const recognitionsReceivedByUser = useMemo(() => {
+    if (!user) return 0;
+    return recognitions.filter((rec) => rec.receiver_name === user.fullname).length;
+  }, [recognitions, user]);
 
   const getReactionData = (recId) => {
     const selected = selectedReactions[recId];
-    const baseCounts = {
-      like: 2,
-      celebrate: 1,
-      inspire: 1,
-      love: 0,
-    };
+    const baseCounts = { like: 2, celebrate: 1, inspire: 1, love: 0 };
 
     if (selected) {
-      return {
-        ...baseCounts,
-        [selected]: baseCounts[selected] + 1,
-      };
+      return { ...baseCounts, [selected]: baseCounts[selected] + 1 };
     }
-
     return baseCounts;
   };
 
@@ -226,6 +253,44 @@ function App() {
     return reactionOptions.find((item) => item.key === selected) || null;
   };
 
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Selecciona una imagen PNG, JPG o WEBP.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const openEditProfileModal = () => {
+    setDraftDisplayName(displayName || user.fullname || '');
+    setDraftProfileBio(profileBio);
+    setDraftProfileTags(profileTags.join(', '));
+    setShowEditProfileModal(true);
+    setShowProfileMenu(false);
+  };
+
+  const handleSaveProfile = () => {
+    const cleanedTags = draftProfileTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== '')
+      .slice(0, 5);
+
+    setDisplayName(draftDisplayName.trim() || user.fullname || '');
+    setProfileBio(draftProfileBio.trim());
+    setProfileTags(cleanedTags.length ? cleanedTags : ['Comunidad TSJ']);
+    setShowEditProfileModal(false);
+  };
+
   const renderReactionBar = (recId) => {
     const selectedMeta = getSelectedReactionMeta(recId);
     const reactionData = getReactionData(recId);
@@ -233,13 +298,8 @@ function App() {
     return (
       <div className="reaction-block">
         <div className="reaction-picker">
-          <button
-            type="button"
-            className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}
-          >
-            <span className="reaction-main-icon">
-              {selectedMeta ? selectedMeta.emoji : '✨'}
-            </span>
+          <button type="button" className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}>
+            <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '✨'}</span>
             <span>{selectedMeta ? selectedMeta.label : 'Reaccionar'}</span>
           </button>
 
@@ -264,9 +324,7 @@ function App() {
           {reactionOptions.map((reaction) => (
             <div
               key={reaction.key}
-              className={`reaction-chip ${
-                selectedReactions[recId] === reaction.key ? 'selected' : ''
-              }`}
+              className={`reaction-chip ${selectedReactions[recId] === reaction.key ? 'selected' : ''}`}
             >
               <span>{reaction.emoji}</span>
               <strong>{reactionData[reaction.key]}</strong>
@@ -365,13 +423,94 @@ function App() {
           </div>
 
           <div className="user-info">
-            <div className="user-chip">
-              <div className="avatar-circle">{getInitials(user.fullname)}</div>
-              <div className="user-text">
-                <span>Hola,</span>
-                <strong>{user.fullname}</strong>
-              </div>
+            <div className="nav-profile-menu-wrapper" ref={navMenuRef}>
+              <button
+                type="button"
+                className="nav-profile-trigger"
+                onClick={() => setShowProfileMenu((prev) => !prev)}
+              >
+                <div className="user-chip">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Perfil" className="nav-profile-image" />
+                  ) : (
+                    <div className="avatar-circle">{getInitials(displayName || user.fullname)}</div>
+                  )}
+
+                  <div className="user-text">
+                    <span>Hola,</span>
+                    <strong>{displayName || user.fullname}</strong>
+                  </div>
+                </div>
+              </button>
+
+              {showProfileMenu && (
+                <div className="nav-profile-dropdown">
+                  <div className="nav-profile-dropdown-header">
+                    {profileImage ? (
+                      <img src={profileImage} alt="Perfil" className="nav-dropdown-avatar" />
+                    ) : (
+                      <div className="nav-dropdown-avatar-fallback">
+                        {getInitials(displayName || user.fullname)}
+                      </div>
+                    )}
+
+                    <div className="nav-dropdown-userinfo">
+                      <strong>{displayName || user.fullname}</strong>
+                      <span>{user.email}</span>
+                    </div>
+                  </div>
+
+                  <div className="nav-dropdown-status">
+                    <span className="profile-status-dot"></span>
+                    <span>Activo en la plataforma</span>
+                  </div>
+
+                  <div className="nav-dropdown-actions">
+                    <button
+                      type="button"
+                      className="nav-dropdown-btn"
+                      onClick={openEditProfileModal}
+                    >
+                      Editar perfil
+                    </button>
+
+                    <button
+                      type="button"
+                      className="nav-dropdown-btn"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      Cambiar foto
+                    </button>
+
+                    <button
+                      type="button"
+                      className="nav-dropdown-btn"
+                      onClick={() => {
+                        window.scrollTo({ top: 520, behavior: 'smooth' });
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      Ir al perfil
+                    </button>
+
+                    <button
+                      type="button"
+                      className="nav-dropdown-btn danger"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        setUser(null);
+                      }}
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
             <button onClick={() => setUser(null)} className="btn-logout">
               Cerrar sesión
             </button>
@@ -401,7 +540,7 @@ function App() {
             </div>
             <div className="stat-card">
               <span>Usuario activo</span>
-              <strong>{user.fullname?.split(' ')[0]}</strong>
+              <strong>{(displayName || user.fullname)?.split(' ')[0]}</strong>
             </div>
           </div>
         </section>
@@ -523,6 +662,81 @@ function App() {
 
         <section className="dashboard">
           <aside className="sidebar">
+            <div className="profile-card">
+              <div className="profile-cover"></div>
+
+              <div className="profile-card-body">
+                <div className="profile-avatar-wrap">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
+                  ) : (
+                    <div className="profile-avatar-fallback">
+                      {getInitials(displayName || user.fullname)}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="profile-photo-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Cambiar foto
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleProfileImageChange}
+                    className="hidden-file-input"
+                  />
+                </div>
+
+                <div className="profile-main-info">
+                  <div className="profile-status-row">
+                    <span className="profile-status-dot"></span>
+                    <span className="profile-status-text">Activo en la plataforma</span>
+                  </div>
+
+                  <h3>{displayName || user.fullname}</h3>
+                  <p className="profile-email">{user.email}</p>
+
+                  <div className="profile-tags">
+                    {profileTags.map((tag) => (
+                      <span key={tag} className="profile-tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="profile-bio">{profileBio}</p>
+
+                  <button
+                    type="button"
+                    className="profile-edit-btn"
+                    onClick={openEditProfileModal}
+                  >
+                    Editar perfil
+                  </button>
+                </div>
+
+                <div className="profile-stats-grid">
+                  <div className="profile-mini-stat">
+                    <span>Enviados</span>
+                    <strong>{recognitionsSentByUser}</strong>
+                  </div>
+                  <div className="profile-mini-stat">
+                    <span>Recibidos</span>
+                    <strong>{recognitionsReceivedByUser}</strong>
+                  </div>
+                  <div className="profile-mini-stat">
+                    <span>Reacciones</span>
+                    <strong>{Object.keys(selectedReactions).filter((k) => selectedReactions[k]).length}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="panel-header">
               <p className="section-label">Nuevo reconocimiento</p>
               <h3>Haz visible una acción positiva</h3>
@@ -551,33 +765,59 @@ function App() {
                 />
               </div>
 
-              <div className="category-filters">
-                {categoryOptions.map((category) => (
-                  <button
-                    key={category}
-                    className={`filter-chip ${
-                      selectedCategory === category ? 'active' : ''
-                    }`}
-                    onClick={() => setSelectedCategory(category)}
-                    type="button"
+              <div className="feed-toolbar-row">
+                <div className="category-filters">
+                  {categoryOptions.map((category) => (
+                    <button
+                      key={category}
+                      className={`filter-chip ${selectedCategory === category ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(category)}
+                      type="button"
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="sort-box">
+                  <label htmlFor="sortSelect">Ordenar por</label>
+                  <select
+                    id="sortSelect"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="sort-select"
                   >
-                    {category}
-                  </button>
-                ))}
+                    <option value="recent">Más recientes</option>
+                    <option value="oldest">Más antiguas</option>
+                    <option value="az">Nombre A-Z</option>
+                    <option value="category">Categoría</option>
+                  </select>
+                </div>
               </div>
             </div>
+
+            {activeFilterLabels.length > 0 && (
+              <div className="active-filters-row">
+                {activeFilterLabels.map((label) => (
+                  <span key={label} className="active-filter-chip">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <div className="feed-results-bar">
               <span>
                 Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
               </span>
-              {(selectedCategory !== 'Todas' || searchTerm.trim() !== '') && (
+              {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
                 <button
                   type="button"
                   className="clear-filters-btn"
                   onClick={() => {
                     setSelectedCategory('Todas');
                     setSearchTerm('');
+                    setSortBy('recent');
                   }}
                 >
                   Limpiar filtros
@@ -598,13 +838,14 @@ function App() {
                   <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
                 </div>
               ) : (
-                filteredRecognitions.map((rec) => {
+                filteredRecognitions.map((rec, index) => {
                   const categoryMeta = getCategoryMeta(rec.category);
 
                   return (
                     <div
                       key={rec.id}
                       className={`recognition-card ${categoryMeta.className}`}
+                      style={{ animationDelay: `${index * 0.04}s` }}
                     >
                       <div className="card-top">
                         <span className={`badge-category ${categoryMeta.className}`}>
@@ -637,6 +878,93 @@ function App() {
           </section>
         </section>
       </main>
+
+      {showEditProfileModal && (
+        <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <div>
+                <p className="section-label">Perfil</p>
+                <h2>Editar información visible</h2>
+              </div>
+              <button
+                type="button"
+                className="profile-modal-close"
+                onClick={() => setShowEditProfileModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="profile-modal-body">
+              <div className="input-group-custom">
+                <label>Nombre visible</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={draftDisplayName}
+                  onChange={(e) => setDraftDisplayName(e.target.value)}
+                  placeholder="Escribe tu nombre visible"
+                />
+              </div>
+
+              <div className="input-group-custom">
+                <label>Biografía</label>
+                <textarea
+                  className="form-control form-textarea"
+                  value={draftProfileBio}
+                  onChange={(e) => setDraftProfileBio(e.target.value)}
+                  placeholder="Escribe una breve descripción sobre ti..."
+                />
+              </div>
+
+              <div className="input-group-custom">
+                <label>Tags o intereses</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={draftProfileTags}
+                  onChange={(e) => setDraftProfileTags(e.target.value)}
+                  placeholder="Ej. Comunidad TSJ, Liderazgo, Innovación"
+                />
+                <small className="field-hint">
+                  Separa cada tag con coma.
+                </small>
+              </div>
+            </div>
+
+            <div className="profile-modal-footer">
+              <button
+                type="button"
+                className="profile-secondary-btn"
+                onClick={() => setShowEditProfileModal(false)}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary profile-save-btn"
+                onClick={handleSaveProfile}
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showScrollTop && (
+        <button
+          type="button"
+          className="scroll-top-btn"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Volver arriba"
+          title="Volver arriba"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 }
