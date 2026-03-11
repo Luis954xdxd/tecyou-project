@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const pool = require('./db');
 const userRoutes = require('./routes/userRoutes');
 const recognitionRoutes = require('./routes/recognitionRoutes');
@@ -11,6 +12,9 @@ const PORT = process.env.PORT || 5000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Servir archivos subidos
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rutas de la API
 app.use('/api/users', userRoutes);
@@ -23,10 +27,10 @@ app.get('/', (req, res) => {
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
-  console.error(" Error detectado:", err.stack);
+  console.error('Error detectado:', err.stack);
   res.status(500).send('Algo salió mal en el servidor.');
 });
 
 app.listen(PORT, () => {
-  console.log(` Servidor listo en: http://localhost:${PORT}`);
+  console.log(`Servidor listo en: http://localhost:${PORT}`);
 });

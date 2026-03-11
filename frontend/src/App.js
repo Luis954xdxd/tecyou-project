@@ -4,19 +4,25 @@ import './App.css';
 import RecognitionForm from './components/RecognitionForm';
 import logoTSJ from './assets/logo-tsj.png';
 
+const API_BASE = 'http://localhost:5000';
+
 function App() {
   const [user, setUser] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [recognitions, setRecognitions] = useState([]);
   const [error, setError] = useState('');
   const [loadingFeed, setLoadingFeed] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('recent');
-  const [selectedReactions, setSelectedReactions] = useState({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [reactionTotals, setReactionTotals] = useState({});
+  const [userReactionMap, setUserReactionMap] = useState({});
+  const [reactingIds, setReactingIds] = useState({});
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -37,15 +43,132 @@ function App() {
     { key: 'love', label: 'Agradezco', emoji: '❤️' },
   ];
 
+  const resolveImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_BASE}${url}`;
+  };
+
+  const normalizeReactionTotals = (totalsArray) => {
+    const base = {
+      like: 0,
+      celebrate: 0,
+      inspire: 0,
+      love: 0,
+    };
+
+    if (!Array.isArray(totalsArray)) return base;
+
+    totalsArray.forEach((item) => {
+      if (item?.reaction_type && base[item.reaction_type] !== undefined) {
+        base[item.reaction_type] = Number(item.total) || 0;
+      }
+    });
+
+    return base;
+  };
+
+  const fetchRecognitionReactions = async (recognitionId) => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/recognitions/${recognitionId}/reactions`
+      );
+
+      const totals = normalizeReactionTotals(response.data?.totals || []);
+      const users = response.data?.users || [];
+
+      setReactionTotals((prev) => ({
+        ...prev,
+        [recognitionId]: totals,
+      }));
+
+      const currentUserReaction =
+        users.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
+
+      setUserReactionMap((prev) => ({
+        ...prev,
+        [recognitionId]: currentUserReaction,
+      }));
+    } catch (err) {
+      console.error(`Error al obtener reacciones del reconocimiento ${recognitionId}:`, err);
+    }
+  };
+
+  const fetchAllReactionsForFeed = async (feedItems) => {
+    if (!Array.isArray(feedItems) || feedItems.length === 0 || !user?.id) {
+      setReactionTotals({});
+      setUserReactionMap({});
+      return;
+    }
+
+    try {
+      const results = await Promise.all(
+        feedItems.map(async (rec) => {
+          const response = await axios.get(
+            `${API_BASE}/api/recognitions/${rec.id}/reactions`
+          );
+          return {
+            recognitionId: rec.id,
+            totals: normalizeReactionTotals(response.data?.totals || []),
+            users: response.data?.users || [],
+          };
+        })
+      );
+
+      const totalsMap = {};
+      const myReactionMap = {};
+
+      results.forEach((item) => {
+        totalsMap[item.recognitionId] = item.totals;
+        myReactionMap[item.recognitionId] =
+          item.users.find((u) => Number(u.user_id) === Number(user?.id))?.reaction_type || null;
+      });
+
+      setReactionTotals(totalsMap);
+      setUserReactionMap(myReactionMap);
+    } catch (err) {
+      console.error('Error al obtener las reacciones del feed:', err);
+    }
+  };
+
   const fetchFeed = async () => {
     try {
       setLoadingFeed(true);
-      const response = await axios.get('http://localhost:5000/api/recognitions/feed');
+      const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
       setRecognitions(response.data);
+      await fetchAllReactionsForFeed(response.data);
     } catch (error) {
       console.error('Error al obtener el feed:', error);
     } finally {
       setLoadingFeed(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      setLoadingProfile(true);
+      const response = await axios.get(`${API_BASE}/api/users/profile/${userId}`);
+      const profile = response.data;
+
+      setDisplayName(profile.display_name || profile.fullname || '');
+      setProfileBio(
+        profile.bio ||
+          'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.'
+      );
+      setProfileTags(
+        Array.isArray(profile.tags) && profile.tags.length > 0
+          ? profile.tags
+          : ['Comunidad TSJ', 'Reconocimiento positivo']
+      );
+      setProfileImage(resolveImageUrl(profile.profile_image_url));
+      setUser((prev) => ({
+        ...prev,
+        ...profile,
+      }));
+    } catch (err) {
+      console.error('Error al obtener el perfil:', err);
+    } finally {
+      setLoadingProfile(false);
     }
   };
 
@@ -54,7 +177,7 @@ function App() {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/users/login', {
+      const response = await axios.post(`${API_BASE}/api/users/login`, {
         email: emailInput,
       });
       setUser(response.data);
@@ -68,17 +191,11 @@ function App() {
   };
 
   useEffect(() => {
-    if (user) fetchFeed();
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      setDisplayName(user.fullname || '');
-      setProfileBio(
-        'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.'
-      );
+    if (user?.id) {
+      fetchFeed();
+      fetchUserProfile(user.id);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 420);
@@ -223,51 +340,88 @@ function App() {
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
-    return recognitions.filter((rec) => rec.sender_name === user.fullname).length;
+    return recognitions.filter((rec) => rec.sender_id === user.id).length;
   }, [recognitions, user]);
 
   const recognitionsReceivedByUser = useMemo(() => {
     if (!user) return 0;
-    return recognitions.filter((rec) => rec.receiver_name === user.fullname).length;
+    return recognitions.filter((rec) => rec.receiver_id === user.id).length;
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
-    const selected = selectedReactions[recId];
-    const baseCounts = { like: 2, celebrate: 1, inspire: 1, love: 0 };
-
-    if (selected) {
-      return { ...baseCounts, [selected]: baseCounts[selected] + 1 };
-    }
-    return baseCounts;
-  };
-
-  const handleReactionSelect = (recId, reactionKey) => {
-    setSelectedReactions((prev) => ({
-      ...prev,
-      [recId]: prev[recId] === reactionKey ? null : reactionKey,
-    }));
+    return (
+      reactionTotals[recId] || {
+        like: 0,
+        celebrate: 0,
+        inspire: 0,
+        love: 0,
+      }
+    );
   };
 
   const getSelectedReactionMeta = (recId) => {
-    const selected = selectedReactions[recId];
+    const selected = userReactionMap[recId];
     return reactionOptions.find((item) => item.key === selected) || null;
   };
 
-  const handleProfileImageChange = (e) => {
+  const handleReactionSelect = async (recId, reactionKey) => {
+    if (!user?.id) return;
+
+    try {
+      setReactingIds((prev) => ({ ...prev, [recId]: true }));
+
+      await axios.post(`${API_BASE}/api/recognitions/${recId}/react`, {
+        user_id: user.id,
+        reaction_type: reactionKey,
+      });
+
+      await fetchRecognitionReactions(recId);
+    } catch (err) {
+      console.error('Error al guardar reacción:', err);
+      alert(err.response?.data?.error || 'No se pudo guardar la reacción.');
+    } finally {
+      setReactingIds((prev) => ({ ...prev, [recId]: false }));
+    }
+  };
+
+  const handleProfileImageChange = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user?.id) return;
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       alert('Selecciona una imagen PNG, JPG o WEBP.');
+      e.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfileImage(reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const formData = new FormData();
+      formData.append('profileImage', file);
+
+      const response = await axios.post(
+        `${API_BASE}/api/users/profile/${user.id}/photo`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      const updatedProfile = response.data;
+
+      setProfileImage(resolveImageUrl(updatedProfile.profile_image_url));
+      setUser((prev) => ({
+        ...prev,
+        ...updatedProfile,
+      }));
+    } catch (err) {
+      console.error('Error al subir la foto:', err);
+      alert(err.response?.data?.error || 'No se pudo subir la foto de perfil.');
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const openEditProfileModal = () => {
@@ -278,56 +432,99 @@ function App() {
     setShowProfileMenu(false);
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+
     const cleanedTags = draftProfileTags
       .split(',')
       .map((tag) => tag.trim())
       .filter((tag) => tag !== '')
       .slice(0, 5);
 
-    setDisplayName(draftDisplayName.trim() || user.fullname || '');
-    setProfileBio(draftProfileBio.trim());
-    setProfileTags(cleanedTags.length ? cleanedTags : ['Comunidad TSJ']);
-    setShowEditProfileModal(false);
+    try {
+      setSavingProfile(true);
+
+      const payload = {
+        display_name: draftDisplayName.trim() || user.fullname || '',
+        bio: draftProfileBio.trim(),
+        tags: cleanedTags.length ? cleanedTags : ['Comunidad TSJ'],
+      };
+
+      const response = await axios.put(`${API_BASE}/api/users/profile/${user.id}`, payload);
+      const updatedProfile = response.data;
+
+      setDisplayName(updatedProfile.display_name || user.fullname || '');
+      setProfileBio(updatedProfile.bio || '');
+      setProfileTags(
+        Array.isArray(updatedProfile.tags) && updatedProfile.tags.length > 0
+          ? updatedProfile.tags
+          : ['Comunidad TSJ']
+      );
+      setProfileImage(resolveImageUrl(updatedProfile.profile_image_url));
+      setUser((prev) => ({
+        ...prev,
+        ...updatedProfile,
+      }));
+
+      setShowEditProfileModal(false);
+    } catch (err) {
+      console.error('Error al guardar perfil:', err);
+      alert(err.response?.data?.error || 'No se pudo guardar el perfil.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const renderReactionBar = (recId) => {
     const selectedMeta = getSelectedReactionMeta(recId);
     const reactionData = getReactionData(recId);
+    const isReacting = reactingIds[recId];
 
     return (
       <div className="reaction-block">
         <div className="reaction-picker">
-          <button type="button" className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}>
+          <button
+            type="button"
+            className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}
+            disabled={isReacting}
+          >
             <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '✨'}</span>
-            <span>{selectedMeta ? selectedMeta.label : 'Reaccionar'}</span>
+            <span>
+              {isReacting
+                ? 'Guardando...'
+                : selectedMeta
+                ? selectedMeta.label
+                : 'Reaccionar'}
+            </span>
           </button>
 
-          <div className="reaction-menu">
-            {reactionOptions.map((reaction) => (
-              <button
-                key={reaction.key}
-                type="button"
-                className="reaction-option"
-                onClick={() => handleReactionSelect(recId, reaction.key)}
-                aria-label={reaction.label}
-                title={reaction.label}
-              >
-                <span className="reaction-option-emoji">{reaction.emoji}</span>
-                <span className="reaction-tooltip">{reaction.label}</span>
-              </button>
-            ))}
-          </div>
+          {!isReacting && (
+            <div className="reaction-menu">
+              {reactionOptions.map((reaction) => (
+                <button
+                  key={reaction.key}
+                  type="button"
+                  className="reaction-option"
+                  onClick={() => handleReactionSelect(recId, reaction.key)}
+                  aria-label={reaction.label}
+                  title={reaction.label}
+                >
+                  <span className="reaction-option-emoji">{reaction.emoji}</span>
+                  <span className="reaction-tooltip">{reaction.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="reaction-counts">
           {reactionOptions.map((reaction) => (
             <div
               key={reaction.key}
-              className={`reaction-chip ${selectedReactions[recId] === reaction.key ? 'selected' : ''}`}
+              className={`reaction-chip ${userReactionMap[recId] === reaction.key ? 'selected' : ''}`}
             >
               <span>{reaction.emoji}</span>
-              <strong>{reactionData[reaction.key]}</strong>
+              <strong>{reactionData[reaction.key] || 0}</strong>
             </div>
           ))}
         </div>
@@ -462,7 +659,7 @@ function App() {
 
                   <div className="nav-dropdown-status">
                     <span className="profile-status-dot"></span>
-                    <span>Activo en la plataforma</span>
+                    <span>{loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}</span>
                   </div>
 
                   <div className="nav-dropdown-actions">
@@ -549,7 +746,7 @@ function App() {
           <div className="featured-header">
             <div>
               <p className="section-label">Destacados</p>
-              <h2>Reconocimientos recientes con mayor visibilidad</h2>
+              <h2>Reconocimientos recientes </h2>
             </div>
             <p className="featured-subtext">
               Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
@@ -695,7 +892,9 @@ function App() {
                 <div className="profile-main-info">
                   <div className="profile-status-row">
                     <span className="profile-status-dot"></span>
-                    <span className="profile-status-text">Activo en la plataforma</span>
+                    <span className="profile-status-text">
+                      {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
+                    </span>
                   </div>
 
                   <h3>{displayName || user.fullname}</h3>
@@ -731,7 +930,9 @@ function App() {
                   </div>
                   <div className="profile-mini-stat">
                     <span>Reacciones</span>
-                    <strong>{Object.keys(selectedReactions).filter((k) => selectedReactions[k]).length}</strong>
+                    <strong>
+                      {Object.values(userReactionMap).filter(Boolean).length}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -927,9 +1128,7 @@ function App() {
                   onChange={(e) => setDraftProfileTags(e.target.value)}
                   placeholder="Ej. Comunidad TSJ, Liderazgo, Innovación"
                 />
-                <small className="field-hint">
-                  Separa cada tag con coma.
-                </small>
+                <small className="field-hint">Separa cada tag con coma.</small>
               </div>
             </div>
 
@@ -938,6 +1137,7 @@ function App() {
                 type="button"
                 className="profile-secondary-btn"
                 onClick={() => setShowEditProfileModal(false)}
+                disabled={savingProfile}
               >
                 Cancelar
               </button>
@@ -946,8 +1146,9 @@ function App() {
                 type="button"
                 className="btn-primary profile-save-btn"
                 onClick={handleSaveProfile}
+                disabled={savingProfile}
               >
-                Guardar cambios
+                {savingProfile ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </div>

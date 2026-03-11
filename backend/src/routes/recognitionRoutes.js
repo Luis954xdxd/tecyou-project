@@ -2,72 +2,142 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-/**
- * RUTA PARA ENVIAR RECONOCIMIENTO
- * Ahora busca al compañero por su Número de Control (ej: 220113032)
- * en lugar de pedir el ID interno de la base de datos.
- */
+// ENVIAR RECONOCIMIENTO
 router.post('/send', async (req, res) => {
     try {
         const { sender_id, receiver_control_number, message, category } = req.body;
 
-        // 1. Reconstruimos el correo institucional a partir del número de control
-        // El patrón es 'za' + número + el dominio del Tecnológico Superior de Jalisco
         const receiverEmail = `za${receiver_control_number}@zapopan.tecmm.edu.mx`;
 
-        // 2. Buscamos al usuario receptor en la tabla 'users'
         const userLookup = await pool.query(
-            "SELECT id FROM users WHERE email = $1", 
+            'SELECT id FROM users WHERE email = $1',
             [receiverEmail]
         );
 
-        // Si el compañero no existe (nunca ha iniciado sesión)
         if (userLookup.rows.length === 0) {
-            return res.status(404).json({ 
-                error: "No se encontró al compañero. Debe haber iniciado sesión al menos una vez en ¡Tec! ¡you!." 
+            return res.status(404).json({
+                error: 'No se encontró al compañero. Debe haber iniciado sesión al menos una vez en ¡Tec! ¡you!.'
             });
         }
 
         const receiver_id = userLookup.rows[0].id;
 
-        // 3. Insertamos el reconocimiento con el ID real encontrado
         const newRecognition = await pool.query(
-            "INSERT INTO recognitions (sender_id, receiver_id, message, category) VALUES ($1, $2, $3, $4) RETURNING *",
+            `INSERT INTO recognitions (sender_id, receiver_id, message, category)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
             [sender_id, receiver_id, message, category]
         );
 
         res.json({
             success: true,
-            message: "¡Reconocimiento enviado con éxito!",
+            message: '¡Reconocimiento enviado con éxito!',
             data: newRecognition.rows[0]
         });
 
     } catch (err) {
-        console.error("Error en /send:", err.message);
-        res.status(500).send("Error interno al procesar el reconocimiento.");
+        console.error('Error en /send:', err.message);
+        res.status(500).send('Error interno al procesar el reconocimiento.');
     }
 });
 
-/**
- * RUTA PARA EL MURO (FEED)
- * Muestra los nombres reales de los alumnos usando JOINs
- */
+// FEED
 router.get('/feed', async (req, res) => {
     try {
         const feed = await pool.query(`
-            SELECT r.*, 
-                   s.fullname AS sender_name, 
-                   rec.fullname AS receiver_name 
+            SELECT 
+                r.*,
+                s.fullname AS sender_name,
+                COALESCE(s.display_name, s.fullname) AS sender_display_name,
+                s.profile_image_url AS sender_profile_image,
+                rec.fullname AS receiver_name,
+                COALESCE(rec.display_name, rec.fullname) AS receiver_display_name,
+                rec.profile_image_url AS receiver_profile_image
             FROM recognitions r
             JOIN users s ON r.sender_id = s.id
             JOIN users rec ON r.receiver_id = rec.id
             ORDER BY r.created_at DESC
         `);
+
         res.json(feed.rows);
     } catch (err) {
-        console.error("Error en /feed:", err.message);
-        res.status(500).send("Error al obtener las publicaciones del muro.");
+        console.error('Error en /feed:', err.message);
+        res.status(500).send('Error al obtener las publicaciones del muro.');
     }
 });
 
-module.exports = router;
+// GUARDAR O CAMBIAR REACCIÓN
+router.post('/:id/react', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user_id, reaction_type } = req.body;
+
+        const validReactions = ['like', 'celebrate', 'inspire', 'love'];
+        if (!validReactions.includes(reaction_type)) {
+            return res.status(400).json({ error: 'Tipo de reacción no válido.' });
+        }
+
+        const existingReaction = await pool.query(
+            `SELECT * FROM recognition_reactions
+             WHERE recognition_id = $1 AND user_id = $2`,
+            [id, user_id]
+        );
+
+        let result;
+
+        if (existingReaction.rows.length > 0) {
+            result = await pool.query(
+                `UPDATE recognition_reactions
+                 SET reaction_type = $1, created_at = CURRENT_TIMESTAMP
+                 WHERE recognition_id = $2 AND user_id = $3
+                 RETURNING *`,
+                [reaction_type, id, user_id]
+            );
+        } else {
+            result = await pool.query(
+                `INSERT INTO recognition_reactions (recognition_id, user_id, reaction_type)
+                 VALUES ($1, $2, $3)
+                 RETURNING *`,
+                [id, user_id, reaction_type]
+            );
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error en POST /:id/react:', err.message);
+        res.status(500).send('Error al guardar la reacción.');
+    }
+});
+
+// OBTENER REACCIONES DE UN RECONOCIMIENTO
+router.get('/:id/reactions', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const reactions = await pool.query(
+            `SELECT reaction_type, COUNT(*)::int AS total
+             FROM recognition_reactions
+             WHERE recognition_id = $1
+             GROUP BY reaction_type`,
+            [id]
+        );
+
+        const userReactions = await pool.query(
+            `SELECT rr.user_id, rr.reaction_type, COALESCE(u.display_name, u.fullname) AS user_name
+             FROM recognition_reactions rr
+             JOIN users u ON rr.user_id = u.id
+             WHERE rr.recognition_id = $1`,
+            [id]
+        );
+
+        res.json({
+            totals: reactions.rows,
+            users: userReactions.rows
+        });
+    } catch (err) {
+        console.error('Error en GET /:id/reactions:', err.message);
+        res.status(500).send('Error al obtener las reacciones.');
+    }
+});
+
+module.exports = router; 
