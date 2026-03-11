@@ -123,6 +123,10 @@ function App() {
     return top[1] === 0 ? 'Sin datos' : top[0];
   }, [categoryCounts]);
 
+  const featuredRecognitions = useMemo(() => {
+    return [...recognitions].slice(0, 3);
+  }, [recognitions]);
+
   const filteredRecognitions = useMemo(() => {
     return recognitions.filter((rec) => {
       const matchesCategory =
@@ -275,6 +279,63 @@ function App() {
               <span>Usuario activo</span>
               <strong>{user.fullname?.split(' ')[0]}</strong>
             </div>
+          </div>
+        </section>
+
+        <section className="featured-section">
+          <div className="featured-header">
+            <div>
+              <p className="section-label">Destacados</p>
+              <h2>Reconocimientos recientes</h2>
+            </div>
+            <p className="featured-subtext">
+              Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
+            </p>
+          </div>
+
+          <div className="featured-grid">
+            {featuredRecognitions.length === 0 ? (
+              <div className="featured-empty">
+                <div className="empty-icon">✦</div>
+                <h3>Aún no hay destacados</h3>
+                <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
+              </div>
+            ) : (
+              featuredRecognitions.map((rec, index) => {
+                const categoryMeta = getCategoryMeta(rec.category);
+
+                return (
+                  <article
+                    key={rec.id}
+                    className={`featured-card ${categoryMeta.className} ${
+                      index === 0 ? 'featured-card-large' : ''
+                    }`}
+                  >
+                    <div className="featured-card-top">
+                      <span className={`badge-category ${categoryMeta.className}`}>
+                        <span className="badge-icon">{categoryMeta.icon}</span>
+                        {rec.category}
+                      </span>
+                      <span className="date">{formatDate(rec.created_at)}</span>
+                    </div>
+
+                    <div className="featured-card-body">
+                      <div className={`recognition-icon-box ${categoryMeta.className}`}>
+                        {categoryMeta.icon}
+                      </div>
+
+                      <div>
+                        <p className="featured-main-text">
+                          <strong>{rec.sender_name}</strong> reconoció a{' '}
+                          <strong>{rec.receiver_name}</strong>
+                        </p>
+                        <p className="featured-message-text">“{rec.message}”</p>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
+            )}
           </div>
         </section>
 
