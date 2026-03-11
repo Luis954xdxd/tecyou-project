@@ -12,6 +12,14 @@ function App() {
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedReactions, setSelectedReactions] = useState({});
+
+  const reactionOptions = [
+    { key: 'like', label: 'Me gusta', emoji: '👍' },
+    { key: 'celebrate', label: 'Excelente', emoji: '🎉' },
+    { key: 'inspire', label: 'Inspirador', emoji: '💡' },
+    { key: 'love', label: 'Agradezco', emoji: '❤️' },
+  ];
 
   const fetchFeed = async () => {
     try {
@@ -127,6 +135,40 @@ function App() {
     return [...recognitions].slice(0, 3);
   }, [recognitions]);
 
+  const maxCategoryCount = useMemo(() => {
+    const values = Object.values(categoryCounts);
+    return Math.max(...values, 1);
+  }, [categoryCounts]);
+
+  const categorySummary = useMemo(() => {
+    return [
+      {
+        name: 'Colaboración',
+        value: categoryCounts.Colaboración,
+        icon: '🤝',
+        className: 'category-colaboracion',
+      },
+      {
+        name: 'Académico',
+        value: categoryCounts.Académico,
+        icon: '📚',
+        className: 'category-academico',
+      },
+      {
+        name: 'Liderazgo',
+        value: categoryCounts.Liderazgo,
+        icon: '⭐',
+        className: 'category-liderazgo',
+      },
+      {
+        name: 'Creatividad',
+        value: categoryCounts.Creatividad,
+        icon: '💡',
+        className: 'category-creatividad',
+      },
+    ];
+  }, [categoryCounts]);
+
   const filteredRecognitions = useMemo(() => {
     return recognitions.filter((rec) => {
       const matchesCategory =
@@ -152,6 +194,88 @@ function App() {
     'Liderazgo',
     'Creatividad',
   ];
+
+  const getReactionData = (recId) => {
+    const selected = selectedReactions[recId];
+    const baseCounts = {
+      like: 2,
+      celebrate: 1,
+      inspire: 1,
+      love: 0,
+    };
+
+    if (selected) {
+      return {
+        ...baseCounts,
+        [selected]: baseCounts[selected] + 1,
+      };
+    }
+
+    return baseCounts;
+  };
+
+  const handleReactionSelect = (recId, reactionKey) => {
+    setSelectedReactions((prev) => ({
+      ...prev,
+      [recId]: prev[recId] === reactionKey ? null : reactionKey,
+    }));
+  };
+
+  const getSelectedReactionMeta = (recId) => {
+    const selected = selectedReactions[recId];
+    return reactionOptions.find((item) => item.key === selected) || null;
+  };
+
+  const renderReactionBar = (recId) => {
+    const selectedMeta = getSelectedReactionMeta(recId);
+    const reactionData = getReactionData(recId);
+
+    return (
+      <div className="reaction-block">
+        <div className="reaction-picker">
+          <button
+            type="button"
+            className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}
+          >
+            <span className="reaction-main-icon">
+              {selectedMeta ? selectedMeta.emoji : '✨'}
+            </span>
+            <span>{selectedMeta ? selectedMeta.label : 'Reaccionar'}</span>
+          </button>
+
+          <div className="reaction-menu">
+            {reactionOptions.map((reaction) => (
+              <button
+                key={reaction.key}
+                type="button"
+                className="reaction-option"
+                onClick={() => handleReactionSelect(recId, reaction.key)}
+                aria-label={reaction.label}
+                title={reaction.label}
+              >
+                <span className="reaction-option-emoji">{reaction.emoji}</span>
+                <span className="reaction-tooltip">{reaction.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="reaction-counts">
+          {reactionOptions.map((reaction) => (
+            <div
+              key={reaction.key}
+              className={`reaction-chip ${
+                selectedReactions[recId] === reaction.key ? 'selected' : ''
+              }`}
+            >
+              <span>{reaction.emoji}</span>
+              <strong>{reactionData[reaction.key]}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (!user) {
     return (
@@ -286,7 +410,7 @@ function App() {
           <div className="featured-header">
             <div>
               <p className="section-label">Destacados</p>
-              <h2>Reconocimientos recientes</h2>
+              <h2>Reconocimientos recientes con mayor visibilidad</h2>
             </div>
             <p className="featured-subtext">
               Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
@@ -330,6 +454,7 @@ function App() {
                           <strong>{rec.receiver_name}</strong>
                         </p>
                         <p className="featured-message-text">“{rec.message}”</p>
+                        {renderReactionBar(rec.id)}
                       </div>
                     </div>
                   </article>
@@ -355,6 +480,44 @@ function App() {
           <div className="mini-stat">
             <span>💡 Creatividad</span>
             <strong>{categoryCounts.Creatividad}</strong>
+          </div>
+        </section>
+
+        <section className="category-summary-section">
+          <div className="category-summary-card">
+            <div className="category-summary-header">
+              <div>
+                <p className="section-label">Top categorías</p>
+                <h2>Distribución actual de reconocimientos</h2>
+              </div>
+              <p className="category-summary-subtext">
+                Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
+              </p>
+            </div>
+
+            <div className="category-bars">
+              {categorySummary.map((item) => {
+                const widthPercentage = (item.value / maxCategoryCount) * 100;
+
+                return (
+                  <div key={item.name} className="category-bar-row">
+                    <div className="category-bar-label">
+                      <span className={`category-pill ${item.className}`}>
+                        {item.icon} {item.name}
+                      </span>
+                      <strong>{item.value}</strong>
+                    </div>
+
+                    <div className="category-bar-track">
+                      <div
+                        className={`category-bar-fill ${item.className}`}
+                        style={{ width: `${widthPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -463,6 +626,7 @@ function App() {
                           </p>
 
                           <p className="message-text">“{rec.message}”</p>
+                          {renderReactionBar(rec.id)}
                         </div>
                       </div>
                     </div>
