@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
+import UsersDirectory from './components/UsersDirectory';
+import ActivityPanel from './components/ActivityPanel';
 import logoTSJ from './assets/logo-tsj.png';
 
 const API_BASE = 'http://localhost:5000';
@@ -21,8 +23,11 @@ function App() {
   const [profileImage, setProfileImage] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [reactionTotals, setReactionTotals] = useState({});
+  const [reactionUsersMap, setReactionUsersMap] = useState({});
   const [userReactionMap, setUserReactionMap] = useState({});
   const [reactingIds, setReactingIds] = useState({});
+  const [openReactionPanelId, setOpenReactionPanelId] = useState(null);
+  const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -50,12 +55,7 @@ function App() {
   };
 
   const normalizeReactionTotals = (totalsArray) => {
-    const base = {
-      like: 0,
-      celebrate: 0,
-      inspire: 0,
-      love: 0,
-    };
+    const base = { like: 0, celebrate: 0, inspire: 0, love: 0 };
 
     if (!Array.isArray(totalsArray)) return base;
 
@@ -70,9 +70,7 @@ function App() {
 
   const fetchRecognitionReactions = async (recognitionId) => {
     try {
-      const response = await axios.get(
-        `${API_BASE}/api/recognitions/${recognitionId}/reactions`
-      );
+      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
 
       const totals = normalizeReactionTotals(response.data?.totals || []);
       const users = response.data?.users || [];
@@ -80,6 +78,11 @@ function App() {
       setReactionTotals((prev) => ({
         ...prev,
         [recognitionId]: totals,
+      }));
+
+      setReactionUsersMap((prev) => ({
+        ...prev,
+        [recognitionId]: users,
       }));
 
       const currentUserReaction =
@@ -97,6 +100,7 @@ function App() {
   const fetchAllReactionsForFeed = async (feedItems) => {
     if (!Array.isArray(feedItems) || feedItems.length === 0 || !user?.id) {
       setReactionTotals({});
+      setReactionUsersMap({});
       setUserReactionMap({});
       return;
     }
@@ -104,9 +108,7 @@ function App() {
     try {
       const results = await Promise.all(
         feedItems.map(async (rec) => {
-          const response = await axios.get(
-            `${API_BASE}/api/recognitions/${rec.id}/reactions`
-          );
+          const response = await axios.get(`${API_BASE}/api/recognitions/${rec.id}/reactions`);
           return {
             recognitionId: rec.id,
             totals: normalizeReactionTotals(response.data?.totals || []),
@@ -116,15 +118,18 @@ function App() {
       );
 
       const totalsMap = {};
+      const usersMap = {};
       const myReactionMap = {};
 
       results.forEach((item) => {
         totalsMap[item.recognitionId] = item.totals;
+        usersMap[item.recognitionId] = item.users;
         myReactionMap[item.recognitionId] =
           item.users.find((u) => Number(u.user_id) === Number(user?.id))?.reaction_type || null;
       });
 
       setReactionTotals(totalsMap);
+      setReactionUsersMap(usersMap);
       setUserReactionMap(myReactionMap);
     } catch (err) {
       console.error('Error al obtener las reacciones del feed:', err);
@@ -349,14 +354,7 @@ function App() {
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
-    return (
-      reactionTotals[recId] || {
-        like: 0,
-        celebrate: 0,
-        inspire: 0,
-        love: 0,
-      }
-    );
+    return reactionTotals[recId] || { like: 0, celebrate: 0, inspire: 0, love: 0 };
   };
 
   const getSelectedReactionMeta = (recId) => {
@@ -399,15 +397,9 @@ function App() {
       const formData = new FormData();
       formData.append('profileImage', file);
 
-      const response = await axios.post(
-        `${API_BASE}/api/users/profile/${user.id}/photo`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await axios.post(`${API_BASE}/api/users/profile/${user.id}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       const updatedProfile = response.data;
 
@@ -475,6 +467,53 @@ function App() {
     }
   };
 
+  const renderReactionUsersPanel = (recId) => {
+    const users = reactionUsersMap[recId] || [];
+
+    if (users.length === 0) {
+      return (
+        <div className="reaction-users-panel">
+          <p className="reaction-users-empty">Aún no hay reacciones.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="reaction-users-panel">
+        <div className="reaction-users-list">
+          {users.map((person, index) => (
+            <div key={`${person.user_id}-${index}`} className="reaction-user-item">
+              {person.profile_image_url ? (
+                <img
+                  src={resolveImageUrl(person.profile_image_url)}
+                  alt={person.user_name}
+                  className="reaction-user-avatar"
+                />
+              ) : (
+                <div className="reaction-user-avatar-fallback">
+                  {(person.user_name || 'TSJ')
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((word) => word[0])
+                    .join('')
+                    .toUpperCase()}
+                </div>
+              )}
+
+              <div className="reaction-user-meta">
+                <strong>{person.user_name}</strong>
+                <span>
+                  {reactionOptions.find((r) => r.key === person.reaction_type)?.emoji}{' '}
+                  {reactionOptions.find((r) => r.key === person.reaction_type)?.label}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderReactionBar = (recId) => {
     const selectedMeta = getSelectedReactionMeta(recId);
     const reactionData = getReactionData(recId);
@@ -517,17 +556,31 @@ function App() {
           )}
         </div>
 
-        <div className="reaction-counts">
-          {reactionOptions.map((reaction) => (
-            <div
-              key={reaction.key}
-              className={`reaction-chip ${userReactionMap[recId] === reaction.key ? 'selected' : ''}`}
-            >
-              <span>{reaction.emoji}</span>
-              <strong>{reactionData[reaction.key] || 0}</strong>
-            </div>
-          ))}
+        <div className="reaction-meta-row">
+          <div className="reaction-counts">
+            {reactionOptions.map((reaction) => (
+              <div
+                key={reaction.key}
+                className={`reaction-chip ${userReactionMap[recId] === reaction.key ? 'selected' : ''}`}
+              >
+                <span>{reaction.emoji}</span>
+                <strong>{reactionData[reaction.key] || 0}</strong>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="reaction-details-btn"
+            onClick={() =>
+              setOpenReactionPanelId((prev) => (prev === recId ? null : recId))
+            }
+          >
+            {openReactionPanelId === recId ? 'Ocultar reacciones' : 'Ver quién reaccionó'}
+          </button>
         </div>
+
+        {openReactionPanelId === recId && renderReactionUsersPanel(recId)}
       </div>
     );
   };
@@ -746,7 +799,7 @@ function App() {
           <div className="featured-header">
             <div>
               <p className="section-label">Destacados</p>
-              <h2>Reconocimientos recientes </h2>
+              <h2>Reconocimientos recientes con mayor visibilidad</h2>
             </div>
             <p className="featured-subtext">
               Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
@@ -857,6 +910,16 @@ function App() {
           </div>
         </section>
 
+        <UsersDirectory
+          currentUserId={user.id}
+          onUserSelected={(selectedUser) => {
+            setRecognitionPrefillUser(selectedUser);
+            window.scrollTo({ top: 1180, behavior: 'smooth' });
+          }}
+        />
+
+        <ActivityPanel userId={user.id} />
+
         <section className="dashboard">
           <aside className="sidebar">
             <div className="profile-card">
@@ -930,9 +993,7 @@ function App() {
                   </div>
                   <div className="profile-mini-stat">
                     <span>Reacciones</span>
-                    <strong>
-                      {Object.values(userReactionMap).filter(Boolean).length}
-                    </strong>
+                    <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
                   </div>
                 </div>
               </div>
@@ -942,7 +1003,12 @@ function App() {
               <p className="section-label">Nuevo reconocimiento</p>
               <h3>Haz visible una acción positiva</h3>
             </div>
-            <RecognitionForm onRecognitionSent={fetchFeed} senderId={user.id} />
+
+            <RecognitionForm
+              onRecognitionSent={fetchFeed}
+              senderId={user.id}
+              preselectedUser={recognitionPrefillUser}
+            />
           </aside>
 
           <section className="feed-section">
