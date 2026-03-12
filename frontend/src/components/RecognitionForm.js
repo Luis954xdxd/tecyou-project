@@ -15,6 +15,10 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sending, setSending] = useState(false);
+  const [formFeedback, setFormFeedback] = useState({
+    type: '',
+    message: '',
+  });
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -65,10 +69,12 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   }, [searchInput, senderId, selectedUser]);
 
   const handleChange = (e) => {
+    setFormFeedback({ type: '', message: '' });
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSelectUser = (user) => {
+    setFormFeedback({ type: '', message: '' });
     setSelectedUser(user);
     setSearchInput(user.display_name || user.fullname);
     setSearchResults([]);
@@ -79,15 +85,20 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   };
 
   const handleClearSelectedUser = () => {
+    setFormFeedback({ type: '', message: '' });
     setSelectedUser(null);
     setSearchInput('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormFeedback({ type: '', message: '' });
 
     if (!selectedUser && !formData.receiver_control_number.trim()) {
-      alert('Selecciona un compañero por nombre o ingresa un número de control.');
+      setFormFeedback({
+        type: 'error',
+        message: 'Selecciona un compañero por nombre o ingresa un número de control.',
+      });
       return;
     }
 
@@ -102,7 +113,6 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         category: formData.category,
       });
 
-      alert('¡Reconocimiento enviado con éxito!');
       onRecognitionSent();
 
       setFormData({
@@ -113,9 +123,17 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       setSearchInput('');
       setSearchResults([]);
       setSelectedUser(null);
+
+      setFormFeedback({
+        type: 'success',
+        message: 'Se envió el reconocimiento correctamente.',
+      });
     } catch (error) {
       console.error('Error al enviar:', error);
-      alert(error.response?.data?.error || 'Error al enviar. Verifica los datos.');
+      setFormFeedback({
+        type: 'error',
+        message: error.response?.data?.error || 'Error al enviar. Verifica los datos.',
+      });
     } finally {
       setSending(false);
     }
@@ -143,6 +161,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             onChange={(e) => {
               setSearchInput(e.target.value);
               if (selectedUser) setSelectedUser(null);
+              setFormFeedback({ type: '', message: '' });
             }}
           />
           <small className="field-hint">
@@ -273,6 +292,12 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         <button type="submit" className="btn-submit" disabled={sending}>
           {sending ? 'Enviando...' : 'Enviar reconocimiento'}
         </button>
+
+        {formFeedback.message && (
+          <div className={`form-feedback ${formFeedback.type}`}>
+            {formFeedback.message}
+          </div>
+        )}
       </form>
     </div>
   );

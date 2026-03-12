@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
 
-function UsersDirectory({ currentUserId, onUserSelected }) {
+function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
   const [users, setUsers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,7 +150,13 @@ function UsersDirectory({ currentUserId, onUserSelected }) {
                       )}
 
                       <div className="directory-user-meta">
-                        <strong>{user.display_name || user.fullname}</strong>
+                        <button
+                          type="button"
+                          className="inline-user-link reaction-user-link"
+                          onClick={() => onOpenProfile(user.id)}
+                        >
+                          {user.display_name || user.fullname}
+                        </button>
                         <span>{user.email}</span>
                         {user.bio && <small>{user.bio}</small>}
                       </div>
@@ -176,6 +182,14 @@ function UsersDirectory({ currentUserId, onUserSelected }) {
                         onClick={() => onUserSelected(user)}
                       >
                         Reconocer
+                      </button>
+
+                      <button
+                        type="button"
+                        className="recognize-quick-btn"
+                        onClick={() => onOpenProfile(user.id)}
+                      >
+                        Ver perfil
                       </button>
                     </div>
                   </div>
@@ -217,18 +231,34 @@ function UsersDirectory({ currentUserId, onUserSelected }) {
                       )}
 
                       <div className="directory-user-meta">
-                        <strong>{user.display_name || user.fullname}</strong>
+                        <button
+                          type="button"
+                          className="inline-user-link reaction-user-link"
+                          onClick={() => onOpenProfile(user.id)}
+                        >
+                          {user.display_name || user.fullname}
+                        </button>
                         <span>{user.email}</span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      className="recognize-quick-btn"
-                      onClick={() => onUserSelected(user)}
-                    >
-                      Reconocer
-                    </button>
+                    <div className="directory-user-actions">
+                      <button
+                        type="button"
+                        className="recognize-quick-btn"
+                        onClick={() => onUserSelected(user)}
+                      >
+                        Reconocer
+                      </button>
+
+                      <button
+                        type="button"
+                        className="recognize-quick-btn"
+                        onClick={() => onOpenProfile(user.id)}
+                      >
+                        Ver perfil
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

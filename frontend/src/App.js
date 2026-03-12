@@ -4,6 +4,8 @@ import './App.css';
 import RecognitionForm from './components/RecognitionForm';
 import UsersDirectory from './components/UsersDirectory';
 import ActivityPanel from './components/ActivityPanel';
+import NotificationsPanel from './components/NotificationsPanel';
+import PublicProfileModal from './components/PublicProfileModal';
 import logoTSJ from './assets/logo-tsj.png';
 
 const API_BASE = 'http://localhost:5000';
@@ -29,6 +31,9 @@ function App() {
   const [openReactionPanelId, setOpenReactionPanelId] = useState(null);
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
+  const [publicProfileUserId, setPublicProfileUserId] = useState(null);
+  const [showPublicProfile, setShowPublicProfile] = useState(false);
+
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [profileBio, setProfileBio] = useState('');
@@ -52,6 +57,11 @@ function App() {
     if (!url) return null;
     if (url.startsWith('http')) return url;
     return `${API_BASE}${url}`;
+  };
+
+  const openPublicProfile = (targetUserId) => {
+    setPublicProfileUserId(targetUserId);
+    setShowPublicProfile(true);
   };
 
   const normalizeReactionTotals = (totalsArray) => {
@@ -501,7 +511,13 @@ function App() {
               )}
 
               <div className="reaction-user-meta">
-                <strong>{person.user_name}</strong>
+                <button
+                  type="button"
+                  className="inline-user-link reaction-user-link"
+                  onClick={() => openPublicProfile(person.user_id)}
+                >
+                  {person.user_name}
+                </button>
                 <span>
                   {reactionOptions.find((r) => r.key === person.reaction_type)?.emoji}{' '}
                   {reactionOptions.find((r) => r.key === person.reaction_type)?.label}
@@ -839,8 +855,21 @@ function App() {
 
                       <div>
                         <p className="featured-main-text">
-                          <strong>{rec.sender_name}</strong> reconoció a{' '}
-                          <strong>{rec.receiver_name}</strong>
+                          <button
+                            type="button"
+                            className="inline-user-link"
+                            onClick={() => openPublicProfile(rec.sender_id)}
+                          >
+                            {rec.sender_name}
+                          </button>{' '}
+                          reconoció a{' '}
+                          <button
+                            type="button"
+                            className="inline-user-link"
+                            onClick={() => openPublicProfile(rec.receiver_id)}
+                          >
+                            {rec.receiver_name}
+                          </button>
                         </p>
                         <p className="featured-message-text">“{rec.message}”</p>
                         {renderReactionBar(rec.id)}
@@ -916,6 +945,12 @@ function App() {
             setRecognitionPrefillUser(selectedUser);
             window.scrollTo({ top: 1180, behavior: 'smooth' });
           }}
+          onOpenProfile={openPublicProfile}
+        />
+
+        <NotificationsPanel
+          userId={user.id}
+          onOpenProfile={openPublicProfile}
         />
 
         <ActivityPanel userId={user.id} />
@@ -1129,8 +1164,21 @@ function App() {
 
                         <div className="recognition-body">
                           <p className="main-text">
-                            <strong>{rec.sender_name}</strong> reconoció a{' '}
-                            <strong>{rec.receiver_name}</strong>
+                            <button
+                              type="button"
+                              className="inline-user-link"
+                              onClick={() => openPublicProfile(rec.sender_id)}
+                            >
+                              {rec.sender_name}
+                            </button>{' '}
+                            reconoció a{' '}
+                            <button
+                              type="button"
+                              className="inline-user-link"
+                              onClick={() => openPublicProfile(rec.receiver_id)}
+                            >
+                              {rec.receiver_name}
+                            </button>
                           </p>
 
                           <p className="message-text">“{rec.message}”</p>
@@ -1145,6 +1193,16 @@ function App() {
           </section>
         </section>
       </main>
+
+      <PublicProfileModal
+        userId={publicProfileUserId}
+        currentUserId={user.id}
+        isOpen={showPublicProfile}
+        onClose={() => setShowPublicProfile(false)}
+        onFollowChanged={() => {
+          fetchFeed();
+        }}
+      />
 
       {showEditProfileModal && (
         <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>

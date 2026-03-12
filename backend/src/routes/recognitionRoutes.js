@@ -39,6 +39,22 @@ router.post('/send', async (req, res) => {
             [sender_id, finalReceiverId, message, category]
         );
 
+        // Crear notificación para el receptor
+        if (Number(sender_id) !== Number(finalReceiverId)) {
+            await pool.query(
+                `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [
+                    finalReceiverId,
+                    sender_id,
+                    'recognition_received',
+                    'Recibiste un reconocimiento',
+                    message,
+                    newRecognition.rows[0].id
+                ]
+            );
+        }
+
         res.json({
             success: true,
             message: '¡Reconocimiento enviado con éxito!',
@@ -92,6 +108,14 @@ router.post('/:id/react', async (req, res) => {
             [id, user_id]
         );
 
+        // Obtener dueño del reconocimiento
+        const recognitionOwner = await pool.query(
+            `SELECT receiver_id FROM recognitions WHERE id = $1`,
+            [id]
+        );
+
+        const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
+
         if (existingReaction.rows.length > 0) {
             if (existingReaction.rows[0].reaction_type === reaction_type) {
                 await pool.query(
@@ -111,6 +135,21 @@ router.post('/:id/react', async (req, res) => {
                 [reaction_type, id, user_id]
             );
 
+            if (receiverId && Number(receiverId) !== Number(user_id)) {
+                await pool.query(
+                    `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+                     VALUES ($1, $2, $3, $4, $5, $6)`,
+                    [
+                        receiverId,
+                        user_id,
+                        'reaction_received',
+                        'Reaccionaron a tu reconocimiento',
+                        reaction_type,
+                        Number(id)
+                    ]
+                );
+            }
+
             return res.json(updated.rows[0]);
         }
 
@@ -120,6 +159,21 @@ router.post('/:id/react', async (req, res) => {
              RETURNING *`,
             [id, user_id, reaction_type]
         );
+
+        if (receiverId && Number(receiverId) !== Number(user_id)) {
+            await pool.query(
+                `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [
+                    receiverId,
+                    user_id,
+                    'reaction_received',
+                    'Reaccionaron a tu reconocimiento',
+                    reaction_type,
+                    Number(id)
+                ]
+            );
+        }
 
         res.json(created.rows[0]);
     } catch (err) {

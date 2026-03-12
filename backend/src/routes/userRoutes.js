@@ -230,7 +230,7 @@ router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res
 // SEGUIR USUARIO
 router.post('/:id/follow', async (req, res) => {
     try {
-        const { id } = req.params; // usuario a seguir
+        const { id } = req.params;
         const { follower_id } = req.body;
 
         if (!follower_id) {
@@ -249,6 +249,21 @@ router.post('/:id/follow', async (req, res) => {
             [follower_id, id]
         );
 
+        if (result.rows.length > 0) {
+            await pool.query(
+                `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [
+                    id,
+                    follower_id,
+                    'new_follower',
+                    'Tienes un nuevo seguidor',
+                    null,
+                    null
+                ]
+            );
+        }
+
         res.json({
             success: true,
             followed: true,
@@ -263,7 +278,7 @@ router.post('/:id/follow', async (req, res) => {
 // DEJAR DE SEGUIR
 router.delete('/:id/follow', async (req, res) => {
     try {
-        const { id } = req.params; // usuario a dejar de seguir
+        const { id } = req.params;
         const { follower_id } = req.body;
 
         if (!follower_id) {
@@ -344,6 +359,100 @@ router.get('/:id/followers', async (req, res) => {
     }
 });
 
+// PERFIL PÚBLICO DE USUARIO
+router.get('/:id/public', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const viewerId = req.query.viewerId || null;
+
+        const userResult = await pool.query(
+            `SELECT
+                u.id,
+                u.fullname,
+                COALESCE(u.display_name, u.fullname) AS display_name,
+                u.email,
+                u.role,
+                u.bio,
+                u.profile_image_url,
+                u.tags,
+                u.created_at,
+                EXISTS (
+                    SELECT 1
+                    FROM user_follows uf
+                    WHERE uf.follower_id = $2 AND uf.following_id = u.id
+                ) AS is_following,
+                (
+                    SELECT COUNT(*)
+                    FROM user_follows uf
+                    WHERE uf.following_id = u.id
+                )::int AS followers_count,
+                (
+                    SELECT COUNT(*)
+                    FROM user_follows uf
+                    WHERE uf.follower_id = u.id
+                )::int AS following_count,
+                (
+                    SELECT COUNT(*)
+                    FROM recognitions r
+                    WHERE r.sender_id = u.id
+                )::int AS recognitions_sent,
+                (
+                    SELECT COUNT(*)
+                    FROM recognitions r
+                    WHERE r.receiver_id = u.id
+                )::int AS recognitions_received
+             FROM users u
+             WHERE u.id = $1`,
+            [id, viewerId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        const recognitionsReceived = await pool.query(
+            `SELECT
+                r.id,
+                r.message,
+                r.category,
+                r.created_at,
+                COALESCE(s.display_name, s.fullname) AS sender_name,
+                s.profile_image_url AS sender_profile_image
+             FROM recognitions r
+             JOIN users s ON r.sender_id = s.id
+             WHERE r.receiver_id = $1
+             ORDER BY r.created_at DESC
+             LIMIT 6`,
+            [id]
+        );
+
+        const recognitionsSent = await pool.query(
+            `SELECT
+                r.id,
+                r.message,
+                r.category,
+                r.created_at,
+                COALESCE(u.display_name, u.fullname) AS receiver_name,
+                u.profile_image_url AS receiver_profile_image
+             FROM recognitions r
+             JOIN users u ON r.receiver_id = u.id
+             WHERE r.sender_id = $1
+             ORDER BY r.created_at DESC
+             LIMIT 6`,
+            [id]
+        );
+
+        res.json({
+            user: userResult.rows[0],
+            recognitions_received: recognitionsReceived.rows,
+            recognitions_sent: recognitionsSent.rows,
+        });
+    } catch (err) {
+        console.error('Error en /:id/public:', err.message);
+        res.status(500).send('Error al obtener el perfil público.');
+    }
+});
+
 // ACTIVIDAD RECIENTE DEL USUARIO
 router.get('/:id/activity', async (req, res) => {
     try {
@@ -352,7 +461,6 @@ router.get('/:id/activity', async (req, res) => {
         const activity = await pool.query(
             `
             SELECT * FROM (
-                -- Reconocimientos recibidos
                 SELECT
                     'recognition_received' AS type,
                     r.created_at,
@@ -366,7 +474,6 @@ router.get('/:id/activity', async (req, res) => {
 
                 UNION ALL
 
-                -- Nuevos seguidores
                 SELECT
                     'new_follower' AS type,
                     uf.created_at,
@@ -380,7 +487,6 @@ router.get('/:id/activity', async (req, res) => {
 
                 UNION ALL
 
-                -- Reacciones en reconocimientos recibidos
                 SELECT
                     'reaction_received' AS type,
                     rr.created_at,
@@ -404,6 +510,101 @@ router.get('/:id/activity', async (req, res) => {
     } catch (err) {
         console.error('Error en /:id/activity:', err.message);
         res.status(500).send('Error al obtener actividad reciente.');
+    }
+});
+
+// NOTIFICACIONES DEL USUARIO
+router.get('/:id/notifications', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `SELECT
+                n.id,
+                n.user_id,
+                n.actor_id,
+                n.type,
+                n.title,
+                n.content,
+                n.reference_id,
+                n.is_read,
+                n.created_at,
+                COALESCE(u.display_name, u.fullname) AS actor_name,
+                u.profile_image_url AS actor_profile_image
+             FROM notifications n
+             LEFT JOIN users u ON n.actor_id = u.id
+             WHERE n.user_id = $1
+             ORDER BY n.created_at DESC
+             LIMIT 30`,
+            [id]
+        );
+
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error en /:id/notifications:', err.message);
+        res.status(500).send('Error al obtener notificaciones.');
+    }
+});
+
+// CONTADOR DE NO LEÍDAS
+router.get('/:id/notifications/unread-count', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `SELECT COUNT(*)::int AS total
+             FROM notifications
+             WHERE user_id = $1 AND is_read = FALSE`,
+            [id]
+        );
+
+        res.json({ total: result.rows[0].total });
+    } catch (err) {
+        console.error('Error en unread-count:', err.message);
+        res.status(500).send('Error al obtener contador de notificaciones.');
+    }
+});
+
+// MARCAR UNA COMO LEÍDA
+router.patch('/notifications/:notificationId/read', async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+
+        const result = await pool.query(
+            `UPDATE notifications
+             SET is_read = TRUE
+             WHERE id = $1
+             RETURNING *`,
+            [notificationId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Notificación no encontrada.' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error al marcar notificación como leída:', err.message);
+        res.status(500).send('Error al actualizar la notificación.');
+    }
+});
+
+// MARCAR TODAS COMO LEÍDAS
+router.patch('/:id/notifications/read-all', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await pool.query(
+            `UPDATE notifications
+             SET is_read = TRUE
+             WHERE user_id = $1 AND is_read = FALSE`,
+            [id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error al marcar todas como leídas:', err.message);
+        res.status(500).send('Error al actualizar notificaciones.');
     }
 });
 
