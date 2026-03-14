@@ -1,9 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Carpeta para imágenes de reconocimientos
+const uploadDir = path.join(__dirname, '..', 'uploads', 'recognitions');
+fs.mkdirSync(uploadDir, { recursive: true });
+
+// Configuración de multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `recognition_${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Formato de imagen no permitido. Usa PNG, JPG o WEBP.'));
+    }
+};
+
+const upload = multer({ storage, fileFilter });
 
 // ENVIAR RECONOCIMIENTO
-router.post('/send', async (req, res) => {
+router.post('/send', upload.array('recognitionImages', 5), async (req, res) => {
     try {
         const { sender_id, receiver_id, receiver_control_number, message, category } = req.body;
 
@@ -39,7 +68,21 @@ router.post('/send', async (req, res) => {
             [sender_id, finalReceiverId, message, category]
         );
 
-        // Crear notificación para el receptor
+        const recognitionId = newRecognition.rows[0].id;
+
+        // Guardar imágenes si existen
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                const imagePath = `/uploads/recognitions/${file.filename}`;
+
+                await pool.query(
+                    `INSERT INTO recognition_images (recognition_id, image_url)
+                     VALUES ($1, $2)`,
+                    [recognitionId, imagePath]
+                );
+            }
+        }
+
         if (Number(sender_id) !== Number(finalReceiverId)) {
             await pool.query(
                 `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
@@ -50,7 +93,7 @@ router.post('/send', async (req, res) => {
                     'recognition_received',
                     'Recibiste un reconocimiento',
                     message,
-                    newRecognition.rows[0].id
+                    recognitionId
                 ]
             );
         }
@@ -77,10 +120,21 @@ router.get('/feed', async (req, res) => {
                 s.profile_image_url AS sender_profile_image,
                 COALESCE(rec.display_name, rec.fullname) AS receiver_name,
                 rec.fullname AS receiver_fullname,
-                rec.profile_image_url AS receiver_profile_image
+                rec.profile_image_url AS receiver_profile_image,
+                COALESCE(
+                    json_agg(
+                        DISTINCT jsonb_build_object(
+                            'id', ri.id,
+                            'image_url', ri.image_url
+                        )
+                    ) FILTER (WHERE ri.id IS NOT NULL),
+                    '[]'
+                ) AS images
             FROM recognitions r
             JOIN users s ON r.sender_id = s.id
             JOIN users rec ON r.receiver_id = rec.id
+            LEFT JOIN recognition_images ri ON r.id = ri.recognition_id
+            GROUP BY r.id, s.id, rec.id
             ORDER BY r.created_at DESC
         `);
 
@@ -108,7 +162,6 @@ router.post('/:id/react', async (req, res) => {
             [id, user_id]
         );
 
-        // Obtener dueño del reconocimiento
         const recognitionOwner = await pool.query(
             `SELECT receiver_id FROM recognitions WHERE id = $1`,
             [id]
@@ -215,6 +268,80 @@ router.get('/:id/reactions', async (req, res) => {
     } catch (err) {
         console.error('Error en GET /:id/reactions:', err.message);
         res.status(500).send('Error al obtener las reacciones.');
+    }
+});
+
+// AGREGAR COMENTARIO
+router.post('/:id/comments', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { user_id, comment } = req.body;
+
+        if (!comment || !comment.trim()) {
+            return res.status(400).json({ error: 'El comentario no puede estar vacío.' });
+        }
+
+        const newComment = await pool.query(
+            `INSERT INTO recognition_comments (recognition_id, user_id, comment)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [id, user_id, comment.trim()]
+        );
+
+        const recognitionOwner = await pool.query(
+            `SELECT receiver_id FROM recognitions WHERE id = $1`,
+            [id]
+        );
+
+        const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
+
+        if (receiverId && Number(receiverId) !== Number(user_id)) {
+            await pool.query(
+                `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [
+                    receiverId,
+                    user_id,
+                    'comment_received',
+                    'Comentaron tu reconocimiento',
+                    comment.trim(),
+                    Number(id)
+                ]
+            );
+        }
+
+        res.json(newComment.rows[0]);
+    } catch (err) {
+        console.error('Error en POST /:id/comments:', err.message);
+        res.status(500).send('Error al agregar comentario.');
+    }
+});
+
+// OBTENER COMENTARIOS
+router.get('/:id/comments', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const comments = await pool.query(
+            `SELECT
+                rc.id,
+                rc.recognition_id,
+                rc.user_id,
+                rc.comment,
+                rc.created_at,
+                COALESCE(u.display_name, u.fullname) AS user_name,
+                u.profile_image_url
+             FROM recognition_comments rc
+             JOIN users u ON rc.user_id = u.id
+             WHERE rc.recognition_id = $1
+             ORDER BY rc.created_at ASC`,
+            [id]
+        );
+
+        res.json(comments.rows);
+    } catch (err) {
+        console.error('Error en GET /:id/comments:', err.message);
+        res.status(500).send('Error al obtener comentarios.');
     }
 });
 

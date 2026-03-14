@@ -5,7 +5,9 @@ import RecognitionForm from './components/RecognitionForm';
 import UsersDirectory from './components/UsersDirectory';
 import ActivityPanel from './components/ActivityPanel';
 import NotificationsPanel from './components/NotificationsPanel';
+import NotificationsBell from './components/NotificationsBell';
 import PublicProfileModal from './components/PublicProfileModal';
+import RecognitionComments from './components/RecognitionComments';
 import logoTSJ from './assets/logo-tsj.png';
 
 const API_BASE = 'http://localhost:5000';
@@ -24,11 +26,14 @@ function App() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
   const [reactionTotals, setReactionTotals] = useState({});
   const [reactionUsersMap, setReactionUsersMap] = useState({});
   const [userReactionMap, setUserReactionMap] = useState({});
   const [reactingIds, setReactingIds] = useState({});
   const [openReactionPanelId, setOpenReactionPanelId] = useState(null);
+  const [openReactionPickerId, setOpenReactionPickerId] = useState(null);
+
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
   const [publicProfileUserId, setPublicProfileUserId] = useState(null);
@@ -42,6 +47,8 @@ function App() {
   const [draftDisplayName, setDraftDisplayName] = useState('');
   const [draftProfileBio, setDraftProfileBio] = useState('');
   const [draftProfileTags, setDraftProfileTags] = useState('');
+
+  const [expandedImage, setExpandedImage] = useState(null);
 
   const fileInputRef = useRef(null);
   const navMenuRef = useRef(null);
@@ -57,6 +64,11 @@ function App() {
     if (!url) return null;
     if (url.startsWith('http')) return url;
     return `${API_BASE}${url}`;
+  };
+
+  const normalizeRecognitionImages = (images) => {
+    if (!Array.isArray(images)) return [];
+    return images.filter((img) => img && img.image_url);
   };
 
   const openPublicProfile = (targetUserId) => {
@@ -534,16 +546,22 @@ function App() {
     const selectedMeta = getSelectedReactionMeta(recId);
     const reactionData = getReactionData(recId);
     const isReacting = reactingIds[recId];
+    const isPickerOpen = openReactionPickerId === recId;
 
     return (
       <div className="reaction-block">
-        <div className="reaction-picker">
+        <div className="reaction-picker-stable">
           <button
             type="button"
             className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}
             disabled={isReacting}
+            onClick={() =>
+              setOpenReactionPickerId((prev) => (prev === recId ? null : recId))
+            }
           >
-            <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '✨'}</span>
+            <span className="reaction-main-icon">
+              {selectedMeta ? selectedMeta.emoji : '✨'}
+            </span>
             <span>
               {isReacting
                 ? 'Guardando...'
@@ -553,21 +571,49 @@ function App() {
             </span>
           </button>
 
-          {!isReacting && (
-            <div className="reaction-menu">
-              {reactionOptions.map((reaction) => (
+          {isPickerOpen && !isReacting && (
+            <div className="reaction-picker-panel">
+              <div className="reaction-picker-panel-header">
+                <strong>Selecciona una reacción</strong>
                 <button
-                  key={reaction.key}
                   type="button"
-                  className="reaction-option"
-                  onClick={() => handleReactionSelect(recId, reaction.key)}
-                  aria-label={reaction.label}
-                  title={reaction.label}
+                  className="reaction-picker-close"
+                  onClick={() => setOpenReactionPickerId(null)}
                 >
-                  <span className="reaction-option-emoji">{reaction.emoji}</span>
-                  <span className="reaction-tooltip">{reaction.label}</span>
+                  ✕
                 </button>
-              ))}
+              </div>
+
+              <div className="reaction-picker-options">
+                {reactionOptions.map((reaction) => {
+                  const isSelected = userReactionMap[recId] === reaction.key;
+
+                  return (
+                    <button
+                      key={reaction.key}
+                      type="button"
+                      className={`reaction-option-stable ${isSelected ? 'selected' : ''}`}
+                      onClick={async () => {
+                        await handleReactionSelect(recId, reaction.key);
+                        setOpenReactionPickerId(null);
+                      }}
+                      aria-label={reaction.label}
+                      title={reaction.label}
+                    >
+                      <span className="reaction-option-stable-emoji">
+                        {reaction.emoji}
+                      </span>
+                      <span className="reaction-option-stable-label">
+                        {reaction.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <small className="reaction-picker-hint">
+                Toca la misma reacción otra vez para quitarla.
+              </small>
             </div>
           )}
         </div>
@@ -577,7 +623,9 @@ function App() {
             {reactionOptions.map((reaction) => (
               <div
                 key={reaction.key}
-                className={`reaction-chip ${userReactionMap[recId] === reaction.key ? 'selected' : ''}`}
+                className={`reaction-chip ${
+                  userReactionMap[recId] === reaction.key ? 'selected' : ''
+                }`}
               >
                 <span>{reaction.emoji}</span>
                 <strong>{reactionData[reaction.key] || 0}</strong>
@@ -592,7 +640,9 @@ function App() {
               setOpenReactionPanelId((prev) => (prev === recId ? null : recId))
             }
           >
-            {openReactionPanelId === recId ? 'Ocultar reacciones' : 'Ver quién reaccionó'}
+            {openReactionPanelId === recId
+              ? 'Ocultar reacciones'
+              : 'Ver quién reaccionó'}
           </button>
         </div>
 
@@ -689,6 +739,11 @@ function App() {
           </div>
 
           <div className="user-info">
+            <NotificationsBell
+              userId={user.id}
+              onOpenProfile={openPublicProfile}
+            />
+
             <div className="nav-profile-menu-wrapper" ref={navMenuRef}>
               <button
                 type="button"
@@ -871,7 +926,34 @@ function App() {
                             {rec.receiver_name}
                           </button>
                         </p>
+
                         <p className="featured-message-text">“{rec.message}”</p>
+
+                        {normalizeRecognitionImages(rec.images).length > 0 && (
+                          <div className="recognition-images-grid">
+                            {normalizeRecognitionImages(rec.images).map((image) => (
+                              <button
+                                key={image.id}
+                                type="button"
+                                className="recognition-image-card"
+                                onClick={() => setExpandedImage(resolveImageUrl(image.image_url))}
+                              >
+                                <img
+                                  src={resolveImageUrl(image.image_url)}
+                                  alt="Imagen del reconocimiento"
+                                  className="recognition-image-thumb"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <RecognitionComments
+                          recognitionId={rec.id}
+                          currentUserId={user.id}
+                          onOpenProfile={openPublicProfile}
+                        />
+
                         {renderReactionBar(rec.id)}
                       </div>
                     </div>
@@ -1182,6 +1264,32 @@ function App() {
                           </p>
 
                           <p className="message-text">“{rec.message}”</p>
+
+                          {normalizeRecognitionImages(rec.images).length > 0 && (
+                            <div className="recognition-images-grid">
+                              {normalizeRecognitionImages(rec.images).map((image) => (
+                                <button
+                                  key={image.id}
+                                  type="button"
+                                  className="recognition-image-card"
+                                  onClick={() => setExpandedImage(resolveImageUrl(image.image_url))}
+                                >
+                                  <img
+                                    src={resolveImageUrl(image.image_url)}
+                                    alt="Imagen del reconocimiento"
+                                    className="recognition-image-thumb"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          <RecognitionComments
+                            recognitionId={rec.id}
+                            currentUserId={user.id}
+                            onOpenProfile={openPublicProfile}
+                          />
+
                           {renderReactionBar(rec.id)}
                         </div>
                       </div>
@@ -1275,6 +1383,29 @@ function App() {
                 {savingProfile ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {expandedImage && (
+        <div className="recognition-image-modal-overlay" onClick={() => setExpandedImage(null)}>
+          <div
+            className="recognition-image-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="recognition-image-modal-close"
+              onClick={() => setExpandedImage(null)}
+            >
+              ✕
+            </button>
+
+            <img
+              src={expandedImage}
+              alt="Imagen ampliada del reconocimiento"
+              className="recognition-image-modal-content"
+            />
           </div>
         </div>
       )}

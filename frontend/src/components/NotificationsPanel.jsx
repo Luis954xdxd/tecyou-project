@@ -42,6 +42,10 @@ function NotificationsPanel({ userId, onOpenProfile }) {
       return `${item.actor_name} ${reactionMap[item.content] || 'reaccionó a tu reconocimiento'}`;
     }
 
+    if (item.type === 'comment_received') {
+      return `${item.actor_name} comentó tu reconocimiento`;
+    }
+
     return item.title || 'Nueva notificación';
   };
 
@@ -153,9 +157,8 @@ function NotificationsPanel({ userId, onOpenProfile }) {
                     {getNotificationText(item)}
                   </button>
 
-                  {item.type === 'recognition_received' && item.content && (
-                    <small>“{item.content}”</small>
-                  )}
+                  {(item.type === 'recognition_received' || item.type === 'comment_received') &&
+                    item.content && <small>“{item.content}”</small>}
 
                   <span>{formatDate(item.created_at)}</span>
                 </div>

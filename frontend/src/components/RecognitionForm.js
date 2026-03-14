@@ -15,6 +15,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sending, setSending] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [formFeedback, setFormFeedback] = useState({
     type: '',
     message: '',
@@ -90,6 +91,18 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     setSearchInput('');
   };
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+    const filtered = files.filter((file) => validTypes.includes(file.type)).slice(0, 5);
+    setSelectedImages(filtered);
+  };
+
+  const handleRemoveImage = (indexToRemove) => {
+    setSelectedImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormFeedback({ type: '', message: '' });
@@ -105,12 +118,24 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     try {
       setSending(true);
 
-      await axios.post(`${API_BASE}/api/recognitions/send`, {
-        sender_id: senderId,
-        receiver_id: selectedUser ? selectedUser.id : null,
-        receiver_control_number: selectedUser ? null : formData.receiver_control_number,
-        message: formData.message,
-        category: formData.category,
+      const payload = new FormData();
+      payload.append('sender_id', senderId);
+      payload.append('receiver_id', selectedUser ? selectedUser.id : '');
+      payload.append(
+        'receiver_control_number',
+        selectedUser ? '' : formData.receiver_control_number
+      );
+      payload.append('message', formData.message);
+      payload.append('category', formData.category);
+
+      selectedImages.forEach((image) => {
+        payload.append('recognitionImages', image);
+      });
+
+      await axios.post(`${API_BASE}/api/recognitions/send`, payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       onRecognitionSent();
@@ -123,6 +148,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       setSearchInput('');
       setSearchResults([]);
       setSelectedUser(null);
+      setSelectedImages([]);
 
       setFormFeedback({
         type: 'success',
@@ -287,6 +313,41 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             onChange={handleChange}
             required
           />
+        </div>
+
+        <div className="input-group-custom">
+          <label>Imágenes del reconocimiento</label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            multiple
+            onChange={handleImageChange}
+            className="form-control"
+          />
+          <small className="field-hint">
+            Puedes subir hasta 5 imágenes.
+          </small>
+
+          {selectedImages.length > 0 && (
+            <div className="recognition-upload-preview-list">
+              {selectedImages.map((image, index) => (
+                <div key={`${image.name}-${index}`} className="recognition-upload-preview-card">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={`preview-${index}`}
+                    className="recognition-upload-preview-image"
+                  />
+                  <button
+                    type="button"
+                    className="recognition-upload-remove-btn"
+                    onClick={() => handleRemoveImage(index)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <button type="submit" className="btn-submit" disabled={sending}>
