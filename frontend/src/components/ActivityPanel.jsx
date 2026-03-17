@@ -63,7 +63,7 @@ function ActivityPanel({ userId }) {
   };
 
   return (
-    <section className="activity-panel-section">
+    <section id="activity-section" className="activity-panel-section">
       <div className="activity-panel-card">
         <div className="activity-panel-header">
           <div>

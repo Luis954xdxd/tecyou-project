@@ -3182,6 +3182,100 @@ select:focus {
   box-shadow: 0 10px 24px rgba(17, 24, 39, 0.16);
 }
 
+/* BUSCADOR GLOBAL NAVBAR */
+.global-search-wrapper {
+  position: relative;
+  width: min(420px, 100%);
+  flex: 1;
+  max-width: 440px;
+}
+
+.global-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.global-search-icon {
+  position: absolute;
+  left: 14px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.global-search-input {
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  padding: 0 14px 0 38px;
+  font-size: 14px;
+  outline: none;
+}
+
+.global-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.global-search-input:focus {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.global-search-results {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #dde5f5;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(17, 24, 39, 0.16);
+  overflow: hidden;
+  z-index: 240;
+}
+
+.global-search-result-item {
+  width: 100%;
+  border: none;
+  background: white;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #f1f4fb;
+}
+
+.global-search-result-item:last-child {
+  border-bottom: none;
+}
+
+.global-search-result-item:hover {
+  background: #f8fbff;
+}
+
+.global-search-result-item strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.global-search-result-item span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.global-search-empty {
+  padding: 18px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {
@@ -3218,7 +3312,12 @@ select:focus {
   .users-directory-layout {
   grid-template-columns: 1fr;
 }
-   
+  
+.global-search-wrapper {
+  max-width: 100%;
+  width: 100%;
+}
+
 }
 
 @media (max-width: 720px) {
@@ -3441,4 +3540,15 @@ select:focus {
   width: 92px;
   height: 92px;
 }
+
+.global-search-wrapper {
+  order: 3;
+  width: 100%;
+  max-width: 100%;
+}
+
+.nav-content {
+  align-items: stretch;
+}
+
 }

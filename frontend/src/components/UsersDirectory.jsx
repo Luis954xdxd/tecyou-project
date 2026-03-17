@@ -95,7 +95,7 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
   };
 
   return (
-    <section className="users-directory-section">
+    <section id="users-directory-section" className="users-directory-section">
       <div className="users-directory-card">
         <div className="users-directory-header">
           <div>

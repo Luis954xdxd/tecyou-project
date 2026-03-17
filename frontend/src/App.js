@@ -8,6 +8,7 @@ import NotificationsPanel from './components/NotificationsPanel';
 import NotificationsBell from './components/NotificationsBell';
 import PublicProfileModal from './components/PublicProfileModal';
 import RecognitionComments from './components/RecognitionComments';
+import GlobalSectionSearch from './components/GlobalSectionSearch';
 import logoTSJ from './assets/logo-tsj.png';
 
 const API_BASE = 'http://localhost:5000';
@@ -75,6 +76,63 @@ function App() {
     setPublicProfileUserId(targetUserId);
     setShowPublicProfile(true);
   };
+
+  const sectionSearchItems = [
+    {
+      id: 'hero-section',
+      title: 'Inicio / Resumen',
+      description: 'Vista general de la plataforma',
+      keywords: ['inicio', 'principal', 'resumen', 'hero', 'panel'],
+    },
+    {
+      id: 'featured-section',
+      title: 'Destacados',
+      description: 'Reconocimientos recientes con mayor visibilidad',
+      keywords: ['destacados', 'top', 'reconocimientos destacados'],
+    },
+    {
+      id: 'analytics-section',
+      title: 'Distribución actual de reconocimientos',
+      description: 'Resumen y métricas por categoría',
+      keywords: ['estadisticas', 'analiticas', 'categorias', 'distribucion', 'metricas'],
+    },
+    {
+      id: 'users-directory-section',
+      title: 'Usuarios / Comunidad',
+      description: 'Buscar usuarios, seguir y reconocer',
+      keywords: ['usuarios', 'comunidad', 'seguir', 'seguidos', 'directorio'],
+    },
+    {
+      id: 'notifications-section',
+      title: 'Centro de notificaciones',
+      description: 'Notificaciones guardadas en la plataforma',
+      keywords: ['notificaciones', 'avisos', 'alertas', 'centro'],
+    },
+    {
+      id: 'activity-section',
+      title: 'Actividad reciente',
+      description: 'Interacciones recientes dentro de la comunidad',
+      keywords: ['actividad', 'reciente', 'movimientos', 'historial'],
+    },
+    {
+      id: 'profile-section',
+      title: 'Perfil',
+      description: 'Información del perfil del usuario',
+      keywords: ['perfil', 'usuario', 'foto', 'bio', 'tags'],
+    },
+    {
+      id: 'recognition-form-section',
+      title: 'Formulario de reconocimiento',
+      description: 'Enviar un reconocimiento a otro usuario',
+      keywords: ['reconocer', 'formulario', 'enviar reconocimiento', 'nuevo reconocimiento'],
+    },
+    {
+      id: 'feed-section',
+      title: 'Reconocimientos recientes',
+      description: 'Muro principal de reconocimientos',
+      keywords: ['muro', 'feed', 'reconocimientos', 'recientes', 'publicaciones'],
+    },
+  ];
 
   const normalizeReactionTotals = (totalsArray) => {
     const base = { like: 0, celebrate: 0, inspire: 0, love: 0 };
@@ -738,6 +796,8 @@ function App() {
             </div>
           </div>
 
+          <GlobalSectionSearch sections={sectionSearchItems} />
+
           <div className="user-info">
             <NotificationsBell
               userId={user.id}
@@ -840,7 +900,7 @@ function App() {
       </header>
 
       <main className="dashboard-shell">
-        <section className="hero-panel">
+        <section id="hero-section" className="hero-panel">
           <div>
             <p className="hero-kicker">Comunidad TSJ</p>
             <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
@@ -866,7 +926,7 @@ function App() {
           </div>
         </section>
 
-        <section className="featured-section">
+        <section id="featured-section" className="featured-section">
           <div className="featured-header">
             <div>
               <p className="section-label">Destacados</p>
@@ -964,7 +1024,7 @@ function App() {
           </div>
         </section>
 
-        <section className="analytics-strip">
+        <section id="analytics-section" className="analytics-strip">
           <div className="mini-stat">
             <span>🤝 Colaboración</span>
             <strong>{categoryCounts.Colaboración}</strong>
@@ -983,7 +1043,7 @@ function App() {
           </div>
         </section>
 
-        <section className="category-summary-section">
+        <section className="category-summary-section" id="category-summary-section">
           <div className="category-summary-card">
             <div className="category-summary-header">
               <div>
@@ -1037,8 +1097,8 @@ function App() {
 
         <ActivityPanel userId={user.id} />
 
-        <section className="dashboard">
-          <aside className="sidebar">
+        <section className="dashboard" id="dashboard-section">
+          <aside id="profile-section" className="sidebar">
             <div className="profile-card">
               <div className="profile-cover"></div>
 
@@ -1121,14 +1181,16 @@ function App() {
               <h3>Haz visible una acción positiva</h3>
             </div>
 
-            <RecognitionForm
-              onRecognitionSent={fetchFeed}
-              senderId={user.id}
-              preselectedUser={recognitionPrefillUser}
-            />
+            <div id="recognition-form-section">
+              <RecognitionForm
+                onRecognitionSent={fetchFeed}
+                senderId={user.id}
+                preselectedUser={recognitionPrefillUser}
+              />
+            </div>
           </aside>
 
-          <section className="feed-section">
+          <section id="feed-section" className="feed-section">
             <div className="feed-header">
               <div>
                 <p className="section-label">Muro de la comunidad</p>

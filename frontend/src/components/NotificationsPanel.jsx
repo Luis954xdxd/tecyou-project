@@ -92,7 +92,7 @@ function NotificationsPanel({ userId, onOpenProfile }) {
   };
 
   return (
-    <section className="notifications-section">
+    <section id="notifications-section" className="notifications-section">
       <div className="notifications-card">
         <div className="notifications-header">
           <div>
