@@ -3276,6 +3276,818 @@ select:focus {
   font-size: 13px;
 }
 
+
+/* ProfileDropDown.css */
+.profile-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  min-width: 280px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column; /* ← ESTO apila los elementos verticalmente */
+  gap: 8px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.avatar-large {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.status {
+  color: #22c55e;
+  font-size: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.dropdown-menu button {
+  display: block;          /* ← ESTO hace que cada botón ocupe su propia línea */
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dropdown-menu button:hover {
+  background: #f3f4f6;
+}
+
+.logout {
+  color: #ef4444;
+  border-color: #fecaca !important;
+  background: #fff5f5 !important;
+}
+
+
+/* INPUT PERSONALIZADO DE IMÁGENES */
+.hidden-file-upload {
+  display: none;
+}
+
+.custom-file-upload {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+.custom-file-upload-content {
+  width: 100%;
+  min-height: 78px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.25s ease;
+}
+
+.custom-file-upload:hover .custom-file-upload-content {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 4px rgba(91, 75, 196, 0.08);
+}
+
+.custom-file-upload-button {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(30, 58, 138, 0.14);
+}
+
+.custom-file-upload-text {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* ===== MODO OSCURO GLOBAL ===== */
+
+.App.dark {
+  background: #0b1220;
+  color: #f8fafc;
+}
+
+.App.dark,
+.App.dark .dashboard-shell,
+.App.dark .dashboard,
+.App.dark .sidebar,
+.App.dark .feed-section,
+.App.dark main {
+  background-color: #0b1220;
+  color: #f8fafc;
+}
+
+.App.dark .main-nav {
+  background: rgba(10, 15, 28, 0.92);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+/* ===== CONTENEDORES PRINCIPALES ===== */
+
+.App.dark .hero-panel,
+.App.dark .featured-card,
+.App.dark .category-summary-card,
+.App.dark .profile-card,
+.App.dark .recognition-card,
+.App.dark .login-card,
+.App.dark .nav-profile-dropdown,
+.App.dark .mini-stat,
+.App.dark .stat-card,
+.App.dark .featured-empty,
+.App.dark .empty-state,
+.App.dark .users-directory-card,
+.App.dark .notifications-card,
+.App.dark .activity-panel-card,
+.App.dark .users-directory-list-box,
+.App.dark .profile-modal,
+.App.dark .public-profile-card,
+.App.dark .public-profile-section-card {
+  background: #111827 !important;
+  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+/* Estas secciones NO deben parecer cajas separadas */
+.App.dark .featured-section,
+.App.dark .category-summary-section,
+.App.dark .analytics-strip,
+.App.dark .users-directory-section,
+.App.dark .notifications-section,
+.App.dark .activity-panel-section,
+.App.dark .feed-container,
+.App.dark .users-directory-layout,
+.App.dark .users-directory-list,
+.App.dark .activity-panel-list {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ===== TARJETAS / BLOQUES INTERNOS ===== */
+
+.App.dark .directory-user-card,
+.App.dark .directory-user-card.compact,
+.App.dark .notification-item,
+.App.dark .profile-mini-stat,
+.App.dark .sort-box,
+.App.dark .activity-item,
+.App.dark .reaction-users-panel,
+.App.dark .comment-body,
+.App.dark .comments-panel,
+.App.dark .selected-user-card,
+.App.dark .user-search-results,
+.App.dark .user-search-item {
+  background: #0f172a !important;
+  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow: none;
+}
+
+/* ===== FORMULARIO ===== */
+
+.App.dark .recognition-form,
+.App.dark .recognition-form-fields,
+.App.dark .input-group-custom,
+.App.dark .input-group,
+.App.dark .feed-search,
+.App.dark .category-filters {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.App.dark .form-intro-card,
+.App.dark .recognition-intro-card {
+  background: #172033 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.App.dark .form-intro-card h3,
+.App.dark .recognition-intro-card h3,
+.App.dark .form-intro-card .section-label,
+.App.dark .recognition-intro-card .section-label {
+  color: #f8fafc !important;
+}
+
+.App.dark .form-helper-text,
+.App.dark .recognition-intro-card p:not(.section-label) {
+  color: #cbd5e1 !important;
+}
+
+/* ===== TEXTOS ===== */
+
+.App.dark .hero-panel h1,
+.App.dark .featured-header h2,
+.App.dark .feed-header h2,
+.App.dark .category-summary-header h2,
+.App.dark .panel-header h3,
+.App.dark .profile-main-info h3,
+.App.dark .main-text,
+.App.dark .featured-main-text,
+.App.dark .logo-text,
+.App.dark .user-text strong,
+.App.dark h1,
+.App.dark h2,
+.App.dark h3,
+.App.dark h4,
+.App.dark label,
+.App.dark .users-directory-box-header h3,
+.App.dark .users-directory-header h2,
+.App.dark .activity-panel-header h2 {
+  color: #f8fafc !important;
+}
+
+.App.dark p,
+.App.dark small,
+.App.dark span,
+.App.dark .hero-subtext,
+.App.dark .feed-subtext,
+.App.dark .featured-subtext,
+.App.dark .profile-email,
+.App.dark .profile-bio,
+.App.dark .nav-dropdown-userinfo span,
+.App.dark .field-hint,
+.App.dark .profile-status-text,
+.App.dark .date,
+.App.dark .directory-user-meta span,
+.App.dark .directory-user-meta small,
+.App.dark .users-directory-subtext,
+.App.dark .activity-panel-subtext,
+.App.dark .activity-meta,
+.App.dark .comment-meta span,
+.App.dark .custom-file-upload-text {
+  color: #cbd5e1 !important;
+}
+
+.App.dark .section-label {
+  color: #a78bfa !important;
+}
+
+.App.dark .inline-user-link,
+.App.dark .reaction-user-link,
+.App.dark .notification-main-link {
+  color: #93c5fd !important;
+}
+
+/* ===== INPUTS, SELECTS, TEXTAREAS ===== */
+
+.App.dark .form-control,
+.App.dark .form-textarea,
+.App.dark input,
+.App.dark textarea,
+.App.dark select,
+.App.dark .feed-search input,
+.App.dark .sort-select {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: none !important;
+}
+
+.App.dark input[type="text"],
+.App.dark input[type="email"],
+.App.dark input[type="search"],
+.App.dark input[type="number"],
+.App.dark textarea,
+.App.dark select {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+
+.App.dark .feed-search input::placeholder,
+.App.dark .form-control::placeholder,
+.App.dark .form-textarea::placeholder,
+.App.dark input::placeholder,
+.App.dark textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.App.dark .form-control:focus,
+.App.dark .form-textarea:focus,
+.App.dark input:focus,
+.App.dark textarea:focus,
+.App.dark select:focus,
+.App.dark .feed-search input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12) !important;
+}
+
+.App.dark select option {
+  background: #111827;
+  color: #ffffff;
+}
+
+/* ===== BOTONES ===== */
+
+.App.dark .nav-dropdown-btn,
+.App.dark .profile-edit-btn,
+.App.dark .profile-photo-btn,
+.App.dark .filter-chip,
+.App.dark .follow-btn,
+.App.dark .view-profile-btn,
+.App.dark .recognize-btn,
+.App.dark .recognize-quick-btn,
+.App.dark .profile-secondary-btn,
+.App.dark .reaction-main-btn,
+.App.dark .reaction-details-btn,
+.App.dark .clear-filters-btn,
+.App.dark .comments-toggle-btn,
+.App.dark .notifications-read-all-btn,
+.App.dark .notification-read-btn,
+.App.dark .notifications-bell-btn,
+.App.dark .global-search-result-item {
+  background: #1f2937 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.App.dark .nav-dropdown-btn:hover,
+.App.dark .filter-chip:hover,
+.App.dark .profile-edit-btn:hover,
+.App.dark .profile-photo-btn:hover,
+.App.dark .profile-secondary-btn:hover,
+.App.dark .reaction-main-btn:hover,
+.App.dark .reaction-details-btn:hover,
+.App.dark .clear-filters-btn:hover,
+.App.dark .notifications-bell-btn:hover {
+  background: #273449 !important;
+}
+
+.App.dark .btn-primary,
+.App.dark .profile-save-btn,
+.App.dark .btn-submit,
+.App.dark .comment-submit-btn,
+.App.dark .custom-file-upload-button {
+  background: linear-gradient(135deg, #6366f1, #7c3aed) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.App.dark .nav-dropdown-btn.danger {
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.24) !important;
+  background: rgba(127, 29, 29, 0.16) !important;
+}
+
+/* ===== CHIPS Y BADGES ===== */
+
+.App.dark .badge-category,
+.App.dark .profile-tag,
+.App.dark .active-filter-chip,
+.App.dark .reaction-chip,
+.App.dark .category-pill {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.App.dark .reaction-chip.selected,
+.App.dark .filter-chip.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+/* ===== MENSAJES ===== */
+
+.App.dark .message-text,
+.App.dark .featured-message-text,
+.App.dark .activity-message,
+.App.dark .comment-input,
+.App.dark .comment-body,
+.App.dark .reaction-picker-panel,
+.App.dark .custom-file-upload-content {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.App.dark .message-text *,
+.App.dark .featured-message-text *,
+.App.dark .activity-message * {
+  color: #ffffff !important;
+}
+
+/* ===== AVATARES / ICONOS ===== */
+
+.App.dark .recognition-icon-box,
+.App.dark .selected-user-avatar-fallback,
+.App.dark .user-search-avatar-fallback,
+.App.dark .activity-avatar-fallback,
+.App.dark .notification-avatar-fallback,
+.App.dark .reaction-user-avatar-fallback,
+.App.dark .comment-avatar-fallback,
+.App.dark .directory-user-avatar-fallback,
+.App.dark .avatar-circle,
+.App.dark .profile-avatar-fallback,
+.App.dark .nav-dropdown-avatar-fallback {
+  background: #1f2937 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  color: #f8fafc !important;
+}
+
+/* ===== BUSCADOR GLOBAL ===== */
+
+.App.dark .global-search-input {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.App.dark .global-search-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.App.dark .global-search-results {
+  background: #111827 !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.App.dark .global-search-result-item {
+  background: #111827 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08) !important;
+}
+
+.App.dark .global-search-result-item:hover {
+  background: #172033 !important;
+}
+
+.App.dark .global-search-result-item strong {
+  color: #f8fafc !important;
+}
+
+.App.dark .global-search-result-item span,
+.App.dark .global-search-empty {
+  color: #cbd5e1 !important;
+}
+
+/* ===== BARRAS DE CATEGORÍA ===== */
+
+.App.dark .category-bar-track {
+  background: #1f2937 !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+
+.App.dark .category-bar-fill.category-colaboracion {
+  background: #60a5fa !important;
+}
+
+.App.dark .category-bar-fill.category-academico {
+  background: #a78bfa !important;
+}
+
+.App.dark .category-bar-fill.category-liderazgo {
+  background: #fbbf24 !important;
+}
+
+.App.dark .category-bar-fill.category-creatividad {
+  background: #f472b6 !important;
+}
+
+.App.dark .category-bar-label strong,
+.App.dark .stat-card strong,
+.App.dark .mini-stat strong,
+.App.dark .profile-mini-stat strong,
+.App.dark .hero-stats strong {
+  color: #93c5fd !important;
+}
+
+/* ===== MODALES ===== */
+
+.App.dark .profile-modal-overlay,
+.App.dark .recognition-image-modal-overlay {
+  background: rgba(0, 0, 0, 0.72) !important;
+}
+
+.App.dark .profile-modal,
+.App.dark .recognition-image-modal {
+  background: #111827 !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.App.dark .profile-modal-close,
+.App.dark .recognition-image-modal-close {
+  background: #1f2937 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+/* ===== LOGIN OSCURO ===== */
+
+.dark-login {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(91, 75, 196, 0.14), transparent 35%),
+    linear-gradient(135deg, #0b1220 0%, #111827 45%, #0f172a 100%) !important;
+}
+
+.App.dark .login-card {
+  background: rgba(17, 24, 39, 0.92) !important;
+}
+
+.App.dark .login-header h2,
+.App.dark .login-header p,
+.App.dark .login-footer p {
+  color: #f8fafc !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1100px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand-panel {
+    padding: 40px;
+  }
+
+  .hero-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .users-directory-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .nav-content,
+  .feed-header,
+  .featured-header,
+  .user-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-shell {
+    padding: 20px 16px 30px;
+  }
+
+  .feed-section,
+  .sidebar,
+  .hero-panel,
+  .login-card,
+  .login-brand-panel {
+    padding: 22px;
+  }
+
+  .login-brand-panel h1 {
+    font-size: 42px;
+  }
+
+  .hero-panel h1 {
+    font-size: 28px;
+  }
+
+  .feed-header h2,
+  .featured-header h2,
+  .category-summary-header h2 {
+    font-size: 24px;
+  }
+
+  .feed-subtext,
+  .featured-subtext,
+  .category-summary-subtext {
+    text-align: left;
+    max-width: none;
+  }
+
+  .analytics-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-results-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .recognition-main-row,
+  .featured-card-body {
+    flex-direction: column;
+  }
+
+  .category-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .login-logo {
+    width: 76px;
+    height: 76px;
+  }
+
+  .reaction-menu {
+    left: 0;
+    right: auto;
+    flex-wrap: nowrap;
+    max-width: calc(100vw - 70px);
+    overflow-x: auto;
+  }
+
+  .reaction-counts {
+    gap: 6px;
+  }
+
+  .feed-toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sort-box {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .scroll-top-btn {
+    right: 16px;
+    bottom: 16px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .profile-card-body {
+    padding: 0 18px 18px;
+  }
+
+  .profile-main-info h3 {
+    font-size: 22px;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-profile-dropdown {
+    right: 0;
+    width: min(290px, calc(100vw - 32px));
+  }
+
+  .profile-modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-modal-header h2 {
+    font-size: 24px;
+  }
+
+  .profile-modal-footer {
+    flex-direction: column;
+  }
+
+  .profile-save-btn,
+  .profile-secondary-btn {
+    width: 100%;
+  }
+
+  .users-directory-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .users-directory-subtext {
+    text-align: left;
+    max-width: none;
+  }
+
+  .directory-user-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .directory-user-actions {
+    width: 100%;
+    flex-direction: row;
+  }
+
+  .activity-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .activity-panel-subtext {
+    text-align: left;
+    max-width: none;
+  }
+
+  .activity-item {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .reaction-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .public-profile-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .public-profile-avatar,
+  .public-profile-avatar-fallback {
+    width: 120px;
+    height: 120px;
+  }
+
+  .public-profile-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .public-profile-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-item {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+}
+
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {
@@ -3549,6 +4361,20 @@ select:focus {
 
 .nav-content {
   align-items: stretch;
+}
+
+.custom-file-upload-content {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.custom-file-upload-button {
+  width: 100%;
+  text-align: center;
+}
+
+.custom-file-upload-text {
+  width: 100%;
 }
 
 }

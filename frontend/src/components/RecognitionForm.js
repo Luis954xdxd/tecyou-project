@@ -317,13 +317,27 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 
         <div className="input-group-custom">
           <label>Imágenes del reconocimiento</label>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
-            multiple
-            onChange={handleImageChange}
-            className="form-control"
-          />
+
+          <label className="custom-file-upload">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              multiple
+              onChange={handleImageChange}
+              className="hidden-file-upload"
+            />
+
+            <div className="custom-file-upload-content">
+              <div className="custom-file-upload-button">Subir imágenes</div>
+
+              <div className="custom-file-upload-text">
+                {selectedImages.length > 0
+                  ? `${selectedImages.length} imagen(es) seleccionada(s)`
+                  : 'No has seleccionado imágenes'}
+              </div>
+            </div>
+          </label>
+
           <small className="field-hint">
             Puedes subir hasta 5 imágenes.
           </small>

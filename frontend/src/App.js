@@ -14,6 +14,11 @@ import logoTSJ from './assets/logo-tsj.png';
 const API_BASE = 'http://localhost:5000';
 
 function App() {
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('tec_you_dark_mode');
+    return saved === 'true';
+  });
+
   const [user, setUser] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [recognitions, setRecognitions] = useState([]);
@@ -60,6 +65,20 @@ function App() {
     { key: 'inspire', label: 'Inspirador', emoji: '💡' },
     { key: 'love', label: 'Agradezco', emoji: '❤️' },
   ];
+
+  useEffect(() => {
+    localStorage.setItem('tec_you_dark_mode', String(darkMode));
+
+    if (darkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+
+    return () => {
+      document.body.classList.remove('dark');
+    };
+  }, [darkMode]);
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -711,7 +730,7 @@ function App() {
 
   if (!user) {
     return (
-      <div className="login-page">
+      <div className={`login-page ${darkMode ? 'dark-login' : ''}`}>
         <div className="login-shell">
           <div className="login-brand-panel">
             <div className="brand-top">
@@ -780,7 +799,7 @@ function App() {
   }
 
   return (
-    <div className="App">
+    <div className={`App ${darkMode ? 'dark' : ''}`}>
       <header className="main-nav">
         <div className="nav-content">
           <div className="nav-left">
@@ -864,6 +883,17 @@ function App() {
                       }}
                     >
                       Cambiar foto
+                    </button>
+
+                    <button
+                      type="button"
+                      className="nav-dropdown-btn"
+                      onClick={() => {
+                        setDarkMode((prev) => !prev);
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      {darkMode ? 'Modo claro' : 'Modo oscuro'}
                     </button>
 
                     <button
