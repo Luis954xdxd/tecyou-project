@@ -46,6 +46,9 @@ function NotificationsBell({ userId, onOpenProfile }) {
     if (item.type === 'comment_received') {
       return `${item.actor_name} comentó tu reconocimiento`;
     }
+    if (item.type === 'comment_reply_received') {
+      return `${item.actor_name} respondió tu comentario`;
+    }
 
     return item.title || 'Nueva notificación';
   };

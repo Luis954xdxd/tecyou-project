@@ -54,7 +54,11 @@ function App() {
   const [draftProfileBio, setDraftProfileBio] = useState('');
   const [draftProfileTags, setDraftProfileTags] = useState('');
 
-  const [expandedImage, setExpandedImage] = useState(null);
+  const [imageViewer, setImageViewer] = useState({
+    isOpen: false,
+    images: [],
+    currentIndex: 0,
+  });
 
   const fileInputRef = useRef(null);
   const navMenuRef = useRef(null);
@@ -94,6 +98,44 @@ function App() {
   const openPublicProfile = (targetUserId) => {
     setPublicProfileUserId(targetUserId);
     setShowPublicProfile(true);
+  };
+
+  const openImageViewer = (images, startIndex = 0) => {
+    setImageViewer({
+      isOpen: true,
+      images,
+      currentIndex: startIndex,
+    });
+  };
+
+  const closeImageViewer = () => {
+    setImageViewer({
+      isOpen: false,
+      images: [],
+      currentIndex: 0,
+    });
+  };
+
+  const goToNextImage = () => {
+    setImageViewer((prev) => {
+      if (!prev.images.length) return prev;
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === prev.images.length - 1 ? 0 : prev.currentIndex + 1,
+      };
+    });
+  };
+
+  const goToPrevImage = () => {
+    setImageViewer((prev) => {
+      if (!prev.images.length) return prev;
+      return {
+        ...prev,
+        currentIndex:
+          prev.currentIndex === 0 ? prev.images.length - 1 : prev.currentIndex - 1,
+      };
+    });
   };
 
   const sectionSearchItems = [
@@ -319,6 +361,27 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!imageViewer.isOpen) return;
+
+      if (e.key === 'Escape') {
+        closeImageViewer();
+      }
+
+      if (e.key === 'ArrowRight') {
+        goToNextImage();
+      }
+
+      if (e.key === 'ArrowLeft') {
+        goToPrevImage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [imageViewer.isOpen]);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -977,6 +1040,10 @@ function App() {
             ) : (
               featuredRecognitions.map((rec, index) => {
                 const categoryMeta = getCategoryMeta(rec.category);
+                const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
+                  ...img,
+                  fullUrl: resolveImageUrl(img.image_url),
+                }));
 
                 return (
                   <article
@@ -1019,17 +1086,17 @@ function App() {
 
                         <p className="featured-message-text">“{rec.message}”</p>
 
-                        {normalizeRecognitionImages(rec.images).length > 0 && (
+                        {recImages.length > 0 && (
                           <div className="recognition-images-grid">
-                            {normalizeRecognitionImages(rec.images).map((image) => (
+                            {recImages.map((image, imageIndex) => (
                               <button
                                 key={image.id}
                                 type="button"
                                 className="recognition-image-card"
-                                onClick={() => setExpandedImage(resolveImageUrl(image.image_url))}
+                                onClick={() => openImageViewer(recImages, imageIndex)}
                               >
                                 <img
-                                  src={resolveImageUrl(image.image_url)}
+                                  src={image.fullUrl}
                                   alt="Imagen del reconocimiento"
                                   className="recognition-image-thumb"
                                 />
@@ -1316,6 +1383,10 @@ function App() {
               ) : (
                 filteredRecognitions.map((rec, index) => {
                   const categoryMeta = getCategoryMeta(rec.category);
+                  const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
+                    ...img,
+                    fullUrl: resolveImageUrl(img.image_url),
+                  }));
 
                   return (
                     <div
@@ -1357,17 +1428,17 @@ function App() {
 
                           <p className="message-text">“{rec.message}”</p>
 
-                          {normalizeRecognitionImages(rec.images).length > 0 && (
+                          {recImages.length > 0 && (
                             <div className="recognition-images-grid">
-                              {normalizeRecognitionImages(rec.images).map((image) => (
+                              {recImages.map((image, imageIndex) => (
                                 <button
                                   key={image.id}
                                   type="button"
                                   className="recognition-image-card"
-                                  onClick={() => setExpandedImage(resolveImageUrl(image.image_url))}
+                                  onClick={() => openImageViewer(recImages, imageIndex)}
                                 >
                                   <img
-                                    src={resolveImageUrl(image.image_url)}
+                                    src={image.fullUrl}
                                     alt="Imagen del reconocimiento"
                                     className="recognition-image-thumb"
                                   />
@@ -1479,8 +1550,8 @@ function App() {
         </div>
       )}
 
-      {expandedImage && (
-        <div className="recognition-image-modal-overlay" onClick={() => setExpandedImage(null)}>
+      {imageViewer.isOpen && imageViewer.images.length > 0 && (
+        <div className="recognition-image-modal-overlay" onClick={closeImageViewer}>
           <div
             className="recognition-image-modal"
             onClick={(e) => e.stopPropagation()}
@@ -1488,16 +1559,66 @@ function App() {
             <button
               type="button"
               className="recognition-image-modal-close"
-              onClick={() => setExpandedImage(null)}
+              onClick={closeImageViewer}
             >
               ✕
             </button>
 
+            {imageViewer.images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="recognition-image-nav-btn prev"
+                  onClick={goToPrevImage}
+                >
+                  ‹
+                </button>
+
+                <button
+                  type="button"
+                  className="recognition-image-nav-btn next"
+                  onClick={goToNextImage}
+                >
+                  ›
+                </button>
+              </>
+            )}
+
+            <div className="recognition-image-modal-counter">
+              {imageViewer.currentIndex + 1} / {imageViewer.images.length}
+            </div>
+
             <img
-              src={expandedImage}
+              src={imageViewer.images[imageViewer.currentIndex].fullUrl}
               alt="Imagen ampliada del reconocimiento"
               className="recognition-image-modal-content"
             />
+
+            {imageViewer.images.length > 1 && (
+              <div className="recognition-image-modal-thumbs">
+                {imageViewer.images.map((image, index) => (
+                  <button
+                    key={image.id || index}
+                    type="button"
+                    className={`recognition-image-modal-thumb-btn ${
+                      imageViewer.currentIndex === index ? 'active' : ''
+                    }`}
+                    onClick={() =>
+                      setImageViewer((prev) => ({
+                        ...prev,
+                        currentIndex: index,
+                      }))
+                    }
+                  >
+                    <img
+                      src={image.fullUrl}
+                      alt={`Miniatura ${index + 1}`}
+                      className="recognition-image-modal-thumb"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
