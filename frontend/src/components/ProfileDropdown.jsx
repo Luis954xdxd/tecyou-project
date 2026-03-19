@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-function ProfileDropdown({ user, displayName, profileImage, getInitials, openEditProfileModal, fileInputRef, onLogout, onGoToProfile }) {
+function ProfileDropdown({ user, displayName, profileImage, getInitials, openEditProfileModal, fileInputRef, onLogout, onGoToProfile, darkMode, onToggleDark }) {
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -64,6 +64,13 @@ function ProfileDropdown({ user, displayName, profileImage, getInitials, openEdi
               fileInputRef.current?.click();
             }}>
               Cambiar foto
+            </button>
+
+            <button className="nav-dropdown-btn" onClick={() => {
+              onToggleDark();
+              setIsOpen(false);
+            }}>
+              {darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}
             </button>
 
             <button className="nav-dropdown-btn" onClick={() => {

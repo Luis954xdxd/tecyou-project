@@ -4350,6 +4350,650 @@ select:focus {
   color: var(--text);
 }
 
+.App.dark .profile-page-shell {
+  background: #0b1220;
+}
+
+.App.dark .profile-page-cover {
+  background: linear-gradient(135deg, #5b7bd8, #8a72ea);
+}
+
+.App.dark .profile-page-avatar,
+.App.dark .profile-page-avatar-fallback {
+  border-color: #0b1220;
+}
+
+.App.dark .profile-page-main h1 {
+  color: #f8fafc;
+}
+
+.App.dark .profile-page-email,
+.App.dark .profile-page-bio,
+.App.dark .profile-page-empty {
+  color: #cbd5e1;
+}
+
+.App.dark .profile-page-tag {
+  background: #1f2937;
+  color: #e9e7ff;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .profile-page-stat,
+.App.dark .profile-page-panel,
+.App.dark .profile-page-rec-card {
+  background: #111827 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  color: #f8fafc;
+}
+
+.App.dark .profile-page-rec-card span {
+  color: #cbd5e1 !important;
+}
+
+/* ===== AJUSTES FINOS MODO OSCURO ===== */
+
+/* Quitar cajas innecesarias en wrappers */
+.App.dark .feed-toolbar,
+.App.dark .feed-toolbar-row,
+.App.dark .sort-box,
+.App.dark .comments-block,
+.App.dark .comments-topbar,
+.App.dark .reaction-block,
+.App.dark .reaction-meta-row,
+.App.dark .recognition-images-grid {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Imágenes del muro sin borde/caja */
+.App.dark .recognition-image-card,
+.App.dark .recognition-image-thumb,
+.App.dark .recognition-upload-preview-card,
+.App.dark .recognition-upload-preview-image {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.App.dark .recognition-image-card {
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+/* Botones "Ver comentarios" y "Ver quién reaccionó" sin caja fea */
+.App.dark .comments-toggle-btn,
+.App.dark .reaction-details-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #cbd5e1 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.App.dark .comments-toggle-btn:hover,
+.App.dark .reaction-details-btn:hover {
+  background: transparent !important;
+  color: #ffffff !important;
+  text-decoration: underline;
+}
+
+/* Botón principal de reacción sí bonito */
+.App.dark .reaction-main-btn {
+  background: #1f2937 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: none !important;
+}
+
+/* Chips de reacciones */
+.App.dark .reaction-chip {
+  background: #182235 !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow: none !important;
+}
+
+.App.dark .reaction-chip.selected {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border-color: transparent !important;
+}
+
+/* Sort box: quitar marco exterior y dejar bonito solo el select */
+.App.dark .sort-box {
+  padding: 0 !important;
+}
+
+.App.dark .sort-box label {
+  color: #f8fafc !important;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.App.dark .sort-select {
+  background: #1f2937 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: none !important;
+}
+
+/* Comentarios sin cajas sobrantes */
+.App.dark .comments-panel,
+.App.dark .comments-list {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Actividad reciente: nombres más visibles */
+.App.dark .activity-item strong,
+.App.dark .activity-meta strong,
+.App.dark .activity-meta .inline-user-link,
+.App.dark .activity-panel-list strong {
+  color: #f8fafc !important;
+}
+
+/* Dropdown de perfil: nombre más visible */
+.App.dark .nav-dropdown-userinfo strong,
+.App.dark .nav-profile-dropdown-header strong {
+  color: #f8fafc !important;
+}
+
+/* Estado activo del dropdown */
+.App.dark .nav-dropdown-status {
+  background: #1f2937 !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+
+/* Menú de perfil más limpio */
+.App.dark .nav-profile-dropdown {
+  background: #111827 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28) !important;
+}
+
+/* Botones del dropdown */
+.App.dark .nav-dropdown-btn {
+  background: #1b2435 !important;
+  border: 1px solid rgba(148, 163, 184, 0.10) !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .nav-dropdown-btn:hover {
+  background: #243044 !important;
+}
+
+.App.dark .nav-dropdown-btn.danger {
+  background: rgba(127, 29, 29, 0.18) !important;
+  border: 1px solid rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
+}
+
+/* Visor de imágenes oscuro: quitar sensación de caja */
+.App.dark .recognition-image-modal-overlay {
+  background: rgba(2, 6, 23, 0.86) !important;
+  backdrop-filter: blur(8px);
+}
+
+.App.dark .recognition-image-modal {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.App.dark .recognition-image-modal-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.34) !important;
+}
+
+.App.dark .recognition-image-modal-close,
+.App.dark .recognition-image-nav-btn,
+.App.dark .recognition-image-modal-counter {
+  background: rgba(17, 24, 39, 0.88) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  color: #ffffff !important;
+}
+
+/* Miniaturas del visor */
+.App.dark .recognition-image-modal-thumb-btn {
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  box-shadow: none !important;
+}
+
+.App.dark .recognition-image-modal-thumb-btn.active {
+  border-color: #6366f1 !important;
+}
+
+/* Links tipo texto sin “caja” */
+.App.dark .inline-user-link {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Perfil público grande, estilo más limpio */
+.App.dark .public-profile-hero,
+.App.dark .public-profile-columns,
+.App.dark .public-profile-stats,
+.App.dark .public-profile-recognition-card {
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+/* Fotos del perfil público sin marco blanco duro */
+.App.dark .public-profile-avatar,
+.App.dark .public-profile-avatar-fallback,
+.App.dark .profile-avatar-image,
+.App.dark .nav-profile-image,
+.App.dark .nav-dropdown-avatar {
+  box-shadow: none !important;
+}
+
+/* Carrusel de imágenes del perfil tipo galería */
+.App.dark .profile-gallery-grid,
+.App.dark .public-profile-gallery {
+  background: transparent !important;
+  border: none !important;
+}
+
+.App.dark .profile-gallery-item,
+.App.dark .public-gallery-item {
+  border: none !important;
+  box-shadow: none !important;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+/* ===== PROFILE PAGE / ESTILO SOCIAL ===== */
+
+.profile-page-shell {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.profile-page-cover {
+  position: relative;
+  height: 280px;
+  background: linear-gradient(135deg, #7ca5ff 0%, #9c87ff 100%);
+}
+
+.profile-page-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+.profile-page-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+
+.profile-page-top {
+  position: relative;
+  margin-top: -78px;
+  display: flex;
+  align-items: flex-end;
+  gap: 26px;
+  margin-bottom: 28px;
+}
+
+.profile-page-avatar-wrap {
+  flex-shrink: 0;
+}
+
+.profile-page-avatar,
+.profile-page-avatar-fallback {
+  width: 170px;
+  height: 170px;
+  border-radius: 34px;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-page-avatar {
+  box-shadow: 0 18px 40px rgba(17, 24, 39, 0.14);
+}
+
+.profile-page-avatar-fallback {
+  background: #dbe4ff;
+  color: #1e3a8a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: 800;
+}
+
+.profile-page-main {
+  flex: 1;
+  padding-bottom: 10px;
+}
+
+.profile-page-main h1 {
+  margin: 0 0 8px;
+  font-size: 52px;
+  line-height: 1;
+  color: var(--text);
+}
+
+.profile-page-email {
+  margin: 0 0 14px;
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.profile-page-bio {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.55;
+  max-width: 900px;
+}
+
+.profile-page-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-page-tag {
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-page-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.profile-page-stat {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page-stat strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 36px;
+  color: var(--primary);
+}
+
+.profile-page-stat span {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.profile-page-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 26px;
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-page-panel h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--text);
+}
+
+.profile-page-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.profile-page-more-btn {
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-page-more-btn:hover {
+  text-decoration: underline;
+}
+
+.profile-page-gallery {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-page-gallery-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.profile-page-gallery-item {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  border-radius: 22px;
+}
+
+.profile-page-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.profile-page-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.profile-page-rec-card {
+  background: #f8fbff;
+  border: 1px solid #dde5f7;
+  border-radius: 20px;
+  padding: 18px;
+}
+
+.profile-page-rec-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.profile-page-rec-card span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.profile-page-rec-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.profile-page-empty {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+/* ===== DARK MODE ===== */
+
+.App.dark .profile-page-shell,
+.dark-profile-page {
+  background: #071124;
+}
+
+.App.dark .profile-page-cover,
+.dark-profile-page .profile-page-cover {
+  background: linear-gradient(135deg, #769cf0 0%, #927ff0 100%);
+}
+
+.App.dark .profile-page-main h1,
+.dark-profile-page .profile-page-main h1 {
+  color: #f8fafc;
+}
+
+.App.dark .profile-page-email,
+.App.dark .profile-page-bio,
+.App.dark .profile-page-empty,
+.dark-profile-page .profile-page-email,
+.dark-profile-page .profile-page-bio,
+.dark-profile-page .profile-page-empty {
+  color: #cbd5e1;
+}
+
+.App.dark .profile-page-tag,
+.dark-profile-page .profile-page-tag {
+  background: #17243b;
+  color: #e8e8ff;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.App.dark .profile-page-stat,
+.App.dark .profile-page-panel,
+.App.dark .profile-page-rec-card,
+.dark-profile-page .profile-page-stat,
+.dark-profile-page .profile-page-panel,
+.dark-profile-page .profile-page-rec-card {
+  background: #0b1830;
+  border: 1px solid rgba(148, 163, 184, 0.10);
+  box-shadow: none;
+}
+
+.App.dark .profile-page-stat strong,
+.dark-profile-page .profile-page-stat strong {
+  color: #4f6fff;
+}
+
+.App.dark .profile-page-stat span,
+.App.dark .profile-page-rec-card span,
+.dark-profile-page .profile-page-stat span,
+.dark-profile-page .profile-page-rec-card span {
+  color: #9fb0c8;
+}
+
+.App.dark .profile-page-rec-card strong,
+.App.dark .profile-page-rec-card p,
+.App.dark .profile-page-panel h2,
+.dark-profile-page .profile-page-rec-card strong,
+.dark-profile-page .profile-page-rec-card p,
+.dark-profile-page .profile-page-panel h2 {
+  color: #f8fafc;
+}
+
+.App.dark .profile-page-more-btn,
+.dark-profile-page .profile-page-more-btn {
+  color: #a78bfa;
+}
+
+/* quitar bordes feos en imágenes */
+.App.dark .profile-page-gallery-button,
+.App.dark .profile-page-gallery-item,
+.dark-profile-page .profile-page-gallery-button,
+.dark-profile-page .profile-page-gallery-item {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.App.dark .profile-page-avatar,
+.dark-profile-page .profile-page-avatar {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 980px) {
+  .profile-page-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .profile-page-two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-page-main h1 {
+    font-size: 42px;
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-page-cover {
+    height: 220px;
+  }
+
+  .profile-page-container {
+    padding: 0 16px 28px;
+  }
+
+  .profile-page-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+    margin-top: -56px;
+  }
+
+  .profile-page-avatar,
+  .profile-page-avatar-fallback {
+    width: 124px;
+    height: 124px;
+    border-radius: 24px;
+  }
+
+  .profile-page-main h1 {
+    font-size: 34px;
+  }
+
+  .profile-page-bio {
+    font-size: 16px;
+  }
+
+  .profile-page-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-page-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-page-section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {

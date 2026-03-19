@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
 import UsersDirectory from './components/UsersDirectory';
@@ -9,11 +10,16 @@ import NotificationsBell from './components/NotificationsBell';
 import PublicProfileModal from './components/PublicProfileModal';
 import RecognitionComments from './components/RecognitionComments';
 import GlobalSectionSearch from './components/GlobalSectionSearch';
+import ProfileDropdown from './components/ProfileDropdown';
+import ProfilePage from './pages/ProfilePage';
 import logoTSJ from './assets/logo-tsj.png';
 
 const API_BASE = 'http://localhost:5000';
 
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('tec_you_dark_mode');
     return saved === 'true';
@@ -31,7 +37,6 @@ function App() {
   const [sortBy, setSortBy] = useState('recent');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const [reactionTotals, setReactionTotals] = useState({});
   const [reactionUsersMap, setReactionUsersMap] = useState({});
@@ -48,7 +53,10 @@ function App() {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [profileBio, setProfileBio] = useState('');
-  const [profileTags, setProfileTags] = useState(['Comunidad TSJ', 'Reconocimiento positivo']);
+  const [profileTags, setProfileTags] = useState([
+    'Comunidad TSJ',
+    'Reconocimiento positivo',
+  ]);
 
   const [draftDisplayName, setDraftDisplayName] = useState('');
   const [draftProfileBio, setDraftProfileBio] = useState('');
@@ -61,7 +69,6 @@ function App() {
   });
 
   const fileInputRef = useRef(null);
-  const navMenuRef = useRef(null);
 
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '👍' },
@@ -119,6 +126,7 @@ function App() {
   const goToNextImage = () => {
     setImageViewer((prev) => {
       if (!prev.images.length) return prev;
+
       return {
         ...prev,
         currentIndex:
@@ -130,6 +138,7 @@ function App() {
   const goToPrevImage = () => {
     setImageViewer((prev) => {
       if (!prev.images.length) return prev;
+
       return {
         ...prev,
         currentIndex:
@@ -211,7 +220,9 @@ function App() {
 
   const fetchRecognitionReactions = async (recognitionId) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
+      const response = await axios.get(
+        `${API_BASE}/api/recognitions/${recognitionId}/reactions`
+      );
 
       const totals = normalizeReactionTotals(response.data?.totals || []);
       const users = response.data?.users || [];
@@ -227,14 +238,18 @@ function App() {
       }));
 
       const currentUserReaction =
-        users.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
+        users.find((item) => Number(item.user_id) === Number(user?.id))
+          ?.reaction_type || null;
 
       setUserReactionMap((prev) => ({
         ...prev,
         [recognitionId]: currentUserReaction,
       }));
     } catch (err) {
-      console.error(`Error al obtener reacciones del reconocimiento ${recognitionId}:`, err);
+      console.error(
+        `Error al obtener reacciones del reconocimiento ${recognitionId}:`,
+        err
+      );
     }
   };
 
@@ -249,7 +264,9 @@ function App() {
     try {
       const results = await Promise.all(
         feedItems.map(async (rec) => {
-          const response = await axios.get(`${API_BASE}/api/recognitions/${rec.id}/reactions`);
+          const response = await axios.get(
+            `${API_BASE}/api/recognitions/${rec.id}/reactions`
+          );
           return {
             recognitionId: rec.id,
             totals: normalizeReactionTotals(response.data?.totals || []),
@@ -266,7 +283,8 @@ function App() {
         totalsMap[item.recognitionId] = item.totals;
         usersMap[item.recognitionId] = item.users;
         myReactionMap[item.recognitionId] =
-          item.users.find((u) => Number(u.user_id) === Number(user?.id))?.reaction_type || null;
+          item.users.find((u) => Number(u.user_id) === Number(user?.id))
+            ?.reaction_type || null;
       });
 
       setReactionTotals(totalsMap);
@@ -344,39 +362,20 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (location.pathname !== '/') return;
+
     const onScroll = () => setShowScrollTop(window.scrollY > 420);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (navMenuRef.current && !navMenuRef.current.contains(event.target)) {
-        setShowProfileMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!imageViewer.isOpen) return;
 
-      if (e.key === 'Escape') {
-        closeImageViewer();
-      }
-
-      if (e.key === 'ArrowRight') {
-        goToNextImage();
-      }
-
-      if (e.key === 'ArrowLeft') {
-        goToPrevImage();
-      }
+      if (e.key === 'Escape') closeImageViewer();
+      if (e.key === 'ArrowRight') goToNextImage();
+      if (e.key === 'ArrowLeft') goToPrevImage();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -430,11 +429,18 @@ function App() {
   const featuredCategory = useMemo(() => {
     const entries = Object.entries(categoryCounts);
     if (!entries.length) return 'Sin datos';
-    const top = entries.reduce((max, current) => (current[1] > max[1] ? current : max));
+
+    const top = entries.reduce((max, current) =>
+      current[1] > max[1] ? current : max
+    );
+
     return top[1] === 0 ? 'Sin datos' : top[0];
   }, [categoryCounts]);
 
-  const featuredRecognitions = useMemo(() => [...recognitions].slice(0, 3), [recognitions]);
+  const featuredRecognitions = useMemo(
+    () => [...recognitions].slice(0, 3),
+    [recognitions]
+  );
 
   const maxCategoryCount = useMemo(() => {
     const values = Object.values(categoryCounts);
@@ -443,10 +449,30 @@ function App() {
 
   const categorySummary = useMemo(
     () => [
-      { name: 'Colaboración', value: categoryCounts.Colaboración, icon: '🤝', className: 'category-colaboracion' },
-      { name: 'Académico', value: categoryCounts.Académico, icon: '📚', className: 'category-academico' },
-      { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '⭐', className: 'category-liderazgo' },
-      { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '💡', className: 'category-creatividad' },
+      {
+        name: 'Colaboración',
+        value: categoryCounts.Colaboración,
+        icon: '🤝',
+        className: 'category-colaboracion',
+      },
+      {
+        name: 'Académico',
+        value: categoryCounts.Académico,
+        icon: '📚',
+        className: 'category-academico',
+      },
+      {
+        name: 'Liderazgo',
+        value: categoryCounts.Liderazgo,
+        icon: '⭐',
+        className: 'category-liderazgo',
+      },
+      {
+        name: 'Creatividad',
+        value: categoryCounts.Creatividad,
+        icon: '💡',
+        className: 'category-creatividad',
+      },
     ],
     [categoryCounts]
   );
@@ -457,6 +483,7 @@ function App() {
         selectedCategory === 'Todas' || rec.category === selectedCategory;
 
       const query = searchTerm.trim().toLowerCase();
+
       const matchesSearch =
         query === '' ||
         rec.sender_name?.toLowerCase().includes(query) ||
@@ -474,10 +501,14 @@ function App() {
         sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         break;
       case 'az':
-        sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
+        sorted.sort((a, b) =>
+          (a.sender_name || '').localeCompare(b.sender_name || '', 'es')
+        );
         break;
       case 'category':
-        sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
+        sorted.sort((a, b) =>
+          (a.category || '').localeCompare(b.category || '', 'es')
+        );
         break;
       case 'recent':
       default:
@@ -503,7 +534,13 @@ function App() {
     return labels;
   }, [selectedCategory, searchTerm, sortBy]);
 
-  const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
+  const categoryOptions = [
+    'Todas',
+    'Colaboración',
+    'Académico',
+    'Liderazgo',
+    'Creatividad',
+  ];
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
@@ -516,7 +553,12 @@ function App() {
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
-    return reactionTotals[recId] || { like: 0, celebrate: 0, inspire: 0, love: 0 };
+    return reactionTotals[recId] || {
+      like: 0,
+      celebrate: 0,
+      inspire: 0,
+      love: 0,
+    };
   };
 
   const getSelectedReactionMeta = (recId) => {
@@ -559,9 +601,13 @@ function App() {
       const formData = new FormData();
       formData.append('profileImage', file);
 
-      const response = await axios.post(`${API_BASE}/api/users/profile/${user.id}/photo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await axios.post(
+        `${API_BASE}/api/users/profile/${user.id}/photo`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
 
       const updatedProfile = response.data;
 
@@ -583,7 +629,6 @@ function App() {
     setDraftProfileBio(profileBio);
     setDraftProfileTags(profileTags.join(', '));
     setShowEditProfileModal(true);
-    setShowProfileMenu(false);
   };
 
   const handleSaveProfile = async () => {
@@ -604,7 +649,10 @@ function App() {
         tags: cleanedTags.length ? cleanedTags : ['Comunidad TSJ'],
       };
 
-      const response = await axios.put(`${API_BASE}/api/users/profile/${user.id}`, payload);
+      const response = await axios.put(
+        `${API_BASE}/api/users/profile/${user.id}`,
+        payload
+      );
       const updatedProfile = response.data;
 
       setDisplayName(updatedProfile.display_name || user.fullname || '');
@@ -732,7 +780,9 @@ function App() {
                     <button
                       key={reaction.key}
                       type="button"
-                      className={`reaction-option-stable ${isSelected ? 'selected' : ''}`}
+                      className={`reaction-option-stable ${
+                        isSelected ? 'selected' : ''
+                      }`}
                       onClick={async () => {
                         await handleReactionSelect(recId, reaction.key);
                         setOpenReactionPickerId(null);
@@ -806,8 +856,8 @@ function App() {
             </h1>
 
             <p className="brand-description">
-              Reconoce el esfuerzo, la dedicación y el impacto positivo de tu comunidad
-              académica en un espacio moderno, institucional y humano.
+              Reconoce el esfuerzo, la dedicación y el impacto positivo de tu
+              comunidad académica en un espacio moderno, institucional y humano.
             </p>
 
             <div className="brand-highlights">
@@ -861,8 +911,8 @@ function App() {
     );
   }
 
-  return (
-    <div className={`App ${darkMode ? 'dark' : ''}`}>
+  const dashboardView = (
+    <>
       <header className="main-nav">
         <div className="nav-content">
           <div className="nav-left">
@@ -881,113 +931,20 @@ function App() {
           <GlobalSectionSearch sections={sectionSearchItems} />
 
           <div className="user-info">
-            <NotificationsBell
-              userId={user.id}
-              onOpenProfile={openPublicProfile}
+            <NotificationsBell userId={user.id} onOpenProfile={openPublicProfile} />
+
+            <ProfileDropdown
+              user={user}
+              displayName={displayName}
+              profileImage={profileImage}
+              getInitials={getInitials}
+              openEditProfileModal={openEditProfileModal}
+              fileInputRef={fileInputRef}
+              onLogout={() => setUser(null)}
+              onGoToProfile={() => navigate('/perfil')}
+              darkMode={darkMode}
+              onToggleDark={() => setDarkMode((prev) => !prev)}
             />
-
-            <div className="nav-profile-menu-wrapper" ref={navMenuRef}>
-              <button
-                type="button"
-                className="nav-profile-trigger"
-                onClick={() => setShowProfileMenu((prev) => !prev)}
-              >
-                <div className="user-chip">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Perfil" className="nav-profile-image" />
-                  ) : (
-                    <div className="avatar-circle">{getInitials(displayName || user.fullname)}</div>
-                  )}
-
-                  <div className="user-text">
-                    <span>Hola,</span>
-                    <strong>{displayName || user.fullname}</strong>
-                  </div>
-                </div>
-              </button>
-
-              {showProfileMenu && (
-                <div className="nav-profile-dropdown">
-                  <div className="nav-profile-dropdown-header">
-                    {profileImage ? (
-                      <img src={profileImage} alt="Perfil" className="nav-dropdown-avatar" />
-                    ) : (
-                      <div className="nav-dropdown-avatar-fallback">
-                        {getInitials(displayName || user.fullname)}
-                      </div>
-                    )}
-
-                    <div className="nav-dropdown-userinfo">
-                      <strong>{displayName || user.fullname}</strong>
-                      <span>{user.email}</span>
-                    </div>
-                  </div>
-
-                  <div className="nav-dropdown-status">
-                    <span className="profile-status-dot"></span>
-                    <span>{loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}</span>
-                  </div>
-
-                  <div className="nav-dropdown-actions">
-                    <button
-                      type="button"
-                      className="nav-dropdown-btn"
-                      onClick={openEditProfileModal}
-                    >
-                      Editar perfil
-                    </button>
-
-                    <button
-                      type="button"
-                      className="nav-dropdown-btn"
-                      onClick={() => {
-                        fileInputRef.current?.click();
-                        setShowProfileMenu(false);
-                      }}
-                    >
-                      Cambiar foto
-                    </button>
-
-                    <button
-                      type="button"
-                      className="nav-dropdown-btn"
-                      onClick={() => {
-                        setDarkMode((prev) => !prev);
-                        setShowProfileMenu(false);
-                      }}
-                    >
-                      {darkMode ? 'Modo claro' : 'Modo oscuro'}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="nav-dropdown-btn"
-                      onClick={() => {
-                        window.scrollTo({ top: 520, behavior: 'smooth' });
-                        setShowProfileMenu(false);
-                      }}
-                    >
-                      Ir al perfil
-                    </button>
-
-                    <button
-                      type="button"
-                      className="nav-dropdown-btn danger"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        setUser(null);
-                      }}
-                    >
-                      Cerrar sesión
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button onClick={() => setUser(null)} className="btn-logout">
-              Cerrar sesión
-            </button>
           </div>
         </div>
       </header>
@@ -1187,10 +1144,7 @@ function App() {
           onOpenProfile={openPublicProfile}
         />
 
-        <NotificationsPanel
-          userId={user.id}
-          onOpenProfile={openPublicProfile}
-        />
+        <NotificationsPanel userId={user.id} onOpenProfile={openPublicProfile} />
 
         <ActivityPanel userId={user.id} />
 
@@ -1353,7 +1307,9 @@ function App() {
               <span>
                 Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
               </span>
-              {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
+              {(selectedCategory !== 'Todas' ||
+                searchTerm.trim() !== '' ||
+                sortBy !== 'recent') && (
                 <button
                   type="button"
                   className="clear-filters-btn"
@@ -1623,7 +1579,7 @@ function App() {
         </div>
       )}
 
-      {showScrollTop && (
+      {showScrollTop && location.pathname === '/' && (
         <button
           type="button"
           className="scroll-top-btn"
@@ -1634,6 +1590,31 @@ function App() {
           ↑
         </button>
       )}
+    </>
+  );
+
+  return (
+    <div className={`App ${darkMode ? 'dark' : ''}`}>
+      <Routes>
+        <Route path="/" element={dashboardView} />
+        <Route
+          path="/perfil"
+          element={
+            <ProfilePage
+              user={user}
+              profileImage={profileImage}
+              displayName={displayName}
+              profileBio={profileBio}
+              profileTags={profileTags}
+              recognitions={recognitions}
+              onBack={() => navigate('/')}
+              onOpenImageViewer={openImageViewer}
+              darkMode={darkMode}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }
