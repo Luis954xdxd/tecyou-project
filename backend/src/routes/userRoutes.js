@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
-        cb(null, `user_${req.params.id}_${Date.now()}${ext}`);
+        cb(null, `user_${req.params.id || 'file'}_${Date.now()}${ext}`);
     }
 });
 
@@ -55,8 +55,16 @@ router.post('/login', async (req, res) => {
         } else {
             const tempName = email.split('@')[0];
             const newUser = await pool.query(
-                `INSERT INTO users (fullname, display_name, email, role, bio, tags)
-                 VALUES ($1, $2, $3, $4, $5, $6)
+                `INSERT INTO users (
+                    fullname,
+                    display_name,
+                    email,
+                    role,
+                    bio,
+                    tags,
+                    is_verified
+                 )
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                  RETURNING *`,
                 [
                     tempName,
@@ -64,7 +72,8 @@ router.post('/login', async (req, res) => {
                     email,
                     'student',
                     'Usuario participante en la comunidad ¡Tec! ¡you!',
-                    ['Comunidad TSJ', 'Reconocimiento positivo']
+                    ['Comunidad TSJ', 'Reconocimiento positivo'],
+                    false
                 ]
             );
             return res.json(newUser.rows[0]);
@@ -81,7 +90,7 @@ router.get('/search', async (req, res) => {
         const q = (req.query.q || '').trim();
         const currentUserId = req.query.currentUserId || null;
 
-        if (!q) {
+        if (!q || q.length < 2) {
             return res.json([]);
         }
 
@@ -92,12 +101,16 @@ router.get('/search', async (req, res) => {
                 COALESCE(u.display_name, u.fullname) AS display_name,
                 u.email,
                 u.profile_image_url,
+                u.cover_image_url,
                 u.role,
                 u.bio,
+                u.tags,
+                u.is_verified,
                 EXISTS (
                     SELECT 1
                     FROM user_follows uf
-                    WHERE uf.follower_id = $2 AND uf.following_id = u.id
+                    WHERE uf.follower_id = $2
+                      AND uf.following_id = u.id
                 ) AS is_following
              FROM users u
              WHERE
@@ -128,12 +141,16 @@ router.get('/all', async (req, res) => {
                 COALESCE(u.display_name, u.fullname) AS display_name,
                 u.email,
                 u.profile_image_url,
+                u.cover_image_url,
                 u.role,
                 u.bio,
+                u.tags,
+                u.is_verified,
                 EXISTS (
                     SELECT 1
                     FROM user_follows uf
-                    WHERE uf.follower_id = $1 AND uf.following_id = u.id
+                    WHERE uf.follower_id = $1
+                      AND uf.following_id = u.id
                 ) AS is_following
              FROM users u
              ORDER BY COALESCE(u.display_name, u.fullname) ASC`,
@@ -153,9 +170,32 @@ router.get('/profile/:id', async (req, res) => {
         const { id } = req.params;
 
         const user = await pool.query(
-            `SELECT id, fullname, display_name, email, role, bio, profile_image_url, tags, created_at
-             FROM users
-             WHERE id = $1`,
+            `SELECT
+                u.id,
+                u.fullname,
+                u.display_name,
+                u.email,
+                u.role,
+                u.bio,
+                u.profile_image_url,
+                u.cover_image_url,
+                u.tags,
+                u.birth_date,
+                u.location,
+                u.is_verified,
+                u.created_at,
+                (
+                    SELECT COUNT(*)
+                    FROM user_follows uf
+                    WHERE uf.following_id = u.id
+                )::int AS followers_count,
+                (
+                    SELECT COUNT(*)
+                    FROM user_follows uf
+                    WHERE uf.follower_id = u.id
+                )::int AS following_count
+             FROM users u
+             WHERE u.id = $1`,
             [id]
         );
 
@@ -174,16 +214,45 @@ router.get('/profile/:id', async (req, res) => {
 router.put('/profile/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { display_name, bio, tags } = req.body;
+        const { display_name, bio, tags, birth_date, location } = req.body;
+
+        const cleanedTags = Array.isArray(tags)
+            ? tags
+                .map((tag) => String(tag).trim())
+                .filter((tag) => tag !== '')
+                .slice(0, 8)
+            : [];
 
         const updatedUser = await pool.query(
             `UPDATE users
              SET display_name = $1,
                  bio = $2,
-                 tags = $3
-             WHERE id = $4
-             RETURNING id, fullname, display_name, email, role, bio, profile_image_url, tags, created_at`,
-            [display_name, bio, tags, id]
+                 tags = $3,
+                 birth_date = $4,
+                 location = $5
+             WHERE id = $6
+             RETURNING
+                id,
+                fullname,
+                display_name,
+                email,
+                role,
+                bio,
+                profile_image_url,
+                cover_image_url,
+                tags,
+                birth_date,
+                location,
+                is_verified,
+                created_at`,
+            [
+                display_name || null,
+                bio || null,
+                cleanedTags,
+                birth_date || null,
+                location || null,
+                id
+            ]
         );
 
         if (updatedUser.rows.length === 0) {
@@ -197,7 +266,7 @@ router.put('/profile/:id', async (req, res) => {
     }
 });
 
-// SUBIR FOTO
+// SUBIR FOTO DE PERFIL
 router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res) => {
     try {
         const { id } = req.params;
@@ -212,7 +281,20 @@ router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res
             `UPDATE users
              SET profile_image_url = $1
              WHERE id = $2
-             RETURNING id, fullname, display_name, email, role, bio, profile_image_url, tags, created_at`,
+             RETURNING
+                id,
+                fullname,
+                display_name,
+                email,
+                role,
+                bio,
+                profile_image_url,
+                cover_image_url,
+                tags,
+                birth_date,
+                location,
+                is_verified,
+                created_at`,
             [imagePath, id]
         );
 
@@ -224,6 +306,49 @@ router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res
     } catch (err) {
         console.error('Error en POST /profile/:id/photo:', err.message);
         res.status(500).send('Error al subir la foto de perfil.');
+    }
+});
+
+// SUBIR PORTADA
+router.post('/profile/:id/cover', upload.single('coverImage'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se recibió ninguna imagen de portada.' });
+        }
+
+        const imagePath = `/uploads/profiles/${req.file.filename}`;
+
+        const updatedUser = await pool.query(
+            `UPDATE users
+             SET cover_image_url = $1
+             WHERE id = $2
+             RETURNING
+                id,
+                fullname,
+                display_name,
+                email,
+                role,
+                bio,
+                profile_image_url,
+                cover_image_url,
+                tags,
+                birth_date,
+                location,
+                is_verified,
+                created_at`,
+            [imagePath, id]
+        );
+
+        if (updatedUser.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        res.json(updatedUser.rows[0]);
+    } catch (err) {
+        console.error('Error en POST /profile/:id/cover:', err.message);
+        res.status(500).send('Error al subir la portada.');
     }
 });
 
@@ -313,8 +438,11 @@ router.get('/:id/following', async (req, res) => {
                 COALESCE(u.display_name, u.fullname) AS display_name,
                 u.email,
                 u.profile_image_url,
+                u.cover_image_url,
                 u.role,
                 u.bio,
+                u.tags,
+                u.is_verified,
                 uf.created_at AS followed_at
              FROM user_follows uf
              JOIN users u ON uf.following_id = u.id
@@ -342,8 +470,11 @@ router.get('/:id/followers', async (req, res) => {
                 COALESCE(u.display_name, u.fullname) AS display_name,
                 u.email,
                 u.profile_image_url,
+                u.cover_image_url,
                 u.role,
                 u.bio,
+                u.tags,
+                u.is_verified,
                 uf.created_at AS followed_at
              FROM user_follows uf
              JOIN users u ON uf.follower_id = u.id
@@ -374,7 +505,11 @@ router.get('/:id/public', async (req, res) => {
                 u.role,
                 u.bio,
                 u.profile_image_url,
+                u.cover_image_url,
                 u.tags,
+                u.birth_date,
+                u.location,
+                u.is_verified,
                 u.created_at,
                 EXISTS (
                     SELECT 1

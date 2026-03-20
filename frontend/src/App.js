@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
 import UsersDirectory from './components/UsersDirectory';
@@ -36,7 +36,26 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showScrollTop, setShowScrollTop] = useState(false);
+
   const [profileImage, setProfileImage] = useState(null);
+  const [coverImage, setCoverImage] = useState(null);
+
+  const [displayName, setDisplayName] = useState('');
+  const [profileBio, setProfileBio] = useState('');
+  const [profileTags, setProfileTags] = useState(['Comunidad TSJ', 'Reconocimiento positivo']);
+  const [birthDate, setBirthDate] = useState('');
+  const [locationText, setLocationText] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+
+  const [draftDisplayName, setDraftDisplayName] = useState('');
+  const [draftProfileBio, setDraftProfileBio] = useState('');
+  const [draftProfileTags, setDraftProfileTags] = useState('');
+  const [draftBirthDate, setDraftBirthDate] = useState('');
+  const [draftLocationText, setDraftLocationText] = useState('');
+
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   const [reactionTotals, setReactionTotals] = useState({});
   const [reactionUsersMap, setReactionUsersMap] = useState({});
@@ -50,18 +69,6 @@ function App() {
   const [publicProfileUserId, setPublicProfileUserId] = useState(null);
   const [showPublicProfile, setShowPublicProfile] = useState(false);
 
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-  const [displayName, setDisplayName] = useState('');
-  const [profileBio, setProfileBio] = useState('');
-  const [profileTags, setProfileTags] = useState([
-    'Comunidad TSJ',
-    'Reconocimiento positivo',
-  ]);
-
-  const [draftDisplayName, setDraftDisplayName] = useState('');
-  const [draftProfileBio, setDraftProfileBio] = useState('');
-  const [draftProfileTags, setDraftProfileTags] = useState('');
-
   const [imageViewer, setImageViewer] = useState({
     isOpen: false,
     images: [],
@@ -69,6 +76,7 @@ function App() {
   });
 
   const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
 
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '👍' },
@@ -79,16 +87,10 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('tec_you_dark_mode', String(darkMode));
+    if (darkMode) document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
 
-    if (darkMode) {
-      document.body.classList.add('dark');
-    } else {
-      document.body.classList.remove('dark');
-    }
-
-    return () => {
-      document.body.classList.remove('dark');
-    };
+    return () => document.body.classList.remove('dark');
   }, [darkMode]);
 
   const resolveImageUrl = (url) => {
@@ -126,7 +128,6 @@ function App() {
   const goToNextImage = () => {
     setImageViewer((prev) => {
       if (!prev.images.length) return prev;
-
       return {
         ...prev,
         currentIndex:
@@ -138,7 +139,6 @@ function App() {
   const goToPrevImage = () => {
     setImageViewer((prev) => {
       if (!prev.images.length) return prev;
-
       return {
         ...prev,
         currentIndex:
@@ -148,65 +148,19 @@ function App() {
   };
 
   const sectionSearchItems = [
-    {
-      id: 'hero-section',
-      title: 'Inicio / Resumen',
-      description: 'Vista general de la plataforma',
-      keywords: ['inicio', 'principal', 'resumen', 'hero', 'panel'],
-    },
-    {
-      id: 'featured-section',
-      title: 'Destacados',
-      description: 'Reconocimientos recientes con mayor visibilidad',
-      keywords: ['destacados', 'top', 'reconocimientos destacados'],
-    },
-    {
-      id: 'analytics-section',
-      title: 'Distribución actual de reconocimientos',
-      description: 'Resumen y métricas por categoría',
-      keywords: ['estadisticas', 'analiticas', 'categorias', 'distribucion', 'metricas'],
-    },
-    {
-      id: 'users-directory-section',
-      title: 'Usuarios / Comunidad',
-      description: 'Buscar usuarios, seguir y reconocer',
-      keywords: ['usuarios', 'comunidad', 'seguir', 'seguidos', 'directorio'],
-    },
-    {
-      id: 'notifications-section',
-      title: 'Centro de notificaciones',
-      description: 'Notificaciones guardadas en la plataforma',
-      keywords: ['notificaciones', 'avisos', 'alertas', 'centro'],
-    },
-    {
-      id: 'activity-section',
-      title: 'Actividad reciente',
-      description: 'Interacciones recientes dentro de la comunidad',
-      keywords: ['actividad', 'reciente', 'movimientos', 'historial'],
-    },
-    {
-      id: 'profile-section',
-      title: 'Perfil',
-      description: 'Información del perfil del usuario',
-      keywords: ['perfil', 'usuario', 'foto', 'bio', 'tags'],
-    },
-    {
-      id: 'recognition-form-section',
-      title: 'Formulario de reconocimiento',
-      description: 'Enviar un reconocimiento a otro usuario',
-      keywords: ['reconocer', 'formulario', 'enviar reconocimiento', 'nuevo reconocimiento'],
-    },
-    {
-      id: 'feed-section',
-      title: 'Reconocimientos recientes',
-      description: 'Muro principal de reconocimientos',
-      keywords: ['muro', 'feed', 'reconocimientos', 'recientes', 'publicaciones'],
-    },
+    { id: 'hero-section', title: 'Inicio / Resumen', description: 'Vista general', keywords: ['inicio', 'resumen', 'principal'] },
+    { id: 'featured-section', title: 'Destacados', description: 'Reconocimientos destacados', keywords: ['destacados', 'top'] },
+    { id: 'analytics-section', title: 'Distribución', description: 'Métricas por categoría', keywords: ['estadisticas', 'analiticas', 'categorias'] },
+    { id: 'users-directory-section', title: 'Usuarios / Comunidad', description: 'Directorio y seguidores', keywords: ['usuarios', 'seguir', 'directorio'] },
+    { id: 'notifications-section', title: 'Notificaciones', description: 'Centro de notificaciones', keywords: ['notificaciones', 'avisos'] },
+    { id: 'activity-section', title: 'Actividad reciente', description: 'Actividad comunitaria', keywords: ['actividad', 'reciente'] },
+    { id: 'profile-section', title: 'Perfil', description: 'Bloque de perfil', keywords: ['perfil', 'foto', 'bio'] },
+    { id: 'recognition-form-section', title: 'Formulario', description: 'Enviar reconocimiento', keywords: ['reconocer', 'formulario'] },
+    { id: 'feed-section', title: 'Reconocimientos recientes', description: 'Muro principal', keywords: ['muro', 'feed'] },
   ];
 
   const normalizeReactionTotals = (totalsArray) => {
     const base = { like: 0, celebrate: 0, inspire: 0, love: 0 };
-
     if (!Array.isArray(totalsArray)) return base;
 
     totalsArray.forEach((item) => {
@@ -220,36 +174,19 @@ function App() {
 
   const fetchRecognitionReactions = async (recognitionId) => {
     try {
-      const response = await axios.get(
-        `${API_BASE}/api/recognitions/${recognitionId}/reactions`
-      );
-
+      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
       const totals = normalizeReactionTotals(response.data?.totals || []);
       const users = response.data?.users || [];
 
-      setReactionTotals((prev) => ({
-        ...prev,
-        [recognitionId]: totals,
-      }));
-
-      setReactionUsersMap((prev) => ({
-        ...prev,
-        [recognitionId]: users,
-      }));
+      setReactionTotals((prev) => ({ ...prev, [recognitionId]: totals }));
+      setReactionUsersMap((prev) => ({ ...prev, [recognitionId]: users }));
 
       const currentUserReaction =
-        users.find((item) => Number(item.user_id) === Number(user?.id))
-          ?.reaction_type || null;
+        users.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
 
-      setUserReactionMap((prev) => ({
-        ...prev,
-        [recognitionId]: currentUserReaction,
-      }));
+      setUserReactionMap((prev) => ({ ...prev, [recognitionId]: currentUserReaction }));
     } catch (err) {
-      console.error(
-        `Error al obtener reacciones del reconocimiento ${recognitionId}:`,
-        err
-      );
+      console.error(`Error al obtener reacciones del reconocimiento ${recognitionId}:`, err);
     }
   };
 
@@ -264,9 +201,7 @@ function App() {
     try {
       const results = await Promise.all(
         feedItems.map(async (rec) => {
-          const response = await axios.get(
-            `${API_BASE}/api/recognitions/${rec.id}/reactions`
-          );
+          const response = await axios.get(`${API_BASE}/api/recognitions/${rec.id}/reactions`);
           return {
             recognitionId: rec.id,
             totals: normalizeReactionTotals(response.data?.totals || []),
@@ -283,8 +218,7 @@ function App() {
         totalsMap[item.recognitionId] = item.totals;
         usersMap[item.recognitionId] = item.users;
         myReactionMap[item.recognitionId] =
-          item.users.find((u) => Number(u.user_id) === Number(user?.id))
-            ?.reaction_type || null;
+          item.users.find((u) => Number(u.user_id) === Number(user?.id))?.reaction_type || null;
       });
 
       setReactionTotals(totalsMap);
@@ -324,16 +258,28 @@ function App() {
           ? profile.tags
           : ['Comunidad TSJ', 'Reconocimiento positivo']
       );
+
+      setBirthDate(profile.birth_date || '');
+      setLocationText(profile.location || '');
+      setIsVerified(Boolean(profile.is_verified));
+      setFollowersCount(Number(profile.followers_count || 0));
+      setFollowingCount(Number(profile.following_count || 0));
+
       setProfileImage(resolveImageUrl(profile.profile_image_url));
-      setUser((prev) => ({
-        ...prev,
-        ...profile,
-      }));
+      setCoverImage(resolveImageUrl(profile.cover_image_url));
+
+      setUser((prev) => ({ ...prev, ...profile }));
     } catch (err) {
       console.error('Error al obtener el perfil:', err);
     } finally {
       setLoadingProfile(false);
     }
+  };
+
+  const handleRefreshAllProfileData = async () => {
+    if (!user?.id) return;
+    await fetchUserProfile(user.id);
+    await fetchFeed();
   };
 
   const handleLogin = async (e) => {
@@ -356,14 +302,18 @@ function App() {
 
   useEffect(() => {
     if (user?.id) {
-      fetchFeed();
-      fetchUserProfile(user.id);
+      handleRefreshAllProfileData();
     }
   }, [user?.id]);
 
   useEffect(() => {
-    if (location.pathname !== '/') return;
+    if (location.pathname === '/perfil' && user?.id) {
+      handleRefreshAllProfileData();
+    }
+  }, [location.pathname, user?.id]);
 
+  useEffect(() => {
+    if (location.pathname !== '/') return;
     const onScroll = () => setShowScrollTop(window.scrollY > 420);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
@@ -372,7 +322,6 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!imageViewer.isOpen) return;
-
       if (e.key === 'Escape') closeImageViewer();
       if (e.key === 'ArrowRight') goToNextImage();
       if (e.key === 'ArrowLeft') goToPrevImage();
@@ -407,7 +356,6 @@ function App() {
       Liderazgo: { icon: '⭐', className: 'category-liderazgo' },
       Creatividad: { icon: '💡', className: 'category-creatividad' },
     };
-
     return categories[category] || { icon: '✨', className: 'category-default' };
   };
 
@@ -429,18 +377,11 @@ function App() {
   const featuredCategory = useMemo(() => {
     const entries = Object.entries(categoryCounts);
     if (!entries.length) return 'Sin datos';
-
-    const top = entries.reduce((max, current) =>
-      current[1] > max[1] ? current : max
-    );
-
+    const top = entries.reduce((max, current) => (current[1] > max[1] ? current : max));
     return top[1] === 0 ? 'Sin datos' : top[0];
   }, [categoryCounts]);
 
-  const featuredRecognitions = useMemo(
-    () => [...recognitions].slice(0, 3),
-    [recognitions]
-  );
+  const featuredRecognitions = useMemo(() => [...recognitions].slice(0, 3), [recognitions]);
 
   const maxCategoryCount = useMemo(() => {
     const values = Object.values(categoryCounts);
@@ -449,30 +390,10 @@ function App() {
 
   const categorySummary = useMemo(
     () => [
-      {
-        name: 'Colaboración',
-        value: categoryCounts.Colaboración,
-        icon: '🤝',
-        className: 'category-colaboracion',
-      },
-      {
-        name: 'Académico',
-        value: categoryCounts.Académico,
-        icon: '📚',
-        className: 'category-academico',
-      },
-      {
-        name: 'Liderazgo',
-        value: categoryCounts.Liderazgo,
-        icon: '⭐',
-        className: 'category-liderazgo',
-      },
-      {
-        name: 'Creatividad',
-        value: categoryCounts.Creatividad,
-        icon: '💡',
-        className: 'category-creatividad',
-      },
+      { name: 'Colaboración', value: categoryCounts.Colaboración, icon: '🤝', className: 'category-colaboracion' },
+      { name: 'Académico', value: categoryCounts.Académico, icon: '📚', className: 'category-academico' },
+      { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '⭐', className: 'category-liderazgo' },
+      { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '💡', className: 'category-creatividad' },
     ],
     [categoryCounts]
   );
@@ -483,7 +404,6 @@ function App() {
         selectedCategory === 'Todas' || rec.category === selectedCategory;
 
       const query = searchTerm.trim().toLowerCase();
-
       const matchesSearch =
         query === '' ||
         rec.sender_name?.toLowerCase().includes(query) ||
@@ -501,14 +421,10 @@ function App() {
         sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         break;
       case 'az':
-        sorted.sort((a, b) =>
-          (a.sender_name || '').localeCompare(b.sender_name || '', 'es')
-        );
+        sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
         break;
       case 'category':
-        sorted.sort((a, b) =>
-          (a.category || '').localeCompare(b.category || '', 'es')
-        );
+        sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
         break;
       case 'recent':
       default:
@@ -534,13 +450,7 @@ function App() {
     return labels;
   }, [selectedCategory, searchTerm, sortBy]);
 
-  const categoryOptions = [
-    'Todas',
-    'Colaboración',
-    'Académico',
-    'Liderazgo',
-    'Creatividad',
-  ];
+  const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
@@ -553,12 +463,7 @@ function App() {
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
-    return reactionTotals[recId] || {
-      like: 0,
-      celebrate: 0,
-      inspire: 0,
-      love: 0,
-    };
+    return reactionTotals[recId] || { like: 0, celebrate: 0, inspire: 0, love: 0 };
   };
 
   const getSelectedReactionMeta = (recId) => {
@@ -604,21 +509,49 @@ function App() {
       const response = await axios.post(
         `${API_BASE}/api/users/profile/${user.id}/photo`,
         formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
       const updatedProfile = response.data;
-
       setProfileImage(resolveImageUrl(updatedProfile.profile_image_url));
-      setUser((prev) => ({
-        ...prev,
-        ...updatedProfile,
-      }));
+      setUser((prev) => ({ ...prev, ...updatedProfile }));
+      await handleRefreshAllProfileData();
     } catch (err) {
       console.error('Error al subir la foto:', err);
       alert(err.response?.data?.error || 'No se pudo subir la foto de perfil.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleCoverImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Selecciona una imagen PNG, JPG o WEBP.');
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('coverImage', file);
+
+      const response = await axios.post(
+        `${API_BASE}/api/users/profile/${user.id}/cover`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      const updatedProfile = response.data;
+      setCoverImage(resolveImageUrl(updatedProfile.cover_image_url));
+      setUser((prev) => ({ ...prev, ...updatedProfile }));
+      await handleRefreshAllProfileData();
+    } catch (err) {
+      console.error('Error al subir portada:', err);
+      alert(err.response?.data?.error || 'No se pudo subir la portada.');
     } finally {
       e.target.value = '';
     }
@@ -628,6 +561,8 @@ function App() {
     setDraftDisplayName(displayName || user.fullname || '');
     setDraftProfileBio(profileBio);
     setDraftProfileTags(profileTags.join(', '));
+    setDraftBirthDate(birthDate || '');
+    setDraftLocationText(locationText || '');
     setShowEditProfileModal(true);
   };
 
@@ -638,7 +573,7 @@ function App() {
       .split(',')
       .map((tag) => tag.trim())
       .filter((tag) => tag !== '')
-      .slice(0, 5);
+      .slice(0, 8);
 
     try {
       setSavingProfile(true);
@@ -647,12 +582,11 @@ function App() {
         display_name: draftDisplayName.trim() || user.fullname || '',
         bio: draftProfileBio.trim(),
         tags: cleanedTags.length ? cleanedTags : ['Comunidad TSJ'],
+        birth_date: draftBirthDate || null,
+        location: draftLocationText.trim(),
       };
 
-      const response = await axios.put(
-        `${API_BASE}/api/users/profile/${user.id}`,
-        payload
-      );
+      const response = await axios.put(`${API_BASE}/api/users/profile/${user.id}`, payload);
       const updatedProfile = response.data;
 
       setDisplayName(updatedProfile.display_name || user.fullname || '');
@@ -662,13 +596,15 @@ function App() {
           ? updatedProfile.tags
           : ['Comunidad TSJ']
       );
+      setBirthDate(updatedProfile.birth_date || '');
+      setLocationText(updatedProfile.location || '');
+      setIsVerified(Boolean(updatedProfile.is_verified));
       setProfileImage(resolveImageUrl(updatedProfile.profile_image_url));
-      setUser((prev) => ({
-        ...prev,
-        ...updatedProfile,
-      }));
+      setCoverImage(resolveImageUrl(updatedProfile.cover_image_url));
 
+      setUser((prev) => ({ ...prev, ...updatedProfile }));
       setShowEditProfileModal(false);
+      await handleRefreshAllProfileData();
     } catch (err) {
       console.error('Error al guardar perfil:', err);
       alert(err.response?.data?.error || 'No se pudo guardar el perfil.');
@@ -679,7 +615,6 @@ function App() {
 
   const renderReactionUsersPanel = (recId) => {
     const users = reactionUsersMap[recId] || [];
-
     if (users.length === 0) {
       return (
         <div className="reaction-users-panel">
@@ -743,20 +678,10 @@ function App() {
             type="button"
             className={`reaction-main-btn ${selectedMeta ? 'active' : ''}`}
             disabled={isReacting}
-            onClick={() =>
-              setOpenReactionPickerId((prev) => (prev === recId ? null : recId))
-            }
+            onClick={() => setOpenReactionPickerId((prev) => (prev === recId ? null : recId))}
           >
-            <span className="reaction-main-icon">
-              {selectedMeta ? selectedMeta.emoji : '✨'}
-            </span>
-            <span>
-              {isReacting
-                ? 'Guardando...'
-                : selectedMeta
-                ? selectedMeta.label
-                : 'Reaccionar'}
-            </span>
+            <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '✨'}</span>
+            <span>{isReacting ? 'Guardando...' : selectedMeta ? selectedMeta.label : 'Reaccionar'}</span>
           </button>
 
           {isPickerOpen && !isReacting && (
@@ -780,22 +705,14 @@ function App() {
                     <button
                       key={reaction.key}
                       type="button"
-                      className={`reaction-option-stable ${
-                        isSelected ? 'selected' : ''
-                      }`}
+                      className={`reaction-option-stable ${isSelected ? 'selected' : ''}`}
                       onClick={async () => {
                         await handleReactionSelect(recId, reaction.key);
                         setOpenReactionPickerId(null);
                       }}
-                      aria-label={reaction.label}
-                      title={reaction.label}
                     >
-                      <span className="reaction-option-stable-emoji">
-                        {reaction.emoji}
-                      </span>
-                      <span className="reaction-option-stable-label">
-                        {reaction.label}
-                      </span>
+                      <span className="reaction-option-stable-emoji">{reaction.emoji}</span>
+                      <span className="reaction-option-stable-label">{reaction.label}</span>
                     </button>
                   );
                 })}
@@ -813,9 +730,7 @@ function App() {
             {reactionOptions.map((reaction) => (
               <div
                 key={reaction.key}
-                className={`reaction-chip ${
-                  userReactionMap[recId] === reaction.key ? 'selected' : ''
-                }`}
+                className={`reaction-chip ${userReactionMap[recId] === reaction.key ? 'selected' : ''}`}
               >
                 <span>{reaction.emoji}</span>
                 <strong>{reactionData[reaction.key] || 0}</strong>
@@ -826,13 +741,9 @@ function App() {
           <button
             type="button"
             className="reaction-details-btn"
-            onClick={() =>
-              setOpenReactionPanelId((prev) => (prev === recId ? null : recId))
-            }
+            onClick={() => setOpenReactionPanelId((prev) => (prev === recId ? null : recId))}
           >
-            {openReactionPanelId === recId
-              ? 'Ocultar reacciones'
-              : 'Ver quién reaccionó'}
+            {openReactionPanelId === recId ? 'Ocultar reacciones' : 'Ver quién reaccionó'}
           </button>
         </div>
 
@@ -856,8 +767,8 @@ function App() {
             </h1>
 
             <p className="brand-description">
-              Reconoce el esfuerzo, la dedicación y el impacto positivo de tu
-              comunidad académica en un espacio moderno, institucional y humano.
+              Reconoce el esfuerzo, la dedicación y el impacto positivo de tu comunidad
+              académica en un espacio moderno, institucional y humano.
             </p>
 
             <div className="brand-highlights">
@@ -955,8 +866,7 @@ function App() {
             <p className="hero-kicker">Comunidad TSJ</p>
             <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
             <p className="hero-subtext">
-              Publica reconocimientos, celebra logros y fortalece la identidad de tu
-              comunidad académica con una experiencia más clara, humana y moderna.
+              Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
             </p>
           </div>
 
@@ -1307,9 +1217,7 @@ function App() {
               <span>
                 Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
               </span>
-              {(selectedCategory !== 'Todas' ||
-                searchTerm.trim() !== '' ||
-                sortBy !== 'recent') && (
+              {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
                 <button
                   type="button"
                   className="clear-filters-btn"
@@ -1420,35 +1328,88 @@ function App() {
           </section>
         </section>
       </main>
+    </>
+  );
 
-      <PublicProfileModal
-        userId={publicProfileUserId}
-        currentUserId={user.id}
-        isOpen={showPublicProfile}
-        onClose={() => setShowPublicProfile(false)}
-        onFollowChanged={() => {
-          fetchFeed();
-        }}
-      />
+  return (
+    <div className={`App ${darkMode ? 'dark' : ''}`}>
+      <Routes>
+        <Route path="/" element={dashboardView} />
+        <Route
+          path="/perfil"
+          element={
+            <ProfilePage
+              user={user}
+              profileImage={profileImage}
+              coverImage={coverImage}
+              displayName={displayName}
+              profileBio={profileBio}
+              profileTags={profileTags}
+              recognitions={recognitions}
+              onBack={() => navigate('/')}
+              onOpenImageViewer={openImageViewer}
+              darkMode={darkMode}
+              onOpenEditProfile={openEditProfileModal}
+              followingCount={followingCount}
+              followersCount={followersCount}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {showEditProfileModal && (
         <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header">
-              <div>
-                <p className="section-label">Perfil</p>
-                <h2>Editar información visible</h2>
-              </div>
+          <div className="profile-modal premium-profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="premium-profile-modal-cover">
+              {coverImage ? (
+                <img src={coverImage} alt="Portada" className="premium-profile-modal-cover-image" />
+              ) : null}
+
               <button
                 type="button"
-                className="profile-modal-close"
+                className="premium-cover-btn"
+                onClick={() => coverInputRef.current?.click()}
+              >
+                Cambiar portada
+              </button>
+
+              <button
+                type="button"
+                className="premium-profile-modal-close"
                 onClick={() => setShowEditProfileModal(false)}
               >
                 ✕
               </button>
             </div>
 
-            <div className="profile-modal-body">
+            <div className="premium-profile-modal-avatar-row">
+              <div className="premium-profile-avatar-box">
+                {profileImage ? (
+                  <img src={profileImage} alt="Perfil" className="premium-profile-avatar-image" />
+                ) : (
+                  <div className="premium-profile-avatar-fallback">
+                    {getInitials(displayName || user.fullname)}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="premium-avatar-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Cambiar foto
+                </button>
+              </div>
+
+              <div className="premium-profile-verified-box">
+                <span className={`premium-verified-chip ${isVerified ? 'verified' : ''}`}>
+                  {isVerified ? '✔ Verificado' : '◇ Get verified'}
+                </span>
+              </div>
+            </div>
+
+            <div className="profile-modal-body premium-profile-modal-body">
               <div className="input-group-custom">
                 <label>Nombre visible</label>
                 <input
@@ -1466,8 +1427,31 @@ function App() {
                   className="form-control form-textarea"
                   value={draftProfileBio}
                   onChange={(e) => setDraftProfileBio(e.target.value)}
-                  placeholder="Escribe una breve descripción sobre ti..."
+                  placeholder="Describe tu perfil..."
                 />
+              </div>
+
+              <div className="profile-modal-two-columns">
+                <div className="input-group-custom">
+                  <label>Ubicación</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={draftLocationText}
+                    onChange={(e) => setDraftLocationText(e.target.value)}
+                    placeholder="Ej. Zapopan, Jalisco"
+                  />
+                </div>
+
+                <div className="input-group-custom">
+                  <label>Fecha de nacimiento</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={draftBirthDate}
+                    onChange={(e) => setDraftBirthDate(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="input-group-custom">
@@ -1481,6 +1465,14 @@ function App() {
                 />
                 <small className="field-hint">Separa cada tag con coma.</small>
               </div>
+
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleCoverImageChange}
+                className="hidden-file-input"
+              />
             </div>
 
             <div className="profile-modal-footer">
@@ -1508,10 +1500,7 @@ function App() {
 
       {imageViewer.isOpen && imageViewer.images.length > 0 && (
         <div className="recognition-image-modal-overlay" onClick={closeImageViewer}>
-          <div
-            className="recognition-image-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="recognition-image-modal" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               className="recognition-image-modal-close"
@@ -1590,31 +1579,6 @@ function App() {
           ↑
         </button>
       )}
-    </>
-  );
-
-  return (
-    <div className={`App ${darkMode ? 'dark' : ''}`}>
-      <Routes>
-        <Route path="/" element={dashboardView} />
-        <Route
-          path="/perfil"
-          element={
-            <ProfilePage
-              user={user}
-              profileImage={profileImage}
-              displayName={displayName}
-              profileBio={profileBio}
-              profileTags={profileTags}
-              recognitions={recognitions}
-              onBack={() => navigate('/')}
-              onOpenImageViewer={openImageViewer}
-              darkMode={darkMode}
-            />
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
     </div>
   );
 }
