@@ -1,25 +1,46 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:5000';
 
 function ProfilePage({
-  user,
-  profileImage,
-  coverImage,
-  displayName,
-  profileBio,
-  profileTags,
+  currentUser,
+  loggedInUserId,
   recognitions,
   onBack,
   onOpenImageViewer,
   darkMode,
   onOpenEditProfile,
-  followingCount,
-  followersCount,
+  isOwnProfile,
 }) {
+  const navigate = useNavigate();
+  const { userId } = useParams();
+
   const [activeTab, setActiveTab] = useState('media');
   const [showAllGallery, setShowAllGallery] = useState(false);
   const [profileSearch, setProfileSearch] = useState('');
+  const [loadingViewedProfile, setLoadingViewedProfile] = useState(false);
+
+  const [viewedProfile, setViewedProfile] = useState(
+    isOwnProfile
+      ? {
+          ...currentUser,
+          display_name: currentUser?.display_name || currentUser?.fullname || '',
+          bio:
+            currentUser?.bio ||
+            'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.',
+          tags:
+            Array.isArray(currentUser?.tags) && currentUser.tags.length > 0
+              ? currentUser.tags
+              : ['Comunidad TSJ', 'Reconocimiento positivo'],
+          birth_date: currentUser?.birth_date || '',
+          location: currentUser?.location || '',
+          followers_count: Number(currentUser?.followers_count || 0),
+          following_count: Number(currentUser?.following_count || 0),
+        }
+      : null
+  );
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -27,22 +48,95 @@ function ProfilePage({
     return `${API_BASE}${url}`;
   };
 
+  useEffect(() => {
+    if (isOwnProfile) {
+      setViewedProfile({
+        ...currentUser,
+        display_name: currentUser?.display_name || currentUser?.fullname || '',
+        bio:
+          currentUser?.bio ||
+          'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.',
+        tags:
+          Array.isArray(currentUser?.tags) && currentUser.tags.length > 0
+            ? currentUser.tags
+            : ['Comunidad TSJ', 'Reconocimiento positivo'],
+        birth_date: currentUser?.birth_date || '',
+        location: currentUser?.location || '',
+        followers_count: Number(currentUser?.followers_count || 0),
+        following_count: Number(currentUser?.following_count || 0),
+      });
+      return;
+    }
+
+    const fetchViewedProfile = async () => {
+      if (!userId) return;
+
+      if (Number(userId) === Number(loggedInUserId)) {
+        navigate('/perfil', { replace: true });
+        return;
+      }
+
+      try {
+        setLoadingViewedProfile(true);
+        const response = await axios.get(`${API_BASE}/api/users/profile/${userId}`);
+        const profile = response.data;
+
+        setViewedProfile({
+          ...profile,
+          display_name: profile.display_name || profile.fullname || '',
+          bio:
+            profile.bio ||
+            'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.',
+          tags:
+            Array.isArray(profile.tags) && profile.tags.length > 0
+              ? profile.tags
+              : ['Comunidad TSJ', 'Reconocimiento positivo'],
+          birth_date: profile.birth_date || '',
+          location: profile.location || '',
+          followers_count: Number(profile.followers_count || 0),
+          following_count: Number(profile.following_count || 0),
+          profile_image_url: resolveImageUrl(profile.profile_image_url),
+          cover_image_url: resolveImageUrl(profile.cover_image_url),
+        });
+      } catch (err) {
+        console.error('Error al cargar perfil público:', err);
+      } finally {
+        setLoadingViewedProfile(false);
+      }
+    };
+
+    fetchViewedProfile();
+  }, [isOwnProfile, currentUser, userId, loggedInUserId, navigate]);
+
   const safeRecognitions = Array.isArray(recognitions) ? recognitions : [];
+  const profileUserId = viewedProfile?.id;
 
   const recognitionsSent = useMemo(
-    () => safeRecognitions.filter((rec) => Number(rec.sender_id) === Number(user.id)),
-    [safeRecognitions, user.id]
+    () =>
+      safeRecognitions.filter(
+        (rec) => Number(rec.sender_id) === Number(profileUserId)
+      ),
+    [safeRecognitions, profileUserId]
   );
 
   const recognitionsReceived = useMemo(
-    () => safeRecognitions.filter((rec) => Number(rec.receiver_id) === Number(user.id)),
-    [safeRecognitions, user.id]
+    () =>
+      safeRecognitions.filter(
+        (rec) => Number(rec.receiver_id) === Number(profileUserId)
+      ),
+    [safeRecognitions, profileUserId]
   );
 
   const galleryImages = useMemo(() => {
     const allImages = [];
 
     safeRecognitions.forEach((rec) => {
+      const isRelatedToProfile =
+        Number(rec.sender_id) === Number(profileUserId) ||
+        Number(rec.receiver_id) === Number(profileUserId);
+
+      if (!isRelatedToProfile) return;
+
       if (Array.isArray(rec.images)) {
         rec.images.forEach((img) => {
           if (img?.image_url) {
@@ -56,7 +150,7 @@ function ProfilePage({
     });
 
     return allImages;
-  }, [safeRecognitions]);
+  }, [safeRecognitions, profileUserId]);
 
   const visibleGalleryImages = showAllGallery
     ? galleryImages
@@ -86,12 +180,57 @@ function ProfilePage({
     );
   }, [recognitionsReceived, profileSearch]);
 
-  const initials = (displayName || user.fullname || 'TSJ')
+  const displayName = viewedProfile?.display_name || viewedProfile?.fullname || 'Usuario';
+  const profileBio =
+    viewedProfile?.bio ||
+    'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.';
+  const profileTags =
+    Array.isArray(viewedProfile?.tags) && viewedProfile.tags.length > 0
+      ? viewedProfile.tags
+      : ['Comunidad TSJ', 'Reconocimiento positivo'];
+
+  const profileImage = resolveImageUrl(viewedProfile?.profile_image_url);
+  const coverImage = resolveImageUrl(viewedProfile?.cover_image_url);
+  const birthDate = viewedProfile?.birth_date || '';
+  const locationText = viewedProfile?.location || '';
+  const followingCount = Number(viewedProfile?.following_count || 0);
+  const followersCount = Number(viewedProfile?.followers_count || 0);
+
+  const initials = (displayName || 'TSJ')
     .split(' ')
     .slice(0, 2)
     .map((word) => word[0])
     .join('')
     .toUpperCase();
+
+  if (!viewedProfile && !isOwnProfile) {
+    return (
+      <div className={`profile-page-shell ${darkMode ? 'dark-profile-page' : ''}`}>
+        <div className="profile-twitter-layout">
+          <main className="profile-twitter-main">
+            <div className="profile-twitter-topbar">
+              <button type="button" className="profile-twitter-back" onClick={onBack}>
+                ←
+              </button>
+
+              <div className="profile-twitter-topmeta">
+                <strong>Perfil</strong>
+                <span>Cargando...</span>
+              </div>
+            </div>
+
+            <div className="profile-twitter-content">
+              <section className="profile-twitter-section">
+                <p className="profile-twitter-empty">
+                  {loadingViewedProfile ? 'Cargando perfil...' : 'No se pudo cargar el perfil.'}
+                </p>
+              </section>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`profile-page-shell ${darkMode ? 'dark-profile-page' : ''}`}>
@@ -103,7 +242,7 @@ function ProfilePage({
             </button>
 
             <div className="profile-twitter-topmeta">
-              <strong>{displayName || user.fullname}</strong>
+              <strong>{displayName}</strong>
               <span>{recognitionsSent.length + recognitionsReceived.length} publicaciones</span>
             </div>
 
@@ -135,23 +274,35 @@ function ProfilePage({
             </div>
 
             <div className="profile-twitter-header-actions">
-              <button
-                type="button"
-                className="profile-twitter-edit-btn"
-                onClick={onOpenEditProfile}
-              >
-                Editar perfil
-              </button>
+              {isOwnProfile ? (
+                <button
+                  type="button"
+                  className="profile-twitter-edit-btn"
+                  onClick={onOpenEditProfile}
+                >
+                  Editar perfil
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="profile-twitter-edit-btn"
+                  onClick={() => navigate('/')}
+                >
+                  Volver al inicio
+                </button>
+              )}
             </div>
           </div>
 
           <div className="profile-twitter-info">
             <div className="profile-twitter-name-row">
-              <h1>{displayName || user.fullname}</h1>
+              <h1>{displayName}</h1>
               <span className="profile-twitter-verified-pill">✔ Get verified</span>
             </div>
 
-            <p className="profile-twitter-handle">@{user.email?.split('@')[0] || 'usuario'}</p>
+            <p className="profile-twitter-handle">
+              @{viewedProfile?.email?.split('@')[0] || 'usuario'}
+            </p>
             <p className="profile-twitter-bio">{profileBio}</p>
 
             <div className="profile-twitter-tags">
@@ -160,6 +311,23 @@ function ProfilePage({
                   {tag}
                 </span>
               ))}
+            </div>
+
+            <div className="profile-twitter-meta-extra">
+              {locationText && (
+                <span className="profile-twitter-meta-pill">📍 {locationText}</span>
+              )}
+
+              {birthDate && (
+                <span className="profile-twitter-meta-pill">
+                  🎂{' '}
+                  {new Date(birthDate).toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
+              )}
             </div>
 
             <div className="profile-twitter-follow-stats">
@@ -351,11 +519,11 @@ function ProfilePage({
             <h3>Resumen</h3>
             <div className="profile-twitter-side-stat">
               <span>Nombre visible</span>
-              <strong>{displayName || user.fullname}</strong>
+              <strong>{displayName}</strong>
             </div>
             <div className="profile-twitter-side-stat">
               <span>Correo</span>
-              <strong>{user.email}</strong>
+              <strong>{viewedProfile?.email}</strong>
             </div>
             <div className="profile-twitter-side-stat">
               <span>Modo</span>

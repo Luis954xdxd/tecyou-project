@@ -7,7 +7,6 @@ import UsersDirectory from './components/UsersDirectory';
 import ActivityPanel from './components/ActivityPanel';
 import NotificationsPanel from './components/NotificationsPanel';
 import NotificationsBell from './components/NotificationsBell';
-import PublicProfileModal from './components/PublicProfileModal';
 import RecognitionComments from './components/RecognitionComments';
 import GlobalSectionSearch from './components/GlobalSectionSearch';
 import ProfileDropdown from './components/ProfileDropdown';
@@ -66,9 +65,6 @@ function App() {
 
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
-  const [publicProfileUserId, setPublicProfileUserId] = useState(null);
-  const [showPublicProfile, setShowPublicProfile] = useState(false);
-
   const [imageViewer, setImageViewer] = useState({
     isOpen: false,
     images: [],
@@ -104,9 +100,13 @@ function App() {
     return images.filter((img) => img && img.image_url);
   };
 
-  const openPublicProfile = (targetUserId) => {
-    setPublicProfileUserId(targetUserId);
-    setShowPublicProfile(true);
+  const openUserProfile = (targetUserId) => {
+    if (!targetUserId) return;
+    if (Number(targetUserId) === Number(user?.id)) {
+      navigate('/perfil');
+      return;
+    }
+    navigate(`/perfil/${targetUserId}`);
   };
 
   const openImageViewer = (images, startIndex = 0) => {
@@ -176,13 +176,13 @@ function App() {
     try {
       const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
       const totals = normalizeReactionTotals(response.data?.totals || []);
-      const users = response.data?.users || [];
+      const usersList = response.data?.users || [];
 
       setReactionTotals((prev) => ({ ...prev, [recognitionId]: totals }));
-      setReactionUsersMap((prev) => ({ ...prev, [recognitionId]: users }));
+      setReactionUsersMap((prev) => ({ ...prev, [recognitionId]: usersList }));
 
       const currentUserReaction =
-        users.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
+        usersList.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
 
       setUserReactionMap((prev) => ({ ...prev, [recognitionId]: currentUserReaction }));
     } catch (err) {
@@ -235,8 +235,8 @@ function App() {
       const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
       setRecognitions(response.data);
       await fetchAllReactionsForFeed(response.data);
-    } catch (error) {
-      console.error('Error al obtener el feed:', error);
+    } catch (err) {
+      console.error('Error al obtener el feed:', err);
     } finally {
       setLoadingFeed(false);
     }
@@ -454,12 +454,12 @@ function App() {
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
-    return recognitions.filter((rec) => rec.sender_id === user.id).length;
+    return recognitions.filter((rec) => Number(rec.sender_id) === Number(user.id)).length;
   }, [recognitions, user]);
 
   const recognitionsReceivedByUser = useMemo(() => {
     if (!user) return 0;
-    return recognitions.filter((rec) => rec.receiver_id === user.id).length;
+    return recognitions.filter((rec) => Number(rec.receiver_id) === Number(user.id)).length;
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
@@ -614,8 +614,8 @@ function App() {
   };
 
   const renderReactionUsersPanel = (recId) => {
-    const users = reactionUsersMap[recId] || [];
-    if (users.length === 0) {
+    const usersList = reactionUsersMap[recId] || [];
+    if (usersList.length === 0) {
       return (
         <div className="reaction-users-panel">
           <p className="reaction-users-empty">Aún no hay reacciones.</p>
@@ -626,7 +626,7 @@ function App() {
     return (
       <div className="reaction-users-panel">
         <div className="reaction-users-list">
-          {users.map((person, index) => (
+          {usersList.map((person, index) => (
             <div key={`${person.user_id}-${index}`} className="reaction-user-item">
               {person.profile_image_url ? (
                 <img
@@ -649,7 +649,7 @@ function App() {
                 <button
                   type="button"
                   className="inline-user-link reaction-user-link"
-                  onClick={() => openPublicProfile(person.user_id)}
+                  onClick={() => openUserProfile(person.user_id)}
                 >
                   {person.user_name}
                 </button>
@@ -842,7 +842,7 @@ function App() {
           <GlobalSectionSearch sections={sectionSearchItems} />
 
           <div className="user-info">
-            <NotificationsBell userId={user.id} onOpenProfile={openPublicProfile} />
+            <NotificationsBell userId={user.id} onOpenProfile={openUserProfile} />
 
             <ProfileDropdown
               user={user}
@@ -937,7 +937,7 @@ function App() {
                           <button
                             type="button"
                             className="inline-user-link"
-                            onClick={() => openPublicProfile(rec.sender_id)}
+                            onClick={() => openUserProfile(rec.sender_id)}
                           >
                             {rec.sender_name}
                           </button>{' '}
@@ -945,7 +945,7 @@ function App() {
                           <button
                             type="button"
                             className="inline-user-link"
-                            onClick={() => openPublicProfile(rec.receiver_id)}
+                            onClick={() => openUserProfile(rec.receiver_id)}
                           >
                             {rec.receiver_name}
                           </button>
@@ -975,7 +975,7 @@ function App() {
                         <RecognitionComments
                           recognitionId={rec.id}
                           currentUserId={user.id}
-                          onOpenProfile={openPublicProfile}
+                          onOpenProfile={openUserProfile}
                         />
 
                         {renderReactionBar(rec.id)}
@@ -1051,17 +1051,21 @@ function App() {
             setRecognitionPrefillUser(selectedUser);
             window.scrollTo({ top: 1180, behavior: 'smooth' });
           }}
-          onOpenProfile={openPublicProfile}
+          onOpenProfile={openUserProfile}
         />
 
-        <NotificationsPanel userId={user.id} onOpenProfile={openPublicProfile} />
+        <NotificationsPanel userId={user.id} onOpenProfile={openUserProfile} />
 
         <ActivityPanel userId={user.id} />
 
         <section className="dashboard" id="dashboard-section">
           <aside id="profile-section" className="sidebar">
             <div className="profile-card">
-              <div className="profile-cover"></div>
+              <div className="profile-cover">
+                {coverImage ? (
+                  <img src={coverImage} alt="Portada" className="profile-cover-image" />
+                ) : null}
+              </div>
 
               <div className="profile-card-body">
                 <div className="profile-avatar-wrap">
@@ -1100,6 +1104,20 @@ function App() {
 
                   <h3>{displayName || user.fullname}</h3>
                   <p className="profile-email">{user.email}</p>
+
+                  <div className="profile-extra-meta">
+                    {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
+                    {birthDate && (
+                      <span className="profile-extra-chip">
+                        🎂{' '}
+                        {new Date(birthDate).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </div>
 
                   <div className="profile-tags">
                     {profileTags.map((tag) => (
@@ -1276,7 +1294,7 @@ function App() {
                             <button
                               type="button"
                               className="inline-user-link"
-                              onClick={() => openPublicProfile(rec.sender_id)}
+                              onClick={() => openUserProfile(rec.sender_id)}
                             >
                               {rec.sender_name}
                             </button>{' '}
@@ -1284,7 +1302,7 @@ function App() {
                             <button
                               type="button"
                               className="inline-user-link"
-                              onClick={() => openPublicProfile(rec.receiver_id)}
+                              onClick={() => openUserProfile(rec.receiver_id)}
                             >
                               {rec.receiver_name}
                             </button>
@@ -1314,7 +1332,7 @@ function App() {
                           <RecognitionComments
                             recognitionId={rec.id}
                             currentUserId={user.id}
-                            onOpenProfile={openPublicProfile}
+                            onOpenProfile={openUserProfile}
                           />
 
                           {renderReactionBar(rec.id)}
@@ -1335,26 +1353,39 @@ function App() {
     <div className={`App ${darkMode ? 'dark' : ''}`}>
       <Routes>
         <Route path="/" element={dashboardView} />
+
         <Route
           path="/perfil"
           element={
             <ProfilePage
-              user={user}
-              profileImage={profileImage}
-              coverImage={coverImage}
-              displayName={displayName}
-              profileBio={profileBio}
-              profileTags={profileTags}
+              currentUser={user}
+              loggedInUserId={user?.id}
               recognitions={recognitions}
               onBack={() => navigate('/')}
               onOpenImageViewer={openImageViewer}
               darkMode={darkMode}
               onOpenEditProfile={openEditProfileModal}
-              followingCount={followingCount}
-              followersCount={followersCount}
+              isOwnProfile={true}
             />
           }
         />
+
+        <Route
+          path="/perfil/:userId"
+          element={
+            <ProfilePage
+              currentUser={user}
+              loggedInUserId={user?.id}
+              recognitions={recognitions}
+              onBack={() => navigate('/')}
+              onOpenImageViewer={openImageViewer}
+              darkMode={darkMode}
+              onOpenEditProfile={openEditProfileModal}
+              isOwnProfile={false}
+            />
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 

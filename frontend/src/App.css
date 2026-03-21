@@ -1755,6 +1755,62 @@ select:focus {
   color: var(--primary-dark);
 }
 
+/* ===== FIX PERFIL PEQUEÑO LATERAL ===== */
+
+.profile-card {
+  overflow: hidden;
+}
+
+.profile-card-body {
+  position: relative;
+  padding-top: 0;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  z-index: 3;
+  margin-top: -42px;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.profile-avatar-image,
+.profile-avatar-fallback {
+  width: 108px;
+  height: 108px;
+  border-radius: 28px;
+  object-fit: cover;
+  border: 4px solid #ffffff;
+  background: #ffffff;
+}
+
+.App.dark .profile-avatar-image,
+.App.dark .profile-avatar-fallback {
+  border-color: #0f172a;
+  background: #0f172a;
+}
+
+.profile-photo-btn {
+  margin-top: 12px;
+}
+
+.profile-cover {
+  position: relative;
+  height: 120px;
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #dfe7ff 0%, #ede9ff 100%);
+}
+
+.profile-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* BOTÓN EDITAR PERFIL */
 .profile-edit-btn {
   margin-top: 8px;
@@ -4606,6 +4662,354 @@ select:focus {
   border-radius: 22px;
 }
 
+.profile-cover {
+  position: relative;
+  height: 120px;
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #dfe7ff 0%, #ede9ff 100%);
+}
+
+.profile-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.App.dark .profile-cover {
+  background: linear-gradient(135deg, #32496f 0%, #4a3f8c 100%);
+}
+.profile-twitter-meta-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.profile-twitter-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4250c8;
+  border: 1px solid #d7ddf6;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dark-profile-page .profile-twitter-meta-pill,
+.App.dark .profile-twitter-meta-pill {
+  background: #17243b;
+  color: #dbe1ff;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.profile-extra-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-extra-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4250c8;
+  border: 1px solid #d8e0f5;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.App.dark .profile-extra-chip {
+  background: #17243b;
+  color: #dbe1ff;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+/* ===== PROFILE PAGE MODO CLARO ===== */
+
+.profile-page-shell {
+  min-height: 100vh;
+  background: #eef2f8;
+}
+
+.profile-twitter-main {
+  background: #f7f9fd;
+  border-left: 1px solid #dbe4f0;
+  border-right: 1px solid #dbe4f0;
+}
+
+.profile-twitter-topbar {
+  background: rgba(44, 58, 84, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+.profile-twitter-topmeta strong {
+  color: #ffffff;
+}
+
+.profile-twitter-topmeta span {
+  color: #dbe4f5;
+}
+
+.profile-twitter-cover {
+  background: linear-gradient(135deg, #dfe7ff 0%, #ede9ff 100%);
+}
+
+.profile-twitter-avatar,
+.profile-twitter-avatar-fallback {
+  border: 5px solid #f7f9fd;
+}
+
+.profile-twitter-avatar-fallback {
+  background: #dbe4ff;
+  color: #1e3a8a;
+}
+
+.profile-twitter-info h1 {
+  color: #18212f;
+}
+
+.profile-twitter-handle,
+.profile-twitter-follow-stats,
+.profile-twitter-side-stat span {
+  color: #66758d;
+}
+
+.profile-twitter-bio,
+.profile-twitter-side-stat strong,
+.profile-twitter-section h2 {
+  color: #18212f;
+}
+
+.profile-twitter-tag {
+  background: #eef2ff;
+  color: #3f4cc9;
+  border: 1px solid #d7ddf5;
+}
+
+.profile-twitter-tab {
+  color: #70809a;
+}
+
+.profile-twitter-tab.active {
+  color: #18212f;
+}
+
+.profile-twitter-inline-search-input,
+.profile-twitter-search-input {
+  background: #ffffff;
+  border: 1px solid #d7dfed;
+  color: #18212f;
+}
+
+.profile-twitter-inline-search-input::placeholder,
+.profile-twitter-search-input::placeholder {
+  color: #8c98ad;
+}
+
+.profile-twitter-rec-card,
+.profile-twitter-about-card,
+.profile-twitter-sidebox {
+  background: #ffffff;
+  border: 1px solid #dde5f1;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
+}
+
+.profile-twitter-rec-card strong,
+.profile-twitter-rec-card p,
+.profile-twitter-about-card span,
+.profile-twitter-sidebox h3 {
+  color: #18212f;
+}
+
+.profile-twitter-rec-card span,
+.profile-twitter-empty,
+.profile-twitter-side-text {
+  color: #66758d;
+}
+
+.profile-twitter-about-card strong {
+  color: #3458d8;
+}
+
+.profile-twitter-edit-btn {
+  border: 1px solid #d5ddec;
+  color: #1f2c44;
+  background: #ffffff;
+}
+
+.profile-twitter-edit-btn:hover {
+  background: #f4f7fc;
+}
+
+.profile-twitter-verified-pill {
+  background: #eef1ff;
+  color: #6674e8;
+  border: 1px solid #d7defe;
+}
+
+/* ===== FIX EXTRA MODO CLARO PERFIL ===== */
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topbar {
+  background: #334155 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topmeta strong {
+  color: #ffffff !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topmeta span {
+  color: #dbe4f5 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-search {
+  color: #ffffff !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-main {
+  background: #f7f9fd !important;
+  border-left: 1px solid #dbe4f0 !important;
+  border-right: 1px solid #dbe4f0 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-info h1 {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-handle {
+  color: #6b7280 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-bio {
+  color: #1f2937 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-follow-stats {
+  color: #6b7280 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-follow-stats strong {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-tab {
+  color: #7b8798 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-tab.active {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-section h2 {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-empty {
+  color: #6b7280 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-search-input,
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-inline-search-input {
+  background: #ffffff !important;
+  color: #18212f !important;
+  border: 1px solid #d8e1ee !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-search-input::placeholder,
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-inline-search-input::placeholder {
+  color: #8b97ab !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-sidebox {
+  background: #ffffff !important;
+  border: 1px solid #dde5f1 !important;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06) !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-sidebox h3 {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-side-stat span {
+  color: #66758d !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-side-stat strong {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-side-text {
+  color: #66758d !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-rec-card {
+  background: #ffffff !important;
+  border: 1px solid #dde5f1 !important;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.05) !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-rec-card strong {
+  color: #18212f !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-rec-card span {
+  color: #6b7280 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-rec-card p {
+  color: #1f2937 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-about-card {
+  background: #ffffff !important;
+  border: 1px solid #dde5f1 !important;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.05) !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-about-card strong {
+  color: #3458d8 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-about-card span {
+  color: #66758d !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-tag {
+  background: #eef2ff !important;
+  color: #3f4cc9 !important;
+  border: 1px solid #d7ddf5 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-meta-pill {
+  background: #eef2ff !important;
+  color: #4250c8 !important;
+  border: 1px solid #d7ddf6 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-verified-pill {
+  background: #eef1ff !important;
+  color: #6674e8 !important;
+  border: 1px solid #d7defe !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-edit-btn {
+  background: #ffffff !important;
+  color: #1f2c44 !important;
+  border: 1px solid #d5ddec !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-edit-btn:hover {
+  background: #f4f7fc !important;
+}
+
 /* ===== PERFIL TIPO X / TWITTER ===== */
 
 .profile-page-shell {
@@ -4642,8 +5046,8 @@ select:focus {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(7, 17, 36, 0.86);
   backdrop-filter: blur(8px);
+  background: rgba(44, 58, 84, 0.96);
 }
 
 .profile-twitter-back,
@@ -4668,13 +5072,49 @@ select:focus {
 }
 
 .profile-twitter-topmeta strong {
-  color: #f8fafc;
+  color: #ffffff;
   font-size: 22px;
 }
 
 .profile-twitter-topmeta span {
-  color: #9fb0c8;
+  color: #dbe4f5;
   font-size: 14px;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topbar {
+  background: rgba(44, 58, 84, 0.96) !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topmeta strong {
+  color: #ffffff !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-topmeta span {
+  color: #dbe4f5 !important;
+}
+
+.profile-page-shell:not(.dark-profile-page) .profile-twitter-search {
+  color: #ffffff !important;
+}
+
+.dark-profile-page .profile-twitter-topbar,
+.App.dark .profile-twitter-topbar {
+  background: rgba(7, 17, 36, 0.88) !important;
+}
+
+.dark-profile-page .profile-twitter-topmeta strong,
+.App.dark .profile-twitter-topmeta strong {
+  color: #f8fafc !important;
+}
+
+.dark-profile-page .profile-twitter-topmeta span,
+.App.dark .profile-twitter-topmeta span {
+  color: #9fb0c8 !important;
+}
+
+.dark-profile-page .profile-twitter-search,
+.App.dark .profile-twitter-search {
+  color: #f8fafc !important;
 }
 
 .profile-twitter-cover {
@@ -5064,7 +5504,7 @@ select:focus {
 .premium-cover-btn {
   position: absolute;
   left: 22px;
-  bottom: 18px;
+  bottom: 40px;
   border: none;
   border-radius: 999px;
   padding: 10px 16px;
@@ -5072,8 +5512,8 @@ select:focus {
   color: #ffffff;
   font-weight: 700;
   cursor: pointer;
+  z-index: 4;
 }
-
 .premium-profile-modal-close {
   position: absolute;
   top: 16px;
@@ -5094,23 +5534,27 @@ select:focus {
   align-items: flex-end;
   gap: 18px;
   padding: 0 24px;
-  margin-top: -58px;
+  margin-top: -36px;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 3;
 }
 
 .premium-profile-avatar-box {
   display: flex;
-  align-items: flex-end;
+  align-items:center;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
 .premium-profile-avatar-image,
 .premium-profile-avatar-fallback {
-  width: 128px;
-  height: 128px;
+  width: 112px;
+  height: 112px;
   border-radius: 999px;
   object-fit: cover;
-  border: 5px solid #0f172a;
+  border: 4px solid #0b1830;
+  background: #0b1830;
 }
 
 .premium-profile-avatar-fallback {
