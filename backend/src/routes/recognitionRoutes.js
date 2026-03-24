@@ -4,6 +4,7 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { moderateText } = require('../../moderationService');
 
 // ===============================
 // CONFIGURACIÓN DE UPLOADS
@@ -39,6 +40,15 @@ const upload = multer({ storage, fileFilter });
 router.post('/send', upload.array('recognitionImages', 5), async (req, res) => {
   try {
     const { sender_id, receiver_id, receiver_control_number, message, category } = req.body;
+
+     const moderation = await moderateText(message);
+
+    if (!moderation.permitido) {
+      return res.status(400).json({
+        error: moderation.motivo,
+        toxicidad: moderation.toxicidad
+      });
+    }
 
     let finalReceiverId = receiver_id;
 

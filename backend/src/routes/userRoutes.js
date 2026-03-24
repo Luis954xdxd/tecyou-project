@@ -31,59 +31,6 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// Validar correo institucional
-const isValidInstitutionalEmail = (email) => {
-    const regex = /^za\d+@zapopan\.tecmm\.edu\.mx$/;
-    return regex.test(email);
-};
-
-// LOGIN
-router.post('/login', async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!isValidInstitutionalEmail(email)) {
-            return res.status(400).json({
-                error: 'Acceso denegado. Solo se permiten correos institucionales (@zapopan.tecmm.edu.mx).'
-            });
-        }
-
-        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-
-        if (user.rows.length > 0) {
-            return res.json(user.rows[0]);
-        } else {
-            const tempName = email.split('@')[0];
-            const newUser = await pool.query(
-                `INSERT INTO users (
-                    fullname,
-                    display_name,
-                    email,
-                    role,
-                    bio,
-                    tags,
-                    is_verified
-                 )
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                 RETURNING *`,
-                [
-                    tempName,
-                    tempName,
-                    email,
-                    'student',
-                    'Usuario participante en la comunidad ¡Tec! ¡you!',
-                    ['Comunidad TSJ', 'Reconocimiento positivo'],
-                    false
-                ]
-            );
-            return res.json(newUser.rows[0]);
-        }
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Error en el proceso de autenticación');
-    }
-});
-
 // BUSCAR USUARIOS
 router.get('/search', async (req, res) => {
     try {

@@ -12,6 +12,10 @@ import GlobalSectionSearch from './components/GlobalSectionSearch';
 import ProfileDropdown from './components/ProfileDropdown';
 import ProfilePage from './pages/ProfilePage';
 import logoTSJ from './assets/logo-tsj.png';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import './styles/auth.css';
+import {clearUserSession,getUserSession,saveUserSession,} from './utils/authStorage';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -24,10 +28,8 @@ function App() {
     return saved === 'true';
   });
 
-  const [user, setUser] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
+  const [user, setUser] = useState(() => getUserSession());
   const [recognitions, setRecognitions] = useState([]);
-  const [error, setError] = useState('');
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -282,23 +284,16 @@ function App() {
     await fetchFeed();
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
+  const handleAuthSuccess = (loggedUser) => {
+  setUser(loggedUser);
+  saveUserSession(loggedUser);
+};
 
-    try {
-      const response = await axios.post(`${API_BASE}/api/users/login`, {
-        email: emailInput,
-      });
-      setUser(response.data);
-    } catch (err) {
-      console.error('Detalle del error:', err);
-      setError(
-        err.response?.data?.error ||
-          'No se pudo conectar con el servidor. ¿Está encendido el Backend?'
-      );
-    }
-  };
+const handleLogout = () => {
+  setUser(null);
+  clearUserSession();
+  navigate('/login');
+};
 
   useEffect(() => {
     if (user?.id) {
@@ -752,160 +747,451 @@ function App() {
     );
   };
 
-  if (!user) {
-    return (
-      <div className={`login-page ${darkMode ? 'dark-login' : ''}`}>
-        <div className="login-shell">
-          <div className="login-brand-panel">
-            <div className="brand-top">
-              <div className="brand-badge">TSJ</div>
-              <span className="brand-label">Plataforma de reconocimiento</span>
-            </div>
 
-            <h1>
-              ¡Tec! <span>¡you!</span>
-            </h1>
-
-            <p className="brand-description">
-              Reconoce el esfuerzo, la dedicación y el impacto positivo de tu comunidad
-              académica en un espacio moderno, institucional y humano.
-            </p>
-
-            <div className="brand-highlights">
-              <div className="highlight-card">
-                <strong>Reconoce</strong>
-                <span>Comparte mensajes positivos con tu comunidad.</span>
-              </div>
-              <div className="highlight-card">
-                <strong>Conecta</strong>
-                <span>Fortalece el sentido de pertenencia del TSJ.</span>
-              </div>
-              <div className="highlight-card">
-                <strong>Inspira</strong>
-                <span>Haz visible el impacto de las buenas acciones.</span>
-              </div>
-            </div>
+ const dashboardView = user ? (
+  <>
+    <header className="main-nav">
+      <div className="nav-content">
+        <div className="nav-left">
+          <div className="nav-logo-mark image-logo-shell">
+            <img src={logoTSJ} alt="Logo TSJ" className="tsj-logo nav-logo" />
           </div>
 
-          <div className="login-card">
-            <div className="login-header">
-              <img src={logoTSJ} alt="Logo TSJ" className="tsj-logo login-logo" />
-              <h2>Bienvenido</h2>
-              <p>Inicia sesión con tu correo institucional del TSJ.</p>
+          <div className="nav-title-group">
+            <span className="logo-text">
+              ¡Tec! <strong>¡you!</strong>
+            </span>
+            <small>Reconocimiento universitario</small>
+          </div>
+        </div>
+
+        <GlobalSectionSearch sections={sectionSearchItems} />
+
+        <div className="user-info">
+          <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
+
+          <ProfileDropdown
+            user={user}
+            displayName={displayName}
+            profileImage={profileImage}
+            getInitials={getInitials}
+            openEditProfileModal={openEditProfileModal}
+            fileInputRef={fileInputRef}
+            onLogout={handleLogout}
+            onGoToProfile={() => navigate('/perfil')}
+            darkMode={darkMode}
+            onToggleDark={() => setDarkMode((prev) => !prev)}
+          />
+        </div>
+      </div>
+    </header>
+
+    <main className="dashboard-shell">
+      <section id="hero-section" className="hero-panel">
+        <div>
+          <p className="hero-kicker">Comunidad TSJ</p>
+          <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
+          <p className="hero-subtext">
+            Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
+          </p>
+        </div>
+
+        <div className="hero-stats">
+          <div className="stat-card">
+            <span>Total de reconocimientos</span>
+            <strong>{recognitions.length}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Categoría destacada</span>
+            <strong>{featuredCategory}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Usuario activo</span>
+            <strong>{(displayName || user?.fullname || '').split(' ')[0]}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section id="featured-section" className="featured-section">
+        <div className="featured-header">
+          <div>
+            <p className="section-label">Destacados</p>
+            <h2>Reconocimientos recientes con mayor visibilidad</h2>
+          </div>
+          <p className="featured-subtext">
+            Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
+          </p>
+        </div>
+
+        <div className="featured-grid">
+          {featuredRecognitions.length === 0 ? (
+            <div className="featured-empty">
+              <div className="empty-icon">✦</div>
+              <h3>Aún no hay destacados</h3>
+              <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
+            </div>
+          ) : (
+            featuredRecognitions.map((rec, index) => {
+              const categoryMeta = getCategoryMeta(rec.category);
+              const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
+                ...img,
+                fullUrl: resolveImageUrl(img.image_url),
+              }));
+
+              return (
+                <article
+                  key={rec.id}
+                  className={`featured-card ${categoryMeta.className} ${
+                    index === 0 ? 'featured-card-large' : ''
+                  }`}
+                >
+                  <div className="featured-card-top">
+                    <span className={`badge-category ${categoryMeta.className}`}>
+                      <span className="badge-icon">{categoryMeta.icon}</span>
+                      {rec.category}
+                    </span>
+                    <span className="date">{formatDate(rec.created_at)}</span>
+                  </div>
+
+                  <div className="featured-card-body">
+                    <div className={`recognition-icon-box ${categoryMeta.className}`}>
+                      {categoryMeta.icon}
+                    </div>
+
+                    <div>
+                      <p className="featured-main-text">
+                        <button
+                          type="button"
+                          className="inline-user-link"
+                          onClick={() => openUserProfile(rec.sender_id)}
+                        >
+                          {rec.sender_name}
+                        </button>{' '}
+                        reconoció a{' '}
+                        <button
+                          type="button"
+                          className="inline-user-link"
+                          onClick={() => openUserProfile(rec.receiver_id)}
+                        >
+                          {rec.receiver_name}
+                        </button>
+                      </p>
+
+                      <p className="featured-message-text">“{rec.message}”</p>
+
+                      {recImages.length > 0 && (
+                        <div className="recognition-images-grid">
+                          {recImages.map((image, imageIndex) => (
+                            <button
+                              key={image.id}
+                              type="button"
+                              className="recognition-image-card"
+                              onClick={() => openImageViewer(recImages, imageIndex)}
+                            >
+                              <img
+                                src={image.fullUrl}
+                                alt="Imagen del reconocimiento"
+                                className="recognition-image-thumb"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <RecognitionComments
+                        recognitionId={rec.id}
+                        currentUserId={user?.id}
+                        onOpenProfile={openUserProfile}
+                      />
+
+                      {renderReactionBar(rec.id)}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section id="analytics-section" className="analytics-strip">
+        <div className="mini-stat">
+          <span>🤝 Colaboración</span>
+          <strong>{categoryCounts.Colaboración}</strong>
+        </div>
+        <div className="mini-stat">
+          <span>📚 Académico</span>
+          <strong>{categoryCounts.Académico}</strong>
+        </div>
+        <div className="mini-stat">
+          <span>⭐ Liderazgo</span>
+          <strong>{categoryCounts.Liderazgo}</strong>
+        </div>
+        <div className="mini-stat">
+          <span>💡 Creatividad</span>
+          <strong>{categoryCounts.Creatividad}</strong>
+        </div>
+      </section>
+
+      <section className="category-summary-section" id="category-summary-section">
+        <div className="category-summary-card">
+          <div className="category-summary-header">
+            <div>
+              <p className="section-label">Top categorías</p>
+              <h2>Distribución actual de reconocimientos</h2>
+            </div>
+            <p className="category-summary-subtext">
+              Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
+            </p>
+          </div>
+
+          <div className="category-bars">
+            {categorySummary.map((item) => {
+              const widthPercentage = maxCategoryCount > 0
+                ? (item.value / maxCategoryCount) * 100
+                : 0;
+
+              return (
+                <div key={item.name} className="category-bar-row">
+                  <div className="category-bar-label">
+                    <span className={`category-pill ${item.className}`}>
+                      {item.icon} {item.name}
+                    </span>
+                    <strong>{item.value}</strong>
+                  </div>
+
+                  <div className="category-bar-track">
+                    <div
+                      className={`category-bar-fill ${item.className}`}
+                      style={{ width: `${widthPercentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <UsersDirectory
+        currentUserId={user?.id}
+        onUserSelected={(selectedUser) => {
+          setRecognitionPrefillUser(selectedUser);
+          window.scrollTo({ top: 1180, behavior: 'smooth' });
+        }}
+        onOpenProfile={openUserProfile}
+      />
+
+      <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
+
+      <ActivityPanel userId={user?.id} />
+
+      <section className="dashboard" id="dashboard-section">
+        <aside id="profile-section" className="sidebar">
+          <div className="profile-card">
+            <div className="profile-cover">
+              {coverImage ? (
+                <img src={coverImage} alt="Portada" className="profile-cover-image" />
+              ) : null}
             </div>
 
-            <form onSubmit={handleLogin}>
-              <div className="input-group">
-                <label>Correo institucional</label>
+            <div className="profile-card-body">
+              <div className="profile-avatar-wrap">
+                {profileImage ? (
+                  <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
+                ) : (
+                  <div className="profile-avatar-fallback">
+                    {getInitials(displayName || user?.fullname || '')}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="profile-photo-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Cambiar foto
+                </button>
+
                 <input
-                  type="email"
-                  placeholder="zaXXXXXXXXX@zapopan.tecmm.edu.mx"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  required
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleProfileImageChange}
+                  className="hidden-file-input"
                 />
               </div>
 
-              {error && <p className="error-msg">{error}</p>}
+              <div className="profile-main-info">
+                <div className="profile-status-row">
+                  <span className="profile-status-dot"></span>
+                  <span className="profile-status-text">
+                    {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
+                  </span>
+                </div>
 
-              <button type="submit" className="btn-primary">
-                Ingresar al portal
-              </button>
-            </form>
+                <h3>{displayName || user?.fullname || ''}</h3>
+                <p className="profile-email">{user?.email || ''}</p>
 
-            <div className="login-footer">
-              <p>Exclusivo para la comunidad del Tecnológico Superior de Jalisco.</p>
+                <div className="profile-extra-meta">
+                  {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
+                  {birthDate && (
+                    <span className="profile-extra-chip">
+                      🎂{' '}
+                      {new Date(birthDate).toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                <div className="profile-tags">
+                  {profileTags.map((tag) => (
+                    <span key={tag} className="profile-tag">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="profile-bio">{profileBio}</p>
+
+                <button
+                  type="button"
+                  className="profile-edit-btn"
+                  onClick={openEditProfileModal}
+                >
+                  Editar perfil
+                </button>
+              </div>
+
+              <div className="profile-stats-grid">
+                <div className="profile-mini-stat">
+                  <span>Enviados</span>
+                  <strong>{recognitionsSentByUser}</strong>
+                </div>
+                <div className="profile-mini-stat">
+                  <span>Recibidos</span>
+                  <strong>{recognitionsReceivedByUser}</strong>
+                </div>
+                <div className="profile-mini-stat">
+                  <span>Reacciones</span>
+                  <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  const dashboardView = (
-    <>
-      <header className="main-nav">
-        <div className="nav-content">
-          <div className="nav-left">
-            <div className="nav-logo-mark image-logo-shell">
-              <img src={logoTSJ} alt="Logo TSJ" className="tsj-logo nav-logo" />
-            </div>
-
-            <div className="nav-title-group">
-              <span className="logo-text">
-                ¡Tec! <strong>¡you!</strong>
-              </span>
-              <small>Reconocimiento universitario</small>
-            </div>
+          <div className="panel-header">
+            <p className="section-label">Nuevo reconocimiento</p>
+            <h3>Haz visible una acción positiva</h3>
           </div>
 
-          <GlobalSectionSearch sections={sectionSearchItems} />
-
-          <div className="user-info">
-            <NotificationsBell userId={user.id} onOpenProfile={openUserProfile} />
-
-            <ProfileDropdown
-              user={user}
-              displayName={displayName}
-              profileImage={profileImage}
-              getInitials={getInitials}
-              openEditProfileModal={openEditProfileModal}
-              fileInputRef={fileInputRef}
-              onLogout={() => setUser(null)}
-              onGoToProfile={() => navigate('/perfil')}
-              darkMode={darkMode}
-              onToggleDark={() => setDarkMode((prev) => !prev)}
+          <div id="recognition-form-section">
+            <RecognitionForm
+              onRecognitionSent={fetchFeed}
+              senderId={user?.id}
+              preselectedUser={recognitionPrefillUser}
             />
           </div>
-        </div>
-      </header>
+        </aside>
 
-      <main className="dashboard-shell">
-        <section id="hero-section" className="hero-panel">
-          <div>
-            <p className="hero-kicker">Comunidad TSJ</p>
-            <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
-            <p className="hero-subtext">
-              Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
-            </p>
-          </div>
-
-          <div className="hero-stats">
-            <div className="stat-card">
-              <span>Total de reconocimientos</span>
-              <strong>{recognitions.length}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Categoría destacada</span>
-              <strong>{featuredCategory}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Usuario activo</span>
-              <strong>{(displayName || user.fullname)?.split(' ')[0]}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section id="featured-section" className="featured-section">
-          <div className="featured-header">
+        <section id="feed-section" className="feed-section">
+          <div className="feed-header">
             <div>
-              <p className="section-label">Destacados</p>
-              <h2>Reconocimientos recientes con mayor visibilidad</h2>
+              <p className="section-label">Muro de la comunidad</p>
+              <h2>Reconocimientos recientes</h2>
             </div>
-            <p className="featured-subtext">
-              Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
+            <p className="feed-subtext">
+              Explora mensajes positivos, filtra por categoría y encuentra aportes de la comunidad.
             </p>
           </div>
 
-          <div className="featured-grid">
-            {featuredRecognitions.length === 0 ? (
-              <div className="featured-empty">
+          <div className="feed-toolbar">
+            <div className="feed-search">
+              <input
+                type="text"
+                placeholder="Buscar por nombre, mensaje o categoría..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="feed-toolbar-row">
+              <div className="category-filters">
+                {categoryOptions.map((category) => (
+                  <button
+                    key={category}
+                    className={`filter-chip ${selectedCategory === category ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(category)}
+                    type="button"
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <div className="sort-box">
+                <label htmlFor="sortSelect">Ordenar por</label>
+                <select
+                  id="sortSelect"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="recent">Más recientes</option>
+                  <option value="oldest">Más antiguas</option>
+                  <option value="az">Nombre A-Z</option>
+                  <option value="category">Categoría</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {activeFilterLabels.length > 0 && (
+            <div className="active-filters-row">
+              {activeFilterLabels.map((label) => (
+                <span key={label} className="active-filter-chip">
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="feed-results-bar">
+            <span>
+              Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
+            </span>
+            {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
+              <button
+                type="button"
+                className="clear-filters-btn"
+                onClick={() => {
+                  setSelectedCategory('Todas');
+                  setSearchTerm('');
+                  setSortBy('recent');
+                }}
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+
+          <div className="feed-container">
+            {loadingFeed ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p>Cargando reconocimientos...</p>
+              </div>
+            ) : filteredRecognitions.length === 0 ? (
+              <div className="empty-state">
                 <div className="empty-icon">✦</div>
-                <h3>Aún no hay destacados</h3>
-                <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
+                <h3>No se encontraron resultados</h3>
+                <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
               </div>
             ) : (
-              featuredRecognitions.map((rec, index) => {
+              filteredRecognitions.map((rec, index) => {
                 const categoryMeta = getCategoryMeta(rec.category);
                 const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
                   ...img,
@@ -913,13 +1199,12 @@ function App() {
                 }));
 
                 return (
-                  <article
+                  <div
                     key={rec.id}
-                    className={`featured-card ${categoryMeta.className} ${
-                      index === 0 ? 'featured-card-large' : ''
-                    }`}
+                    className={`recognition-card ${categoryMeta.className}`}
+                    style={{ animationDelay: `${index * 0.04}s` }}
                   >
-                    <div className="featured-card-top">
+                    <div className="card-top">
                       <span className={`badge-category ${categoryMeta.className}`}>
                         <span className="badge-icon">{categoryMeta.icon}</span>
                         {rec.category}
@@ -927,13 +1212,13 @@ function App() {
                       <span className="date">{formatDate(rec.created_at)}</span>
                     </div>
 
-                    <div className="featured-card-body">
+                    <div className="recognition-main-row">
                       <div className={`recognition-icon-box ${categoryMeta.className}`}>
                         {categoryMeta.icon}
                       </div>
 
-                      <div>
-                        <p className="featured-main-text">
+                      <div className="recognition-body">
+                        <p className="main-text">
                           <button
                             type="button"
                             className="inline-user-link"
@@ -951,7 +1236,7 @@ function App() {
                           </button>
                         </p>
 
-                        <p className="featured-message-text">“{rec.message}”</p>
+                        <p className="message-text">“{rec.message}”</p>
 
                         {recImages.length > 0 && (
                           <div className="recognition-images-grid">
@@ -974,420 +1259,91 @@ function App() {
 
                         <RecognitionComments
                           recognitionId={rec.id}
-                          currentUserId={user.id}
+                          currentUserId={user?.id}
                           onOpenProfile={openUserProfile}
                         />
 
                         {renderReactionBar(rec.id)}
                       </div>
                     </div>
-                  </article>
+                  </div>
                 );
               })
             )}
           </div>
         </section>
-
-        <section id="analytics-section" className="analytics-strip">
-          <div className="mini-stat">
-            <span>🤝 Colaboración</span>
-            <strong>{categoryCounts.Colaboración}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>📚 Académico</span>
-            <strong>{categoryCounts.Académico}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>⭐ Liderazgo</span>
-            <strong>{categoryCounts.Liderazgo}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>💡 Creatividad</span>
-            <strong>{categoryCounts.Creatividad}</strong>
-          </div>
-        </section>
-
-        <section className="category-summary-section" id="category-summary-section">
-          <div className="category-summary-card">
-            <div className="category-summary-header">
-              <div>
-                <p className="section-label">Top categorías</p>
-                <h2>Distribución actual de reconocimientos</h2>
-              </div>
-              <p className="category-summary-subtext">
-                Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
-              </p>
-            </div>
-
-            <div className="category-bars">
-              {categorySummary.map((item) => {
-                const widthPercentage = (item.value / maxCategoryCount) * 100;
-
-                return (
-                  <div key={item.name} className="category-bar-row">
-                    <div className="category-bar-label">
-                      <span className={`category-pill ${item.className}`}>
-                        {item.icon} {item.name}
-                      </span>
-                      <strong>{item.value}</strong>
-                    </div>
-
-                    <div className="category-bar-track">
-                      <div
-                        className={`category-bar-fill ${item.className}`}
-                        style={{ width: `${widthPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <UsersDirectory
-          currentUserId={user.id}
-          onUserSelected={(selectedUser) => {
-            setRecognitionPrefillUser(selectedUser);
-            window.scrollTo({ top: 1180, behavior: 'smooth' });
-          }}
-          onOpenProfile={openUserProfile}
-        />
-
-        <NotificationsPanel userId={user.id} onOpenProfile={openUserProfile} />
-
-        <ActivityPanel userId={user.id} />
-
-        <section className="dashboard" id="dashboard-section">
-          <aside id="profile-section" className="sidebar">
-            <div className="profile-card">
-              <div className="profile-cover">
-                {coverImage ? (
-                  <img src={coverImage} alt="Portada" className="profile-cover-image" />
-                ) : null}
-              </div>
-
-              <div className="profile-card-body">
-                <div className="profile-avatar-wrap">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
-                  ) : (
-                    <div className="profile-avatar-fallback">
-                      {getInitials(displayName || user.fullname)}
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="profile-photo-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Cambiar foto
-                  </button>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={handleProfileImageChange}
-                    className="hidden-file-input"
-                  />
-                </div>
-
-                <div className="profile-main-info">
-                  <div className="profile-status-row">
-                    <span className="profile-status-dot"></span>
-                    <span className="profile-status-text">
-                      {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
-                    </span>
-                  </div>
-
-                  <h3>{displayName || user.fullname}</h3>
-                  <p className="profile-email">{user.email}</p>
-
-                  <div className="profile-extra-meta">
-                    {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
-                    {birthDate && (
-                      <span className="profile-extra-chip">
-                        🎂{' '}
-                        {new Date(birthDate).toLocaleDateString('es-MX', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="profile-tags">
-                    {profileTags.map((tag) => (
-                      <span key={tag} className="profile-tag">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="profile-bio">{profileBio}</p>
-
-                  <button
-                    type="button"
-                    className="profile-edit-btn"
-                    onClick={openEditProfileModal}
-                  >
-                    Editar perfil
-                  </button>
-                </div>
-
-                <div className="profile-stats-grid">
-                  <div className="profile-mini-stat">
-                    <span>Enviados</span>
-                    <strong>{recognitionsSentByUser}</strong>
-                  </div>
-                  <div className="profile-mini-stat">
-                    <span>Recibidos</span>
-                    <strong>{recognitionsReceivedByUser}</strong>
-                  </div>
-                  <div className="profile-mini-stat">
-                    <span>Reacciones</span>
-                    <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="panel-header">
-              <p className="section-label">Nuevo reconocimiento</p>
-              <h3>Haz visible una acción positiva</h3>
-            </div>
-
-            <div id="recognition-form-section">
-              <RecognitionForm
-                onRecognitionSent={fetchFeed}
-                senderId={user.id}
-                preselectedUser={recognitionPrefillUser}
-              />
-            </div>
-          </aside>
-
-          <section id="feed-section" className="feed-section">
-            <div className="feed-header">
-              <div>
-                <p className="section-label">Muro de la comunidad</p>
-                <h2>Reconocimientos recientes</h2>
-              </div>
-              <p className="feed-subtext">
-                Explora mensajes positivos, filtra por categoría y encuentra aportes de la comunidad.
-              </p>
-            </div>
-
-            <div className="feed-toolbar">
-              <div className="feed-search">
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre, mensaje o categoría..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              <div className="feed-toolbar-row">
-                <div className="category-filters">
-                  {categoryOptions.map((category) => (
-                    <button
-                      key={category}
-                      className={`filter-chip ${selectedCategory === category ? 'active' : ''}`}
-                      onClick={() => setSelectedCategory(category)}
-                      type="button"
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="sort-box">
-                  <label htmlFor="sortSelect">Ordenar por</label>
-                  <select
-                    id="sortSelect"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="sort-select"
-                  >
-                    <option value="recent">Más recientes</option>
-                    <option value="oldest">Más antiguas</option>
-                    <option value="az">Nombre A-Z</option>
-                    <option value="category">Categoría</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {activeFilterLabels.length > 0 && (
-              <div className="active-filters-row">
-                {activeFilterLabels.map((label) => (
-                  <span key={label} className="active-filter-chip">
-                    {label}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="feed-results-bar">
-              <span>
-                Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
-              </span>
-              {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
-                <button
-                  type="button"
-                  className="clear-filters-btn"
-                  onClick={() => {
-                    setSelectedCategory('Todas');
-                    setSearchTerm('');
-                    setSortBy('recent');
-                  }}
-                >
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
-
-            <div className="feed-container">
-              {loadingFeed ? (
-                <div className="loading-state">
-                  <div className="loading-spinner"></div>
-                  <p>Cargando reconocimientos...</p>
-                </div>
-              ) : filteredRecognitions.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">✦</div>
-                  <h3>No se encontraron resultados</h3>
-                  <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
-                </div>
-              ) : (
-                filteredRecognitions.map((rec, index) => {
-                  const categoryMeta = getCategoryMeta(rec.category);
-                  const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
-                    ...img,
-                    fullUrl: resolveImageUrl(img.image_url),
-                  }));
-
-                  return (
-                    <div
-                      key={rec.id}
-                      className={`recognition-card ${categoryMeta.className}`}
-                      style={{ animationDelay: `${index * 0.04}s` }}
-                    >
-                      <div className="card-top">
-                        <span className={`badge-category ${categoryMeta.className}`}>
-                          <span className="badge-icon">{categoryMeta.icon}</span>
-                          {rec.category}
-                        </span>
-                        <span className="date">{formatDate(rec.created_at)}</span>
-                      </div>
-
-                      <div className="recognition-main-row">
-                        <div className={`recognition-icon-box ${categoryMeta.className}`}>
-                          {categoryMeta.icon}
-                        </div>
-
-                        <div className="recognition-body">
-                          <p className="main-text">
-                            <button
-                              type="button"
-                              className="inline-user-link"
-                              onClick={() => openUserProfile(rec.sender_id)}
-                            >
-                              {rec.sender_name}
-                            </button>{' '}
-                            reconoció a{' '}
-                            <button
-                              type="button"
-                              className="inline-user-link"
-                              onClick={() => openUserProfile(rec.receiver_id)}
-                            >
-                              {rec.receiver_name}
-                            </button>
-                          </p>
-
-                          <p className="message-text">“{rec.message}”</p>
-
-                          {recImages.length > 0 && (
-                            <div className="recognition-images-grid">
-                              {recImages.map((image, imageIndex) => (
-                                <button
-                                  key={image.id}
-                                  type="button"
-                                  className="recognition-image-card"
-                                  onClick={() => openImageViewer(recImages, imageIndex)}
-                                >
-                                  <img
-                                    src={image.fullUrl}
-                                    alt="Imagen del reconocimiento"
-                                    className="recognition-image-thumb"
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          <RecognitionComments
-                            recognitionId={rec.id}
-                            currentUserId={user.id}
-                            onOpenProfile={openUserProfile}
-                          />
-
-                          {renderReactionBar(rec.id)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
-        </section>
-      </main>
-    </>
-  );
+      </section>
+    </main>
+  </>
+) : null;
 
   return (
     <div className={`App ${darkMode ? 'dark' : ''}`}>
       <Routes>
-        <Route path="/" element={dashboardView} />
+  <Route
+    path="/login"
+    element={
+      user ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleAuthSuccess} />
+    }
+  />
 
-        <Route
-          path="/perfil"
-          element={
-            <ProfilePage
-              currentUser={user}
-              loggedInUserId={user?.id}
-              recognitions={recognitions}
-              onBack={() => navigate('/')}
-              onOpenImageViewer={openImageViewer}
-              darkMode={darkMode}
-              onOpenEditProfile={openEditProfileModal}
-              isOwnProfile={true}
-            />
-          }
+  <Route
+    path="/registro"
+    element={
+      user ? <Navigate to="/" replace /> : <RegisterPage onRegisterSuccess={handleAuthSuccess} />
+    }
+  />
+
+  <Route
+    path="/"
+    element={user ? dashboardView : <Navigate to="/login" replace />}
+  />
+
+  <Route
+    path="/perfil"
+    element={
+      user ? (
+        <ProfilePage
+          currentUser={user}
+          loggedInUserId={user?.id}
+          recognitions={recognitions}
+          onBack={() => navigate('/')}
+          onOpenImageViewer={openImageViewer}
+          darkMode={darkMode}
+          onOpenEditProfile={openEditProfileModal}
+          isOwnProfile={true}
         />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
+  />
 
-        <Route
-          path="/perfil/:userId"
-          element={
-            <ProfilePage
-              currentUser={user}
-              loggedInUserId={user?.id}
-              recognitions={recognitions}
-              onBack={() => navigate('/')}
-              onOpenImageViewer={openImageViewer}
-              darkMode={darkMode}
-              onOpenEditProfile={openEditProfileModal}
-              isOwnProfile={false}
-            />
-          }
+  <Route
+    path="/perfil/:userId"
+    element={
+      user ? (
+        <ProfilePage
+          currentUser={user}
+          loggedInUserId={user?.id}
+          recognitions={recognitions}
+          onBack={() => navigate('/')}
+          onOpenImageViewer={openImageViewer}
+          darkMode={darkMode}
+          onOpenEditProfile={openEditProfileModal}
+          isOwnProfile={false}
         />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
+  />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+  <Route
+    path="*"
+    element={<Navigate to={user ? '/' : '/login'} replace />}
+  />
+</Routes>
 
       {showEditProfileModal && (
         <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>
