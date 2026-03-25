@@ -833,10 +833,7 @@ const handleLogout = () => {
           ) : (
             featuredRecognitions.map((rec, index) => {
               const categoryMeta = getCategoryMeta(rec.category);
-              const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
-                ...img,
-                fullUrl: resolveImageUrl(img.image_url),
-              }));
+              const recMedia = Array.isArray(rec.media)? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
 
               return (
                 <article
@@ -878,25 +875,49 @@ const handleLogout = () => {
                       </p>
 
                       <p className="featured-message-text">“{rec.message}”</p>
+                      {recMedia.length > 0 && (
+  <div className="recognition-media-grid">
+    {recMedia.map((mediaItem, mediaIndex) => {
+      const isVideo = mediaItem.media_type === 'video';
 
-                      {recImages.length > 0 && (
-                        <div className="recognition-images-grid">
-                          {recImages.map((image, imageIndex) => (
-                            <button
-                              key={image.id}
-                              type="button"
-                              className="recognition-image-card"
-                              onClick={() => openImageViewer(recImages, imageIndex)}
-                            >
-                              <img
-                                src={image.fullUrl}
-                                alt="Imagen del reconocimiento"
-                                className="recognition-image-thumb"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      )}
+      return (
+        <div
+          key={mediaItem.id}
+          className={`recognition-media-card ${isVideo ? 'is-video' : 'is-image'}`}
+        >
+          {isVideo ? (
+            <video
+              src={mediaItem.fullUrl}
+              className="recognition-video-thumb"
+              controls
+              preload="metadata"
+              playsInline
+            />
+          ) : (
+            <button
+              type="button"
+              className="recognition-image-card"
+              onClick={() =>
+                openImageViewer(
+                  recMedia.filter((m) => m.media_type === 'image'),
+                  recMedia
+                    .filter((m) => m.media_type === 'image')
+                    .findIndex((m) => m.id === mediaItem.id)
+                )
+              }
+            >
+              <img
+                src={mediaItem.fullUrl}
+                alt="Imagen del reconocimiento"
+                className="recognition-image-thumb"
+              />
+            </button>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
 
                       <RecognitionComments
                         recognitionId={rec.id}
@@ -974,13 +995,22 @@ const handleLogout = () => {
       </section>
 
       <UsersDirectory
-        currentUserId={user?.id}
-        onUserSelected={(selectedUser) => {
-          setRecognitionPrefillUser(selectedUser);
-          window.scrollTo({ top: 1180, behavior: 'smooth' });
-        }}
-        onOpenProfile={openUserProfile}
-      />
+  currentUserId={user?.id}
+  onUserSelected={(selectedUser) => {
+    setRecognitionPrefillUser(selectedUser);
+
+    setTimeout(() => {
+      const formSection = document.getElementById('recognition-form-section');
+      if (formSection) {
+        formSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    }, 120);
+  }}
+  onOpenProfile={openUserProfile}
+/>
 
       <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
 
@@ -1193,10 +1223,8 @@ const handleLogout = () => {
             ) : (
               filteredRecognitions.map((rec, index) => {
                 const categoryMeta = getCategoryMeta(rec.category);
-                const recImages = normalizeRecognitionImages(rec.images).map((img) => ({
-                  ...img,
-                  fullUrl: resolveImageUrl(img.image_url),
-                }));
+                const recMedia = Array.isArray(rec.media)
+                 ? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
 
                 return (
                   <div
@@ -1238,24 +1266,49 @@ const handleLogout = () => {
 
                         <p className="message-text">“{rec.message}”</p>
 
-                        {recImages.length > 0 && (
-                          <div className="recognition-images-grid">
-                            {recImages.map((image, imageIndex) => (
-                              <button
-                                key={image.id}
-                                type="button"
-                                className="recognition-image-card"
-                                onClick={() => openImageViewer(recImages, imageIndex)}
-                              >
-                                <img
-                                  src={image.fullUrl}
-                                  alt="Imagen del reconocimiento"
-                                  className="recognition-image-thumb"
-                                />
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        {recMedia.length > 0 && (
+  <div className="recognition-media-grid">
+    {recMedia.map((mediaItem, mediaIndex) => {
+      const isVideo = mediaItem.media_type === 'video';
+
+      return (
+        <div
+          key={mediaItem.id}
+          className={`recognition-media-card ${isVideo ? 'is-video' : 'is-image'}`}
+        >
+          {isVideo ? (
+            <video
+              src={mediaItem.fullUrl}
+              className="recognition-video-thumb"
+              controls
+              preload="metadata"
+              playsInline
+            />
+          ) : (
+            <button
+              type="button"
+              className="recognition-image-card"
+              onClick={() =>
+                openImageViewer(
+                  recMedia.filter((m) => m.media_type === 'image'),
+                  recMedia
+                    .filter((m) => m.media_type === 'image')
+                    .findIndex((m) => m.id === mediaItem.id)
+                )
+              }
+            >
+              <img
+                src={mediaItem.fullUrl}
+                alt="Imagen del reconocimiento"
+                className="recognition-image-thumb"
+              />
+            </button>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
 
                         <RecognitionComments
                           recognitionId={rec.id}

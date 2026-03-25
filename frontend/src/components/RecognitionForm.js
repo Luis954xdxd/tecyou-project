@@ -15,7 +15,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sending, setSending] = useState(false);
-  const [selectedImages, setSelectedImages] = useState([]);
+  const [selectedMedia, setSelectedMedia] = useState([]);
   const [formFeedback, setFormFeedback] = useState({
     type: '',
     message: '',
@@ -91,16 +91,40 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     setSearchInput('');
   };
 
-  const handleImageChange = (e) => {
+  const handleMediaChange = (e) => {
     const files = Array.from(e.target.files || []);
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
-    const filtered = files.filter((file) => validTypes.includes(file.type)).slice(0, 5);
-    setSelectedImages(filtered);
+    const validTypes = [
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+    ];
+
+    const filtered = files.filter((file) => validTypes.includes(file.type));
+
+    if (filtered.length !== files.length) {
+      setFormFeedback({
+        type: 'error',
+        message: 'Solo se permiten imágenes PNG/JPG/WEBP y videos MP4/WEBM/MOV.',
+      });
+    } else {
+      setFormFeedback({ type: '', message: '' });
+    }
+
+    setSelectedMedia((prev) => {
+      const merged = [...prev, ...filtered];
+      return merged.slice(0, 5);
+    });
+
+    e.target.value = '';
   };
 
-  const handleRemoveImage = (indexToRemove) => {
-    setSelectedImages((prev) => prev.filter((_, index) => index !== indexToRemove));
+  const handleRemoveMedia = (indexToRemove) => {
+    setSelectedMedia((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = async (e) => {
@@ -128,8 +152,8 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       payload.append('message', formData.message);
       payload.append('category', formData.category);
 
-      selectedImages.forEach((image) => {
-        payload.append('recognitionImages', image);
+      selectedMedia.forEach((file) => {
+        payload.append('recognitionMedia', file);
       });
 
       await axios.post(`${API_BASE}/api/recognitions/send`, payload, {
@@ -148,7 +172,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       setSearchInput('');
       setSearchResults([]);
       setSelectedUser(null);
-      setSelectedImages([]);
+      setSelectedMedia([]);
 
       setFormFeedback({
         type: 'success',
@@ -316,50 +340,65 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         </div>
 
         <div className="input-group-custom">
-          <label>Imágenes del reconocimiento</label>
+          <label>Archivos del reconocimiento</label>
 
           <label className="custom-file-upload">
             <input
               type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
+              accept="image/png,image/jpeg,image/jpg,image/webp,video/mp4,video/webm,video/quicktime"
               multiple
-              onChange={handleImageChange}
+              onChange={handleMediaChange}
               className="hidden-file-upload"
             />
 
             <div className="custom-file-upload-content">
-              <div className="custom-file-upload-button">Subir imágenes</div>
+              <div className="custom-file-upload-button">Subir archivos</div>
 
               <div className="custom-file-upload-text">
-                {selectedImages.length > 0
-                  ? `${selectedImages.length} imagen(es) seleccionada(s)`
-                  : 'No has seleccionado imágenes'}
+                {selectedMedia.length > 0
+                  ? `${selectedMedia.length} archivo(s) seleccionado(s)`
+                  : 'No has seleccionado imágenes o videos'}
               </div>
             </div>
           </label>
 
           <small className="field-hint">
-            Puedes subir hasta 5 imágenes.
+            Puedes subir hasta 5 archivos en total, entre imágenes y videos.
           </small>
 
-          {selectedImages.length > 0 && (
+          {selectedMedia.length > 0 && (
             <div className="recognition-upload-preview-list">
-              {selectedImages.map((image, index) => (
-                <div key={`${image.name}-${index}`} className="recognition-upload-preview-card">
-                  <img
-                    src={URL.createObjectURL(image)}
-                    alt={`preview-${index}`}
-                    className="recognition-upload-preview-image"
-                  />
-                  <button
-                    type="button"
-                    className="recognition-upload-remove-btn"
-                    onClick={() => handleRemoveImage(index)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+              {selectedMedia.map((file, index) => {
+                const isVideo = file.type.startsWith('video/');
+
+                return (
+                  <div key={`${file.name}-${index}`} className="recognition-upload-preview-card">
+                    {isVideo ? (
+                      <video
+                        src={URL.createObjectURL(file)}
+                        className="recognition-upload-preview-video"
+                        controls
+                        muted
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`preview-${index}`}
+                        className="recognition-upload-preview-image"
+                      />
+                    )}
+
+                    <button
+                      type="button"
+                      className="recognition-upload-remove-btn"
+                      onClick={() => handleRemoveMedia(index)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

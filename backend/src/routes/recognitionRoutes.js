@@ -22,22 +22,36 @@ const storage = multer.diskStorage({
   },
 });
 
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  const allowedTypes = [...IMAGE_TYPES, ...VIDEO_TYPES];
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Formato de imagen no permitido. Usa PNG, JPG o WEBP.'));
+    cb(
+      new Error(
+        'Formato no permitido. Usa imágenes PNG/JPG/WEBP o videos MP4/WEBM/MOV.'
+      )
+    );
   }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    files: 5,
+    fileSize: 40 * 1024 * 1024, // 40 MB por archivo
+  },
+});
 
 // ===============================
 // ENVIAR RECONOCIMIENTO
 // ===============================
-router.post('/send', upload.array('recognitionImages', 5), async (req, res) => {
+router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
   try {
     const { sender_id, receiver_id, receiver_control_number, message, category } = req.body;
 
@@ -86,18 +100,30 @@ router.post('/send', upload.array('recognitionImages', 5), async (req, res) => {
 
     const recognitionId = newRecognition.rows[0].id;
 
-    // Guardar imágenes si vienen en el request
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const imagePath = `/uploads/recognitions/${file.filename}`;
+    // Guardar medios si vienen en el request
+if (req.files && req.files.length > 0) {
+  for (const file of req.files) {
+    const mediaPath = `/uploads/recognitions/${file.filename}`;
 
-        await pool.query(
-          `INSERT INTO recognition_images (recognition_id, image_url)
-           VALUES ($1, $2)`,
-          [recognitionId, imagePath]
-        );
-      }
+    let mediaType = null;
+
+    if (IMAGE_TYPES.includes(file.mimetype)) {
+      mediaType = 'image';
+    } else if (VIDEO_TYPES.includes(file.mimetype)) {
+      mediaType = 'video';
     }
+
+    if (!mediaType) {
+      continue;
+    }
+
+    await pool.query(
+      `INSERT INTO recognition_media (recognition_id, media_url, media_type)
+       VALUES ($1, $2, $3)`,
+      [recognitionId, mediaPath, mediaType]
+    );
+  }
+}
 
     // Notificación al receptor del reconocimiento
     if (Number(sender_id) !== Number(finalReceiverId)) {
@@ -143,16 +169,17 @@ router.get('/feed', async (req, res) => {
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'id', ri.id,
-              'image_url', ri.image_url
+              'id', rm.id,
+              'media_url', rm.media_url,
+              'media_type', rm.media_type
             )
-          ) FILTER (WHERE ri.id IS NOT NULL),
+          ) FILTER (WHERE rm.id IS NOT NULL),
           '[]'
-        ) AS images
+        ) AS media
       FROM recognitions r
       JOIN users s ON r.sender_id = s.id
       JOIN users rec ON r.receiver_id = rec.id
-      LEFT JOIN recognition_images ri ON r.id = ri.recognition_id
+      LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
       GROUP BY r.id, s.id, rec.id
       ORDER BY r.created_at DESC
     `);

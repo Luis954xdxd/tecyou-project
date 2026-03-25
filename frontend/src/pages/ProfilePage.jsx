@@ -127,8 +127,8 @@ function ProfilePage({
     [safeRecognitions, profileUserId]
   );
 
-  const galleryImages = useMemo(() => {
-    const allImages = [];
+  const galleryMedia = useMemo(() => {
+    const allMedia = [];
 
     safeRecognitions.forEach((rec) => {
       const isRelatedToProfile =
@@ -137,24 +137,24 @@ function ProfilePage({
 
       if (!isRelatedToProfile) return;
 
-      if (Array.isArray(rec.images)) {
-        rec.images.forEach((img) => {
-          if (img?.image_url) {
-            allImages.push({
-              ...img,
-              fullUrl: resolveImageUrl(img.image_url),
+      if (Array.isArray(rec.media)) {
+        rec.media.forEach((item) => {
+          if (item?.media_url) {
+            allMedia.push({
+              ...item,
+              fullUrl: resolveImageUrl(item.media_url),
             });
           }
         });
       }
     });
 
-    return allImages;
+    return allMedia;
   }, [safeRecognitions, profileUserId]);
 
-  const visibleGalleryImages = showAllGallery
-    ? galleryImages
-    : galleryImages.slice(0, 5);
+  const visibleGalleryMedia = showAllGallery
+    ? galleryMedia
+    : galleryMedia.slice(0, 6);
 
   const filteredSent = useMemo(() => {
     const query = profileSearch.trim().toLowerCase();
@@ -387,39 +387,60 @@ function ProfilePage({
               <section className="profile-twitter-section">
                 <div className="profile-twitter-section-head">
                   <h2>Galería reciente</h2>
-                  {galleryImages.length > 5 && (
+                  {galleryMedia.length > 6 && (
                     <button
                       type="button"
                       className="profile-twitter-more-btn"
                       onClick={() => setShowAllGallery((prev) => !prev)}
                     >
-                      {showAllGallery ? 'Ver menos' : `Ver más (${galleryImages.length})`}
+                      {showAllGallery ? 'Ver menos' : `Ver más (${galleryMedia.length})`}
                     </button>
                   )}
                 </div>
 
-                {galleryImages.length === 0 ? (
-                  <p className="profile-twitter-empty">Aún no hay imágenes publicadas.</p>
+                {galleryMedia.length === 0 ? (
+                  <p className="profile-twitter-empty">Aún no hay archivos publicados.</p>
                 ) : (
-                  <div className="profile-twitter-gallery">
-                    {visibleGalleryImages.map((img, index) => {
-                      const realIndex = showAllGallery
-                        ? index
-                        : galleryImages.findIndex((g) => g.fullUrl === img.fullUrl);
+                  <div className="profile-twitter-gallery media-gallery-grid">
+                    {visibleGalleryMedia.map((item, index) => {
+                      const isVideo = item.media_type === 'video';
+                      const imageOnlyGallery = galleryMedia.filter(
+                        (mediaItem) => mediaItem.media_type === 'image'
+                      );
+
+                      const realImageIndex = imageOnlyGallery.findIndex(
+                        (mediaItem) => mediaItem.id === item.id
+                      );
 
                       return (
-                        <button
-                          key={img.id || index}
-                          type="button"
-                          className="profile-twitter-gallery-button"
-                          onClick={() => onOpenImageViewer(galleryImages, realIndex)}
+                        <div
+                          key={item.id || index}
+                          className={`profile-twitter-gallery-item media-gallery-item ${
+                            isVideo ? 'is-video' : 'is-image'
+                          } ${visibleGalleryMedia.length === 1 ? 'single-item' : ''}`}
                         >
-                          <img
-                            src={img.fullUrl}
-                            alt={`Galería ${index + 1}`}
-                            className="profile-twitter-gallery-image"
-                          />
-                        </button>
+                          {isVideo ? (
+                            <video
+                              src={item.fullUrl}
+                              className="profile-twitter-gallery-video"
+                              controls
+                              preload="metadata"
+                              playsInline
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="profile-twitter-gallery-button profile-gallery-image-btn"
+                              onClick={() => onOpenImageViewer(imageOnlyGallery, realImageIndex)}
+                            >
+                              <img
+                                src={item.fullUrl}
+                                alt={`Galería ${index + 1}`}
+                                className="profile-twitter-gallery-image profile-gallery-image"
+                              />
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -491,8 +512,8 @@ function ProfilePage({
                     <span>Reconocimientos recibidos</span>
                   </div>
                   <div className="profile-twitter-about-card">
-                    <strong>{galleryImages.length}</strong>
-                    <span>Imágenes compartidas</span>
+                    <strong>{galleryMedia.length}</strong>
+                    <span>Archivos compartidos</span>
                   </div>
                   <div className="profile-twitter-about-card">
                     <strong>{followersCount}</strong>

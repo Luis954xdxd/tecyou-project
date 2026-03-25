@@ -5778,6 +5778,261 @@ select:focus {
   }
 }
 
+/* ===== USUARIO SELECCIONADO EN MODO OSCURO ===== */
+
+.App.dark .selected-user-card,
+.App.dark .selected-user-preview,
+.App.dark .user-search-item.selected {
+  background: #172033 !important;
+  border: 1px solid rgba(99, 102, 241, 0.28) !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .selected-user-card strong,
+.App.dark .selected-user-preview strong,
+.App.dark .selected-user-card .user-name,
+.App.dark .selected-user-preview .user-name {
+  color: #f8fafc !important;
+}
+
+.App.dark .selected-user-card span,
+.App.dark .selected-user-preview span,
+.App.dark .selected-user-card small,
+.App.dark .selected-user-preview small {
+  color: #cbd5e1 !important;
+}
+
+.App.dark .selected-user-card .remove-selected-user-btn,
+.App.dark .selected-user-preview .remove-selected-user-btn {
+  background: #e2e8f0 !important;
+  color: #1e3a8a !important;
+  border: none !important;
+}
+
+/* ===== INPUT NUMBER EN MODO OSCURO ===== */
+
+.App.dark input[type="number"] {
+  appearance: auto;
+  background: #1f2937 !important;
+  color: #f8fafc !important;
+}
+
+.App.dark input[type="number"]::-webkit-outer-spin-button,
+.App.dark input[type="number"]::-webkit-inner-spin-button {
+  filter: invert(1) brightness(0.8);
+  opacity: 1;
+}
+
+/* ===== NOTIFICACIONES EN MODO OSCURO ===== */
+
+.App.dark .notifications-section,
+.App.dark .notifications-panel,
+.App.dark .notifications-card,
+.App.dark .notifications-list {
+  background: transparent !important;
+}
+
+.App.dark .notification-item {
+  background: #0f172a !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .notification-item h4,
+.App.dark .notification-title,
+.App.dark .notifications-header h3 {
+  color: #f8fafc !important;
+}
+
+.App.dark .notification-item p,
+.App.dark .notification-item span,
+.App.dark .notification-meta,
+.App.dark .notifications-empty-state {
+  color: #cbd5e1 !important;
+}
+
+.App.dark .notifications-read-all-btn,
+.App.dark .notification-read-btn {
+  background: #1e293b !important;
+  color: #a78bfa !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.App.dark .notifications-read-all-btn:hover,
+.App.dark .notification-read-btn:hover {
+  background: #273449 !important;
+}
+
+/* ===== REACCIONES EN MODO OSCURO ===== */
+
+.App.dark .reaction-picker,
+.App.dark .reaction-menu,
+.App.dark .reaction-popover,
+.App.dark .reaction-panel,
+.App.dark .reaction-modal,
+.App.dark .reaction-selector {
+  background: #1e293b !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.45) !important;
+}
+
+.App.dark .reaction-option,
+.App.dark .reaction-option-btn {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.App.dark .reaction-option:hover,
+.App.dark .reaction-option-btn:hover {
+  background: #273449 !important;
+}
+
+.App.dark .reaction-picker p,
+.App.dark .reaction-menu p,
+.App.dark .reaction-panel p,
+.App.dark .reaction-modal p {
+  color: #cbd5e1 !important;
+}
+
+.App.dark .reaction-picker h4,
+.App.dark .reaction-menu h4,
+.App.dark .reaction-panel h4,
+.App.dark .reaction-modal h4 {
+  color: #f8fafc !important;
+}
+
+/* ===== MEDIOS DE RECONOCIMIENTO ===== */
+
+.recognition-media-preview-list,
+.recognition-media-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.recognition-media-preview-card,
+.recognition-media-card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 10px;
+}
+
+.recognition-media-preview-image,
+.recognition-image-thumb,
+.recognition-video-thumb,
+.recognition-media-preview-video {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  object-fit: cover;
+  max-height: 360px;
+}
+
+.recognition-video-thumb,
+.recognition-media-preview-video {
+  background: #000;
+}
+
+.remove-media-btn {
+  margin-top: 10px;
+  border: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.App.dark .recognition-media-preview-card,
+.App.dark .recognition-media-card {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.App.dark .remove-media-btn {
+  background: #334155;
+  color: #f8fafc;
+}
+
+/* ===== GALERÍA DE MEDIA EN PERFIL ===== */
+
+.media-gallery-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.media-gallery-item {
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 180px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.media-gallery-item.single-item {
+  grid-column: 1 / -1;
+  min-height: 320px;
+}
+
+.media-gallery-item.is-video {
+  min-height: 220px;
+}
+
+.profile-gallery-image-btn {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.profile-gallery-image,
+.profile-twitter-gallery-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+.media-gallery-item.single-item .profile-gallery-image,
+.media-gallery-item.single-item .profile-twitter-gallery-video {
+  min-height: 320px;
+  max-height: 460px;
+}
+
+.App.dark .media-gallery-item {
+  background: #0b1730;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+@media (max-width: 960px) {
+  .media-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .media-gallery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .media-gallery-item.single-item {
+    min-height: 220px;
+  }
+
+  .media-gallery-item.single-item .profile-gallery-image,
+  .media-gallery-item.single-item .profile-twitter-gallery-video {
+    min-height: 220px;
+    max-height: 320px;
+  }
+}
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {
