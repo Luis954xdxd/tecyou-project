@@ -49,24 +49,88 @@ const upload = multer({
 });
 
 // ===============================
+// HELPERS DE MENCIONES
+// ===============================
+const extractMentionHandles = (text = '') => {
+  const mentionRegex = /@([a-zA-Z0-9._]+)/g;
+  const handles = new Set();
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    if (match[1]) {
+      handles.add(match[1].toLowerCase());
+    }
+  }
+
+  return Array.from(handles);
+};
+
+const createMentionNotifications = async ({
+  commentId,
+  recognitionId,
+  actorUserId,
+  commentText,
+}) => {
+  const handles = extractMentionHandles(commentText);
+
+  if (!handles.length) return;
+
+  const mentionedUsers = await pool.query(
+    `SELECT id, email
+     FROM users
+     WHERE LOWER(split_part(email, '@', 1)) = ANY($1::text[])`,
+    [handles]
+  );
+
+  for (const mentionedUser of mentionedUsers.rows) {
+    if (Number(mentionedUser.id) === Number(actorUserId)) {
+      continue;
+    }
+
+    try {
+      await pool.query(
+        `INSERT INTO comment_mentions (comment_id, mentioned_user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (comment_id, mentioned_user_id) DO NOTHING`,
+        [commentId, mentionedUser.id]
+      );
+
+      await pool.query(
+        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          mentionedUser.id,
+          actorUserId,
+          'mention_received',
+          'Te mencionaron en un comentario',
+          commentText,
+          Number(recognitionId),
+        ]
+      );
+    } catch (error) {
+      console.error('Error creando mención/notificación:', error.message);
+    }
+  }
+};
+
+// ===============================
 // ENVIAR RECONOCIMIENTO
 // ===============================
 router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
   try {
     const { sender_id, receiver_id, receiver_control_number, message, category } = req.body;
 
-     const moderation = await moderateText(message);
+    const moderation = await moderateText(message);
 
     if (!moderation.permitido) {
       return res.status(400).json({
         error: moderation.motivo,
-        toxicidad: moderation.toxicidad
+        toxicidad: moderation.toxicidad,
       });
     }
 
     let finalReceiverId = receiver_id;
 
-    // Si no viene receiver_id pero sí número de control, se busca por correo institucional
     if (!finalReceiverId && receiver_control_number) {
       const receiverEmail = `za${receiver_control_number}@zapopan.tecmm.edu.mx`;
 
@@ -100,32 +164,28 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 
     const recognitionId = newRecognition.rows[0].id;
 
-    // Guardar medios si vienen en el request
-if (req.files && req.files.length > 0) {
-  for (const file of req.files) {
-    const mediaPath = `/uploads/recognitions/${file.filename}`;
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const mediaPath = `/uploads/recognitions/${file.filename}`;
 
-    let mediaType = null;
+        let mediaType = null;
 
-    if (IMAGE_TYPES.includes(file.mimetype)) {
-      mediaType = 'image';
-    } else if (VIDEO_TYPES.includes(file.mimetype)) {
-      mediaType = 'video';
+        if (IMAGE_TYPES.includes(file.mimetype)) {
+          mediaType = 'image';
+        } else if (VIDEO_TYPES.includes(file.mimetype)) {
+          mediaType = 'video';
+        }
+
+        if (!mediaType) continue;
+
+        await pool.query(
+          `INSERT INTO recognition_media (recognition_id, media_url, media_type)
+           VALUES ($1, $2, $3)`,
+          [recognitionId, mediaPath, mediaType]
+        );
+      }
     }
 
-    if (!mediaType) {
-      continue;
-    }
-
-    await pool.query(
-      `INSERT INTO recognition_media (recognition_id, media_url, media_type)
-       VALUES ($1, $2, $3)`,
-      [recognitionId, mediaPath, mediaType]
-    );
-  }
-}
-
-    // Notificación al receptor del reconocimiento
     if (Number(sender_id) !== Number(finalReceiverId)) {
       await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
@@ -218,9 +278,7 @@ router.post('/:id/react', async (req, res) => {
 
     const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
 
-    // Si ya existe la reacción
     if (existingReaction.rows.length > 0) {
-      // Si es la misma reacción, la quitamos
       if (existingReaction.rows[0].reaction_type === reaction_type) {
         await pool.query(
           `DELETE FROM recognition_reactions
@@ -231,7 +289,6 @@ router.post('/:id/react', async (req, res) => {
         return res.json({ removed: true });
       }
 
-      // Si es otra reacción, la actualizamos
       const updated = await pool.query(
         `UPDATE recognition_reactions
          SET reaction_type = $1, created_at = CURRENT_TIMESTAMP
@@ -258,7 +315,6 @@ router.post('/:id/react', async (req, res) => {
       return res.json(updated.rows[0]);
     }
 
-    // Si no existe, se crea
     const created = await pool.query(
       `INSERT INTO recognition_reactions (recognition_id, user_id, reaction_type)
        VALUES ($1, $2, $3)
@@ -327,22 +383,82 @@ router.get('/:id/reactions', async (req, res) => {
 });
 
 // ===============================
-// AGREGAR COMENTARIO
+// AGREGAR COMENTARIO O RESPUESTA
 // ===============================
 router.post('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
-    const { user_id, comment } = req.body;
+    const { user_id, comment, parent_comment_id } = req.body;
 
     if (!comment || !comment.trim()) {
-      return res.status(400).json({ error: 'El comentario no puede estar vacío.' });
+      return res.status(400).json({
+        error: 'El comentario no puede estar vacío.',
+      });
+    }
+
+    let finalParentCommentId = null;
+    let parentCommentData = null;
+
+    if (parent_comment_id) {
+      const parentCommentLookup = await pool.query(
+        `SELECT id, recognition_id, user_id
+         FROM recognition_comments
+         WHERE id = $1`,
+        [parent_comment_id]
+      );
+
+      if (parentCommentLookup.rows.length === 0) {
+        return res.status(404).json({
+          error: 'El comentario al que intentas responder no existe.',
+        });
+      }
+
+      parentCommentData = parentCommentLookup.rows[0];
+
+      if (Number(parentCommentData.recognition_id) !== Number(id)) {
+        return res.status(400).json({
+          error: 'La respuesta no corresponde al reconocimiento indicado.',
+        });
+      }
+
+      finalParentCommentId = parent_comment_id;
     }
 
     const newComment = await pool.query(
-      `INSERT INTO recognition_comments (recognition_id, user_id, comment)
-       VALUES ($1, $2, $3)
+      `INSERT INTO recognition_comments (
+        recognition_id,
+        user_id,
+        comment,
+        parent_comment_id
+      )
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [id, user_id, comment.trim()]
+      [id, user_id, comment.trim(), finalParentCommentId]
+    );
+
+    const insertedCommentId = newComment.rows[0].id;
+
+    await createMentionNotifications({
+      commentId: insertedCommentId,
+      recognitionId: id,
+      actorUserId: user_id,
+      commentText: comment.trim(),
+    });
+
+    const commentWithUser = await pool.query(
+      `SELECT
+          rc.id,
+          rc.recognition_id,
+          rc.user_id,
+          rc.comment,
+          rc.parent_comment_id,
+          rc.created_at,
+          COALESCE(u.display_name, u.fullname) AS user_name,
+          u.profile_image_url
+       FROM recognition_comments rc
+       JOIN users u ON rc.user_id = u.id
+       WHERE rc.id = $1`,
+      [insertedCommentId]
     );
 
     const recognitionOwner = await pool.query(
@@ -352,7 +468,20 @@ router.post('/:id/comments', async (req, res) => {
 
     const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
 
-    if (receiverId && Number(receiverId) !== Number(user_id)) {
+    if (parentCommentData && Number(parentCommentData.user_id) !== Number(user_id)) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          parentCommentData.user_id,
+          user_id,
+          'comment_reply_received',
+          'Respondieron tu comentario',
+          comment.trim(),
+          Number(id),
+        ]
+      );
+    } else if (receiverId && Number(receiverId) !== Number(user_id)) {
       await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -367,7 +496,7 @@ router.post('/:id/comments', async (req, res) => {
       );
     }
 
-    res.json(newComment.rows[0]);
+    res.json(commentWithUser.rows[0]);
   } catch (err) {
     console.error('Error en POST /:id/comments:', err.message);
     res.status(500).send('Error al agregar comentario.');
@@ -375,7 +504,7 @@ router.post('/:id/comments', async (req, res) => {
 });
 
 // ===============================
-// OBTENER COMENTARIOS DE RECONOCIMIENTO
+// OBTENER COMENTARIOS EN ÁRBOL
 // ===============================
 router.get('/:id/comments', async (req, res) => {
   try {
@@ -387,6 +516,7 @@ router.get('/:id/comments', async (req, res) => {
           rc.recognition_id,
           rc.user_id,
           rc.comment,
+          rc.parent_comment_id,
           rc.created_at,
           COALESCE(u.display_name, u.fullname) AS user_name,
           u.profile_image_url
@@ -397,95 +527,38 @@ router.get('/:id/comments', async (req, res) => {
       [id]
     );
 
-    res.json(comments.rows);
+    const allComments = comments.rows;
+
+    const commentMap = new Map();
+    const rootComments = [];
+
+    allComments.forEach((comment) => {
+      commentMap.set(comment.id, {
+        ...comment,
+        replies: [],
+      });
+    });
+
+    allComments.forEach((comment) => {
+      const mappedComment = commentMap.get(comment.id);
+
+      if (comment.parent_comment_id) {
+        const parentComment = commentMap.get(comment.parent_comment_id);
+
+        if (parentComment) {
+          parentComment.replies.push(mappedComment);
+        } else {
+          rootComments.push(mappedComment);
+        }
+      } else {
+        rootComments.push(mappedComment);
+      }
+    });
+
+    res.json(rootComments);
   } catch (err) {
     console.error('Error en GET /:id/comments:', err.message);
     res.status(500).send('Error al obtener comentarios.');
-  }
-});
-
-// ===============================
-// AGREGAR RESPUESTA A COMENTARIO
-// ===============================
-router.post('/comments/:commentId/replies', async (req, res) => {
-  try {
-    const { commentId } = req.params;
-    const { user_id, reply } = req.body;
-
-    if (!reply || !reply.trim()) {
-      return res.status(400).json({ error: 'La respuesta no puede estar vacía.' });
-    }
-
-    const commentLookup = await pool.query(
-      `SELECT rc.id, rc.user_id, rc.recognition_id
-       FROM recognition_comments rc
-       WHERE rc.id = $1`,
-      [commentId]
-    );
-
-    if (commentLookup.rows.length === 0) {
-      return res.status(404).json({ error: 'Comentario no encontrado.' });
-    }
-
-    const commentData = commentLookup.rows[0];
-
-    const newReply = await pool.query(
-      `INSERT INTO comment_replies (comment_id, user_id, reply)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [commentId, user_id, reply.trim()]
-    );
-
-    // Notificación al dueño del comentario
-    if (Number(commentData.user_id) !== Number(user_id)) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          commentData.user_id,
-          user_id,
-          'comment_reply_received',
-          'Respondieron tu comentario',
-          reply.trim(),
-          Number(commentData.recognition_id),
-        ]
-      );
-    }
-
-    res.json(newReply.rows[0]);
-  } catch (err) {
-    console.error('Error en POST /comments/:commentId/replies:', err.message);
-    res.status(500).send('Error al agregar respuesta.');
-  }
-});
-
-// ===============================
-// OBTENER RESPUESTAS DE UN COMENTARIO
-// ===============================
-router.get('/comments/:commentId/replies', async (req, res) => {
-  try {
-    const { commentId } = req.params;
-
-    const replies = await pool.query(
-      `SELECT
-          cr.id,
-          cr.comment_id,
-          cr.user_id,
-          cr.reply,
-          cr.created_at,
-          COALESCE(u.display_name, u.fullname) AS user_name,
-          u.profile_image_url
-       FROM comment_replies cr
-       JOIN users u ON cr.user_id = u.id
-       WHERE cr.comment_id = $1
-       ORDER BY cr.created_at ASC`,
-      [commentId]
-    );
-
-    res.json(replies.rows);
-  } catch (err) {
-    console.error('Error en GET /comments/:commentId/replies:', err.message);
-    res.status(500).send('Error al obtener respuestas.');
   }
 });
 

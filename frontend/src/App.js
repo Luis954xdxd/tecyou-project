@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
+import RecognitionVideoPlayer from './components/RecognitionVideoPlayer';
 import UsersDirectory from './components/UsersDirectory';
 import ActivityPanel from './components/ActivityPanel';
 import NotificationsPanel from './components/NotificationsPanel';
@@ -747,7 +748,63 @@ const handleLogout = () => {
     );
   };
 
+const getComposedRecognitionMedia = (mediaItems = []) => {
+  if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+    return {
+      primaryMedia: null,
+      imageOnlyMedia: [],
+      secondaryMedia: [],
+      layoutType: 'empty',
+      visibleSecondaryMedia: [],
+      remainingCount: 0,
+    };
+  }
 
+  const videoItems = mediaItems.filter((item) => item.media_type === 'video');
+  const imageItems = mediaItems.filter((item) => item.media_type === 'image');
+
+  // Si hay video, el video manda
+  if (videoItems.length > 0) {
+    const primaryMedia = videoItems[0];
+    const secondaryMedia = imageItems;
+    const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
+    const remainingCount = Math.max(secondaryMedia.length - 3, 0);
+
+    let layoutType = 'video-only';
+    if (visibleSecondaryMedia.length === 1) layoutType = 'video-plus-1';
+    if (visibleSecondaryMedia.length === 2) layoutType = 'video-plus-2';
+    if (visibleSecondaryMedia.length >= 3) layoutType = 'video-plus-3';
+
+    return {
+      primaryMedia,
+      imageOnlyMedia: imageItems,
+      secondaryMedia,
+      layoutType,
+      visibleSecondaryMedia,
+      remainingCount,
+    };
+  }
+
+  // Si no hay video, usamos solo imágenes
+  const primaryMedia = imageItems[0] || null;
+  const secondaryMedia = imageItems.slice(1);
+  const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
+  const remainingCount = Math.max(secondaryMedia.length - 3, 0);
+
+  let layoutType = 'image-single';
+  if (imageItems.length === 2) layoutType = 'image-2';
+  if (imageItems.length === 3) layoutType = 'image-3';
+  if (imageItems.length >= 4) layoutType = 'image-4plus';
+
+  return {
+    primaryMedia,
+    imageOnlyMedia: imageItems,
+    secondaryMedia,
+    layoutType,
+    visibleSecondaryMedia,
+    remainingCount,
+  };
+};
  const dashboardView = user ? (
   <>
     <header className="main-nav">
@@ -834,6 +891,7 @@ const handleLogout = () => {
             featuredRecognitions.map((rec, index) => {
               const categoryMeta = getCategoryMeta(rec.category);
               const recMedia = Array.isArray(rec.media)? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
+              const {primaryMedia,imageOnlyMedia,layoutType,visibleSecondaryMedia,remainingCount,} = getComposedRecognitionMedia(recMedia);
 
               return (
                 <article
@@ -876,49 +934,78 @@ const handleLogout = () => {
 
                       <p className="featured-message-text">“{rec.message}”</p>
                       {recMedia.length > 0 && (
-  <div className="recognition-media-grid">
-    {recMedia.map((mediaItem, mediaIndex) => {
-      const isVideo = mediaItem.media_type === 'video';
-
-      return (
-        <div
-          key={mediaItem.id}
-          className={`recognition-media-card ${isVideo ? 'is-video' : 'is-image'}`}
-        >
-          {isVideo ? (
-            <video
-              src={mediaItem.fullUrl}
-              className="recognition-video-thumb"
-              controls
-              preload="metadata"
-              playsInline
-            />
-          ) : (
-            <button
-              type="button"
-              className="recognition-image-card"
-              onClick={() =>
-                openImageViewer(
-                  recMedia.filter((m) => m.media_type === 'image'),
-                  recMedia
-                    .filter((m) => m.media_type === 'image')
-                    .findIndex((m) => m.id === mediaItem.id)
-                )
+  <div className={`recognition-media-premium ${layoutType}`}>
+    {primaryMedia && (
+      <div className="recognition-media-premium-main">
+        {primaryMedia.media_type === 'video' ? (
+          <RecognitionVideoPlayer
+            src={primaryMedia.fullUrl}
+            className="recognition-media-premium-main-video"
+            autoPlayWhenVisible={true}
+            showDurationBadge={true}
+            
+          />
+        ) : (
+          <button
+            type="button"
+            className="recognition-media-premium-main-button"
+            onClick={() => {
+              const imageIndex = imageOnlyMedia.findIndex(
+                (item) => item.id === primaryMedia.id
+              );
+              if (imageIndex >= 0) {
+                openImageViewer(imageOnlyMedia, imageIndex);
               }
+            }}
+          >
+            <img
+              src={primaryMedia.fullUrl}
+              alt="Media principal del reconocimiento"
+              className="recognition-media-premium-main-image"
+            />
+          </button>
+        )}
+      </div>
+    )}
+
+    {visibleSecondaryMedia.length > 0 && (
+      <div className="recognition-media-premium-secondary">
+        {visibleSecondaryMedia.map((item, mediaIndex) => {
+          const isLastVisible =
+            mediaIndex === visibleSecondaryMedia.length - 1 && remainingCount > 0;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className="recognition-media-premium-secondary-item"
+              onClick={() => {
+                const imageIndex = imageOnlyMedia.findIndex(
+                  (mediaItem) => mediaItem.id === item.id
+                );
+                if (imageIndex >= 0) {
+                  openImageViewer(imageOnlyMedia, imageIndex);
+                }
+              }}
             >
               <img
-                src={mediaItem.fullUrl}
-                alt="Imagen del reconocimiento"
-                className="recognition-image-thumb"
+                src={item.fullUrl}
+                alt={`Media secundaria ${mediaIndex + 1}`}
+                className="recognition-media-premium-secondary-image"
               />
+
+              {isLastVisible && (
+                <div className="recognition-media-premium-overlay">
+                  +{remainingCount}
+                </div>
+              )}
             </button>
-          )}
-        </div>
-      );
-    })}
+          );
+        })}
+      </div>
+    )}
   </div>
 )}
-
                       <RecognitionComments
                         recognitionId={rec.id}
                         currentUserId={user?.id}
@@ -1226,6 +1313,8 @@ const handleLogout = () => {
                 const recMedia = Array.isArray(rec.media)
                  ? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
 
+                 const {primaryMedia,imageOnlyMedia,layoutType,remainingCount,visibleSecondaryMedia,} = getComposedRecognitionMedia(recMedia);
+
                 return (
                   <div
                     key={rec.id}
@@ -1264,51 +1353,82 @@ const handleLogout = () => {
                           </button>
                         </p>
 
-                        <p className="message-text">“{rec.message}”</p>
-
+                        <p className="message-text">“{rec.message}”</p> 
                         {recMedia.length > 0 && (
-  <div className="recognition-media-grid">
-    {recMedia.map((mediaItem, mediaIndex) => {
-      const isVideo = mediaItem.media_type === 'video';
-
-      return (
-        <div
-          key={mediaItem.id}
-          className={`recognition-media-card ${isVideo ? 'is-video' : 'is-image'}`}
-        >
-          {isVideo ? (
-            <video
-              src={mediaItem.fullUrl}
-              className="recognition-video-thumb"
-              controls
-              preload="metadata"
-              playsInline
-            />
-          ) : (
-            <button
-              type="button"
-              className="recognition-image-card"
-              onClick={() =>
-                openImageViewer(
-                  recMedia.filter((m) => m.media_type === 'image'),
-                  recMedia
-                    .filter((m) => m.media_type === 'image')
-                    .findIndex((m) => m.id === mediaItem.id)
-                )
+  <div className={`recognition-media-premium ${layoutType}`}>
+    {primaryMedia && (
+      <div className="recognition-media-premium-main">
+        {primaryMedia.media_type === 'video' ? (
+          <RecognitionVideoPlayer
+            src={primaryMedia.fullUrl}
+            className="recognition-media-premium-main-video"
+            autoPlayWhenVisible={true}
+            showDurationBadge={true}
+            
+          />
+        ) : (
+          <button
+            type="button"
+            className="recognition-media-premium-main-button"
+            onClick={() => {
+              const imageIndex = imageOnlyMedia.findIndex(
+                (item) => item.id === primaryMedia.id
+              );
+              if (imageIndex >= 0) {
+                openImageViewer(imageOnlyMedia, imageIndex);
               }
+            }}
+          >
+            <img
+              src={primaryMedia.fullUrl}
+              alt="Media principal del reconocimiento"
+              className="recognition-media-premium-main-image"
+            />
+          </button>
+        )}
+      </div>
+    )}
+
+    {visibleSecondaryMedia.length > 0 && (
+      <div className="recognition-media-premium-secondary">
+        {visibleSecondaryMedia.map((item, mediaIndex) => {
+          const isLastVisible =
+            mediaIndex === visibleSecondaryMedia.length - 1 && remainingCount > 0;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className="recognition-media-premium-secondary-item"
+              onClick={() => {
+                const imageIndex = imageOnlyMedia.findIndex(
+                  (mediaItem) => mediaItem.id === item.id
+                );
+                if (imageIndex >= 0) {
+                  openImageViewer(imageOnlyMedia, imageIndex);
+                }
+              }}
             >
               <img
-                src={mediaItem.fullUrl}
-                alt="Imagen del reconocimiento"
-                className="recognition-image-thumb"
+                src={item.fullUrl}
+                alt={`Media secundaria ${mediaIndex + 1}`}
+                className="recognition-media-premium-secondary-image"
               />
+
+              {isLastVisible && (
+                <div className="recognition-media-premium-overlay">
+                  +{remainingCount}
+                </div>
+              )}
             </button>
-          )}
-        </div>
-      );
-    })}
+          );
+        })}
+      </div>
+    )}
   </div>
 )}
+
+                        
 
                         <RecognitionComments
                           recognitionId={rec.id}

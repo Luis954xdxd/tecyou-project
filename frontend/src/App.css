@@ -6033,6 +6033,1551 @@ select:focus {
   }
 }
 
+/* ===== COMPOSICIÓN SOCIAL DE MEDIA EN RECONOCIMIENTOS ===== */
+
+.recognition-media-composer {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  width: 100%;
+}
+
+.recognition-media-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.recognition-hero-image-btn {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recognition-hero-video,
+.recognition-hero-image {
+  width: 100%;
+  display: block;
+  min-height: 320px;
+  max-height: 460px;
+  object-fit: cover;
+  background: #000;
+}
+
+.recognition-media-collage {
+  display: grid;
+  gap: 10px;
+}
+
+.recognition-media-collage.collage-1 {
+  grid-template-columns: 1fr;
+}
+
+.recognition-media-collage.collage-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recognition-media-collage.collage-3,
+.recognition-media-collage.collage-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recognition-collage-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.06);
+  padding: 0;
+  cursor: pointer;
+}
+
+.recognition-collage-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  min-height: 150px;
+  max-height: 220px;
+  object-fit: cover;
+  background: #000;
+}
+
+.recognition-collage-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.56);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.recognition-body .recognition-media-composer,
+.featured-card-body .recognition-media-composer {
+  width: 100%;
+}
+
+.recognition-body,
+.featured-card-body {
+  min-width: 0;
+}
+
+.recognition-main-row,
+.featured-card-body {
+  align-items: flex-start;
+}
+
+.App.dark .recognition-media-hero,
+.App.dark .recognition-collage-item {
+  background: #0b1730;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+@media (max-width: 720px) {
+  .recognition-hero-video,
+  .recognition-hero-image {
+    min-height: 220px;
+    max-height: 320px;
+  }
+
+  .recognition-media-collage.collage-2,
+  .recognition-media-collage.collage-3,
+  .recognition-media-collage.collage-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .recognition-collage-image {
+    min-height: 180px;
+    max-height: 240px;
+  }
+}
+
+/* ===== MEDIA PREMIUM PARA RECONOCIMIENTOS ===== */
+
+.recognition-media-premium {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.recognition-media-premium-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.recognition-media-premium-hero-button {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recognition-media-premium-hero-image,
+.recognition-media-premium-hero-video {
+  width: 100%;
+  height: 245px;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+.recognition-media-premium-collage {
+  display: grid;
+  gap: 8px;
+}
+
+.recognition-media-premium-collage.premium-collage-1 {
+  grid-template-columns: 1fr;
+}
+
+.recognition-media-premium-collage.premium-collage-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recognition-media-premium-collage.premium-collage-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recognition-media-premium-tile {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.recognition-media-premium-tile-image {
+  width: 100%;
+  height: 108px;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+.recognition-media-premium-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.recognition-body .recognition-media-premium,
+.featured-card-body .recognition-media-premium {
+  width: 100%;
+}
+
+.recognition-body,
+.featured-card-body {
+  min-width: 0;
+}
+
+.recognition-main-row,
+.featured-card-body {
+  align-items: flex-start;
+}
+
+.App.dark .recognition-media-premium-hero,
+.App.dark .recognition-media-premium-tile {
+  background: #0b1730;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.22);
+}
+
+@media (max-width: 720px) {
+  .recognition-media-premium-hero-image,
+  .recognition-media-premium-hero-video {
+    height: 210px;
+  }
+
+  .recognition-media-premium-collage.premium-collage-2,
+  .recognition-media-premium-collage.premium-collage-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .recognition-media-premium-tile-image {
+    height: 150px;
+  }
+}
+
+/* ===== AJUSTES FINOS PREMIUM ===== */
+
+/* caso: una sola imagen */
+.recognition-media-premium-hero.hero-image-single .recognition-media-premium-hero-image {
+  height: 190px;
+}
+
+/* caso: video principal */
+.recognition-media-premium-hero.hero-video-main .recognition-media-premium-hero-video {
+  height: 245px;
+}
+
+/* caso normal */
+.recognition-media-premium-hero.hero-default .recognition-media-premium-hero-image,
+.recognition-media-premium-hero.hero-default .recognition-media-premium-hero-video {
+  height: 220px;
+}
+
+/* caso: video + 1 imagen -> hacer la imagen de abajo más compacta */
+.recognition-media-premium-collage.compact-single-after-video {
+  grid-template-columns: 1fr;
+}
+
+.recognition-media-premium-collage.compact-single-after-video .recognition-media-premium-tile-image {
+  height: 86px;
+}
+
+/* mejorar un poco el look general del hero */
+.recognition-media-premium-hero {
+  border-radius: 16px;
+}
+
+.recognition-media-premium-hero-image,
+.recognition-media-premium-hero-video {
+  border-radius: 0;
+}
+
+/* miniaturas más suaves */
+.recognition-media-premium-tile {
+  border-radius: 12px;
+}
+
+@media (max-width: 720px) {
+  .recognition-media-premium-hero.hero-image-single .recognition-media-premium-hero-image {
+    height: 170px;
+  }
+
+  .recognition-media-premium-hero.hero-video-main .recognition-media-premium-hero-video {
+    height: 210px;
+  }
+
+  .recognition-media-premium-hero.hero-default .recognition-media-premium-hero-image,
+  .recognition-media-premium-hero.hero-default .recognition-media-premium-hero-video {
+    height: 190px;
+  }
+
+  .recognition-media-premium-collage.compact-single-after-video .recognition-media-premium-tile-image {
+    height: 110px;
+  }
+}
+
+
+/* ===== MEDIA PREMIUM FINAL PARA RECONOCIMIENTOS ===== */
+
+.recognition-media-premium {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.recognition-media-premium-main {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.recognition-media-premium-main-button {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recognition-media-premium-main-image,
+.recognition-media-premium-main-video {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+/* alturas por tipo */
+.recognition-media-premium.video-only .recognition-media-premium-main-video,
+.recognition-media-premium.video-plus-1 .recognition-media-premium-main-video,
+.recognition-media-premium.video-plus-2 .recognition-media-premium-main-video,
+.recognition-media-premium.video-plus-3 .recognition-media-premium-main-video {
+  height: 230px;
+}
+
+.recognition-media-premium.image-single .recognition-media-premium-main-image {
+  height: 165px;
+}
+
+.recognition-media-premium.image-2 .recognition-media-premium-main-image {
+  height: 170px;
+}
+
+.recognition-media-premium.image-3 .recognition-media-premium-main-image,
+.recognition-media-premium.image-4plus .recognition-media-premium-main-image {
+  height: 210px;
+}
+
+.recognition-media-premium-secondary {
+  display: grid;
+  gap: 8px;
+}
+
+.recognition-media-premium.video-plus-1 .recognition-media-premium-secondary {
+  grid-template-columns: 160px;
+}
+
+.recognition-media-premium.video-plus-2 .recognition-media-premium-secondary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recognition-media-premium.video-plus-3 .recognition-media-premium-secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recognition-media-premium.image-2 .recognition-media-premium-secondary {
+  grid-template-columns: 1fr;
+}
+
+.recognition-media-premium.image-3 .recognition-media-premium-secondary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recognition-media-premium.image-4plus .recognition-media-premium-secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recognition-media-premium-secondary-item {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.recognition-media-premium-secondary-image {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+.recognition-media-premium.video-plus-1 .recognition-media-premium-secondary-image {
+  height: 78px;
+}
+
+.recognition-media-premium.video-plus-2 .recognition-media-premium-secondary-image,
+.recognition-media-premium.video-plus-3 .recognition-media-premium-secondary-image {
+  height: 100px;
+}
+
+.recognition-media-premium.image-2 .recognition-media-premium-secondary-image {
+  height: 120px;
+}
+
+.recognition-media-premium.image-3 .recognition-media-premium-secondary-image,
+.recognition-media-premium.image-4plus .recognition-media-premium-secondary-image {
+  height: 96px;
+}
+
+.recognition-media-premium-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.recognition-body .recognition-media-premium,
+.featured-card-body .recognition-media-premium {
+  width: 100%;
+}
+
+.recognition-body,
+.featured-card-body {
+  min-width: 0;
+}
+
+.recognition-main-row,
+.featured-card-body {
+  align-items: flex-start;
+}
+
+.App.dark .recognition-media-premium-main,
+.App.dark .recognition-media-premium-secondary-item {
+  background: #0b1730;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.22);
+}
+
+@media (max-width: 720px) {
+  .recognition-media-premium.video-only .recognition-media-premium-main-video,
+  .recognition-media-premium.video-plus-1 .recognition-media-premium-main-video,
+  .recognition-media-premium.video-plus-2 .recognition-media-premium-main-video,
+  .recognition-media-premium.video-plus-3 .recognition-media-premium-main-video {
+    height: 200px;
+  }
+
+  .recognition-media-premium.image-single .recognition-media-premium-main-image {
+    height: 150px;
+  }
+
+  .recognition-media-premium.image-2 .recognition-media-premium-main-image {
+    height: 155px;
+  }
+
+  .recognition-media-premium.image-3 .recognition-media-premium-main-image,
+  .recognition-media-premium.image-4plus .recognition-media-premium-main-image {
+    height: 185px;
+  }
+
+  .recognition-media-premium.video-plus-2 .recognition-media-premium-secondary,
+  .recognition-media-premium.video-plus-3 .recognition-media-premium-secondary,
+  .recognition-media-premium.image-3 .recognition-media-premium-secondary,
+  .recognition-media-premium.image-4plus .recognition-media-premium-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .recognition-media-premium.video-plus-1 .recognition-media-premium-secondary {
+    grid-template-columns: 1fr;
+  }
+
+  .recognition-media-premium.video-plus-1 .recognition-media-premium-secondary-image {
+    height: 95px;
+  }
+
+  .recognition-media-premium.video-plus-2 .recognition-media-premium-secondary-image,
+  .recognition-media-premium.video-plus-3 .recognition-media-premium-secondary-image,
+  .recognition-media-premium.image-2 .recognition-media-premium-secondary-image,
+  .recognition-media-premium.image-3 .recognition-media-premium-secondary-image,
+  .recognition-media-premium.image-4plus .recognition-media-premium-secondary-image {
+    height: 120px;
+  }
+}
+
+
+/* ===== REPRODUCTOR PERSONALIZADO DE VIDEO ===== */
+
+.recognition-video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #000;
+}
+
+.recognition-video-player.compact {
+  border-radius: 12px;
+}
+
+.recognition-video-element {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+  cursor: pointer;
+}
+
+.recognition-video-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 36%;
+  border: none;
+  background: transparent;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.recognition-video-zone.left {
+  left: 0;
+}
+
+.recognition-video-zone.right {
+  right: 0;
+}
+
+.recognition-video-feedback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.76);
+  color: #fff;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 800;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+}
+
+.recognition-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.78) 0%,
+    rgba(2, 6, 23, 0.25) 32%,
+    rgba(2, 6, 23, 0.08) 52%,
+    rgba(2, 6, 23, 0.22) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  z-index: 3;
+}
+
+.recognition-video-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.recognition-video-topbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.recognition-video-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  backdrop-filter: blur(8px);
+}
+
+.recognition-video-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.recognition-video-play-toggle {
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.recognition-video-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.recognition-video-progress-wrap {
+  width: 100%;
+}
+
+.recognition-video-progress {
+  width: 100%;
+  appearance: none;
+  height: 5px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.recognition-video-progress::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+.recognition-video-progress::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+.recognition-video-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recognition-video-left-controls,
+.recognition-video-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recognition-video-icon-btn {
+  border: none;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  backdrop-filter: blur(8px);
+}
+
+.recognition-video-time {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.recognition-video-volume {
+  width: 84px;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  outline: none;
+  cursor: pointer;
+}
+
+.recognition-video-volume::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+.recognition-video-volume::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+@media (max-width: 720px) {
+  .recognition-video-play-toggle {
+    width: 50px;
+    height: 50px;
+    font-size: 1.1rem;
+  }
+
+  .recognition-video-control-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .recognition-video-left-controls,
+  .recognition-video-right-controls {
+    justify-content: space-between;
+  }
+
+  .recognition-video-volume {
+    width: 72px;
+  }
+}
+
+/* ===== MEJORAS FINAS DEL REPRODUCTOR ===== */
+
+.recognition-video-duration-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+.recognition-video-center-pulse {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: recognitionVideoPulse 0.3s ease;
+}
+
+.recognition-video-center-pulse.play::before,
+.recognition-video-center-pulse.pause::before {
+  content: '';
+  width: 82px;
+  height: 82px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.64);
+  backdrop-filter: blur(10px);
+  position: absolute;
+}
+
+.recognition-video-center-pulse.play,
+.recognition-video-center-pulse.pause {
+  color: #fff;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.recognition-video-center-pulse > * {
+  position: relative;
+  z-index: 1;
+}
+
+.recognition-video-seek-feedback {
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.66);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  animation: recognitionSeekPop 0.65s ease;
+}
+
+.recognition-video-seek-feedback.left {
+  left: 24px;
+}
+
+.recognition-video-seek-feedback.right {
+  right: 24px;
+}
+
+.recognition-video-seek-feedback span {
+  position: relative;
+  z-index: 1;
+}
+
+.recognition-video-overlay {
+  transition: opacity 0.18s ease;
+}
+
+.recognition-video-player:hover .recognition-video-overlay.visible {
+  opacity: 1;
+}
+
+@keyframes recognitionVideoPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes recognitionSeekPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(1.02);
+  }
+}
+
+@media (max-width: 720px) {
+  .recognition-video-duration-badge {
+    top: 8px;
+    right: 8px;
+    font-size: 0.72rem;
+  }
+
+  .recognition-video-seek-feedback {
+    width: 72px;
+    height: 72px;
+    font-size: 0.92rem;
+  }
+
+  .recognition-video-seek-feedback.left {
+    left: 14px;
+  }
+
+  .recognition-video-seek-feedback.right {
+    right: 14px;
+  }
+
+  .recognition-video-center-pulse.play::before,
+  .recognition-video-center-pulse.pause::before {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+.recognition-video-play-toggle {
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.recognition-video-play-toggle:hover {
+  transform: scale(1.04);
+  background: rgba(15, 23, 42, 0.84);
+}
+
+/* ===== REPRODUCTOR PERSONALIZADO FINAL ===== */
+
+.recognition-video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #000;
+  isolation: isolate;
+}
+
+.recognition-video-player.compact {
+  border-radius: 12px;
+}
+
+.recognition-video-element {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #000;
+  cursor: pointer;
+}
+
+/* zonas invisibles para doble click */
+.recognition-video-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 36%;
+  border: none;
+  background: transparent;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.recognition-video-zone.left {
+  left: 0;
+}
+
+.recognition-video-zone.right {
+  right: 0;
+}
+
+/* badge superior */
+.recognition-video-topbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.recognition-video-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.68);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  backdrop-filter: blur(8px);
+}
+
+/* duración */
+.recognition-video-duration-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.24);
+}
+
+/* overlay general */
+.recognition-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.78) 0%,
+    rgba(2, 6, 23, 0.26) 30%,
+    rgba(2, 6, 23, 0.08) 52%,
+    rgba(2, 6, 23, 0.24) 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  z-index: 3;
+}
+
+.recognition-video-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* centro */
+.recognition-video-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.recognition-video-play-toggle {
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.28);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.recognition-video-play-toggle:hover {
+  transform: scale(1.04);
+  background: rgba(15, 23, 42, 0.84);
+}
+
+/* pulso visual play/pause */
+.recognition-video-center-pulse {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: recognitionVideoPulse 0.3s ease;
+}
+
+.recognition-video-center-pulse.play::before,
+.recognition-video-center-pulse.pause::before {
+  content: '';
+  width: 82px;
+  height: 82px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.64);
+  backdrop-filter: blur(10px);
+  position: absolute;
+}
+
+.recognition-video-center-pulse.play,
+.recognition-video-center-pulse.pause {
+  color: #fff;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+
+.recognition-video-center-pulse span {
+  position: relative;
+  z-index: 1;
+}
+
+/* feedback seek */
+.recognition-video-seek-feedback {
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.66);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  animation: recognitionSeekPop 0.65s ease;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.24);
+}
+
+.recognition-video-seek-feedback.left {
+  left: 24px;
+}
+
+.recognition-video-seek-feedback.right {
+  right: 24px;
+}
+
+.recognition-video-seek-feedback span {
+  position: relative;
+  z-index: 1;
+}
+
+/* controles inferiores */
+.recognition-video-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.recognition-video-progress-wrap {
+  width: 100%;
+}
+
+.recognition-video-progress {
+  width: 100%;
+  appearance: none;
+  height: 5px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.recognition-video-progress::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.22);
+}
+
+.recognition-video-progress::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.22);
+}
+
+.recognition-video-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recognition-video-left-controls,
+.recognition-video-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recognition-video-icon-btn {
+  border: none;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  backdrop-filter: blur(8px);
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.recognition-video-icon-btn:hover {
+  transform: scale(1.04);
+  background: rgba(15, 23, 42, 0.84);
+}
+
+.recognition-video-time {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.recognition-video-volume {
+  width: 84px;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  outline: none;
+  cursor: pointer;
+}
+
+.recognition-video-volume::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+.recognition-video-volume::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: none;
+}
+
+/* animaciones */
+@keyframes recognitionVideoPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes recognitionSeekPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(1.02);
+  }
+}
+
+/* responsive */
+@media (max-width: 720px) {
+  .recognition-video-duration-badge {
+    top: 8px;
+    right: 8px;
+    font-size: 0.72rem;
+  }
+
+  .recognition-video-play-toggle {
+    width: 50px;
+    height: 50px;
+    font-size: 1.1rem;
+  }
+
+  .recognition-video-control-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .recognition-video-left-controls,
+  .recognition-video-right-controls {
+    justify-content: space-between;
+  }
+
+  .recognition-video-volume {
+    width: 72px;
+  }
+
+  .recognition-video-seek-feedback {
+    width: 72px;
+    height: 72px;
+    font-size: 0.92rem;
+  }
+
+  .recognition-video-seek-feedback.left {
+    left: 14px;
+  }
+
+  .recognition-video-seek-feedback.right {
+    right: 14px;
+  }
+
+  .recognition-video-center-pulse.play::before,
+  .recognition-video-center-pulse.pause::before {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+/* ===== COMENTARIOS ANIDADOS ===== */
+
+.comment-thread {
+  margin-top: 10px;
+}
+
+.comment-thread.level-1,
+.comment-thread.level-2,
+.comment-thread.level-3 {
+  position: relative;
+}
+
+.comment-thread.level-1::before,
+.comment-thread.level-2::before,
+.comment-thread.level-3::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+}
+
+.comment-item {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.comment-avatar,
+.reply-avatar {
+  flex-shrink: 0;
+}
+
+.comment-avatar-image,
+.reply-avatar-image {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.comment-avatar-fallback,
+.reply-avatar-fallback {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: #1e3a8a;
+  color: white;
+}
+
+.comment-body,
+.reply-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-meta,
+.reply-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.comment-body p,
+.reply-body p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+
+.comment-actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.comment-reply-toggle-btn {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  color: #60a5fa;
+}
+
+.reply-form-wrap {
+  margin-top: 8px;
+  margin-left: 48px;
+  display: grid;
+  gap: 8px;
+}
+
+.reply-input {
+  width: 100%;
+  min-height: 70px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.reply-submit-btn {
+  justify-self: flex-start;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reply-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.App.dark .comment-item {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .reply-input {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+/* ===== VIDEO AUTOPLAY EN GALERÍA DE PERFIL ===== */
+
+.profile-twitter-gallery-video.recognition-video-player {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border-radius: 0;
+}
+
+.media-gallery-item.single-item .profile-twitter-gallery-video.recognition-video-player {
+  min-height: 320px;
+}
+
+.profile-twitter-gallery-video .recognition-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-twitter-gallery-video .recognition-video-overlay {
+  border-radius: 0;
+}
+
+@media (max-width: 640px) {
+  .profile-twitter-gallery-video.recognition-video-player {
+    min-height: 210px;
+  }
+
+  .media-gallery-item.single-item .profile-twitter-gallery-video.recognition-video-player {
+    min-height: 220px;
+  }
+}
+
+/* ===== MENCIONES EN COMENTARIOS ===== */
+
+.comment-mention {
+  border: none;
+  background: transparent;
+  color: #60a5fa;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+  margin: 0 2px 0 0;
+}
+
+.comment-mention:hover {
+  text-decoration: underline;
+}
+
+.mention-suggestions-dropdown {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.mention-suggestion-item {
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mention-suggestion-item:hover {
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.mention-suggestion-avatar-image {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.mention-suggestion-avatar-fallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: #1e3a8a;
+  color: white;
+}
+
+.mention-suggestion-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.mention-suggestion-meta strong {
+  font-size: 0.95rem;
+}
+
+.mention-suggestion-meta span {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.App.dark .mention-suggestions-dropdown {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .mention-suggestion-item:hover {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.App.dark .mention-suggestion-meta span {
+  color: #cbd5e1;
+}
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {

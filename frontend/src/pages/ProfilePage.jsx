@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -402,48 +403,48 @@ function ProfilePage({
                   <p className="profile-twitter-empty">Aún no hay archivos publicados.</p>
                 ) : (
                   <div className="profile-twitter-gallery media-gallery-grid">
-                    {visibleGalleryMedia.map((item, index) => {
-                      const isVideo = item.media_type === 'video';
-                      const imageOnlyGallery = galleryMedia.filter(
-                        (mediaItem) => mediaItem.media_type === 'image'
-                      );
+  {visibleGalleryMedia.map((item, index) => {
+    const isVideo = item.media_type === 'video';
+    const imageOnlyGallery = galleryMedia.filter(
+      (mediaItem) => mediaItem.media_type === 'image'
+    );
 
-                      const realImageIndex = imageOnlyGallery.findIndex(
-                        (mediaItem) => mediaItem.id === item.id
-                      );
+    const realImageIndex = imageOnlyGallery.findIndex(
+      (mediaItem) => mediaItem.id === item.id
+    );
 
-                      return (
-                        <div
-                          key={item.id || index}
-                          className={`profile-twitter-gallery-item media-gallery-item ${
-                            isVideo ? 'is-video' : 'is-image'
-                          } ${visibleGalleryMedia.length === 1 ? 'single-item' : ''}`}
-                        >
-                          {isVideo ? (
-                            <video
-                              src={item.fullUrl}
-                              className="profile-twitter-gallery-video"
-                              controls
-                              preload="metadata"
-                              playsInline
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="profile-twitter-gallery-button profile-gallery-image-btn"
-                              onClick={() => onOpenImageViewer(imageOnlyGallery, realImageIndex)}
-                            >
-                              <img
-                                src={item.fullUrl}
-                                alt={`Galería ${index + 1}`}
-                                className="profile-twitter-gallery-image profile-gallery-image"
-                              />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+    return (
+      <div
+        key={item.id || index}
+        className={`profile-twitter-gallery-item media-gallery-item ${
+          isVideo ? 'is-video' : 'is-image'
+        } ${visibleGalleryMedia.length === 1 ? 'single-item' : ''}`}
+      >
+        {isVideo ? (
+          <RecognitionVideoPlayer
+            src={item.fullUrl}
+            className="profile-twitter-gallery-video"
+            autoPlayWhenVisible={true}
+            showDurationBadge={true}
+            compact={true}
+          />
+        ) : (
+          <button
+            type="button"
+            className="profile-twitter-gallery-button profile-gallery-image-btn"
+            onClick={() => onOpenImageViewer(imageOnlyGallery, realImageIndex)}
+          >
+            <img
+              src={item.fullUrl}
+              alt={`Galería ${index + 1}`}
+              className="profile-twitter-gallery-image profile-gallery-image"
+            />
+          </button>
+        )}
+      </div>
+    );
+  })}
+</div>
                 )}
               </section>
             )}
