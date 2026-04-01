@@ -99,10 +99,24 @@ function RecognitionPage({
         </div>
 
         <div className="recognition-page-header">
-          <strong>{recognition.sender_name}</strong>
-          <span> reconoció a </span>
-          <strong>{recognition.receiver_name}</strong>
-        </div>
+          <button
+          type="button"
+          className="inline-user-link"
+         onClick={() => onOpenProfile?.(recognition.sender_id)}
+          >
+          {recognition.sender_name}
+        </button>
+
+        <span> reconoció a </span>
+
+        <button
+          type="button"
+            className="inline-user-link"
+            onClick={() => onOpenProfile?.(recognition.receiver_id)}
+          >
+          {recognition.receiver_name}
+          </button>
+          </div>
 
         <div className="recognition-page-message">
           <p className="message-with-hashtags">

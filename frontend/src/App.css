@@ -7962,6 +7962,51 @@ select:focus {
   }
 }
 
+.active-hashtag-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 18px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(91, 130, 255, 0.12);
+  border: 1px solid rgba(145, 172, 255, 0.16);
+  color: #eef4ff;
+}
+
+.clear-hashtag-filter-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eef4ff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+
+/* Hashtags */
+.hashtag-link {
+  color: #4da6ff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.hashtag-link:hover {
+  color: #7dc1ff;
+  text-decoration: underline;
+}
+
+/* Asegurar que dentro del mensaje no se sobreescriba */
+.message-text .hashtag-link,
+.featured-message-text .hashtag-link,
+.recognition-page-message .hashtag-link {
+  color: #4da6ff !important;
+  font-weight: 700 !important;
+}
+
 /* responsive */
 @media (max-width: 720px) {
   .recognition-video-duration-badge {
@@ -8463,18 +8508,6 @@ select:focus {
   z-index: 1;
 }
 
-.active-hashtag-filter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 14px 0 18px;
-  padding: 12px 16px;
-  border-radius: 18px;
-  background: rgba(91, 130, 255, 0.12);
-  border: 1px solid rgba(145, 172, 255, 0.16);
-  color: #eef4ff;
-}
 
 .clear-hashtag-filter-btn {
   border: none;
@@ -8782,6 +8815,50 @@ select:focus {
   font-size: 1rem;
   font-weight: 600;
 }
+
+
+.active-hashtag-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 18px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(91, 130, 255, 0.12);
+  border: 1px solid rgba(145, 172, 255, 0.16);
+  color: #1e3a8a;
+}
+
+.clear-hashtag-filter-btn {
+  border: none;
+  background: rgba(30, 58, 138, 0.08);
+  color: #1e3a8a;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.clear-hashtag-filter-btn:hover {
+  background: rgba(30, 58, 138, 0.14);
+}
+
+.App.dark .active-hashtag-filter {
+  background: rgba(99, 102, 241, 0.16);
+  border: 1px solid rgba(129, 140, 248, 0.18);
+  color: #e0e7ff;
+}
+
+.App.dark .clear-hashtag-filter-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e7ff;
+}
+
+.App.dark .clear-hashtag-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {

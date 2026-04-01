@@ -43,7 +43,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [hashtagFilter, setHashtagFilter] = useState('');
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortBy, setSortBy] = useState('recent'); 
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [profileImage, setProfileImage] = useState(null);
@@ -438,13 +438,13 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     }
   }, [location.pathname, location.state, recognitions]);
     
-useEffect(() => {
+  useEffect(() => {
   const incomingHashtag = location.state?.hashtagFilter;
 
   if (incomingHashtag) {
     setHashtagFilter(incomingHashtag);
   }
-}, [location.state]);
+  }, [location.state]);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -541,14 +541,10 @@ useEffect(() => {
       sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       break;
     case 'az':
-      sorted.sort((a, b) =>
-        (a.sender_name || '').localeCompare(b.sender_name || '', 'es')
-      );
+      sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
       break;
     case 'category':
-      sorted.sort((a, b) =>
-        (a.category || '').localeCompare(b.category || '', 'es')
-      );
+      sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
       break;
     case 'recent':
     default:
@@ -560,19 +556,23 @@ useEffect(() => {
 }, [recognitions, selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
   const activeFilterLabels = useMemo(() => {
-    const labels = [];
-    if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
-    if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
-    if (sortBy !== 'recent') {
-      const map = {
-        oldest: 'Orden: más antiguas',
-        az: 'Orden: A-Z',
-        category: 'Orden: categoría',
-      };
-      labels.push(map[sortBy]);
-    }
-    return labels;
-  }, [selectedCategory, searchTerm, sortBy]);
+  const labels = [];
+
+  if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
+  if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
+  if (hashtagFilter.trim() !== '') labels.push(`Hashtag: ${hashtagFilter}`);
+
+  if (sortBy !== 'recent') {
+    const map = {
+      oldest: 'Orden: más antiguas',
+      az: 'Orden: A-Z',
+      category: 'Orden: categoría',
+    };
+    labels.push(map[sortBy]);
+  }
+
+  return labels;
+}, [selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
   const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
 
@@ -1140,9 +1140,11 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                         </button>
                       </p>
 
-                      <p className="featured-message-text">{renderTextWithHashtags(rec.message, (tag) => {
-                        setHashtagFilter(`#${tag}`);
-                          })}</p>
+                      <p className="featured-message-text">
+                          {renderTextWithHashtags(rec.message, (tag) => {
+                           setHashtagFilter(`#${tag}`);
+                              })}
+                      </p>
                       {recMedia.length > 0 && (
   <div className={`recognition-media-premium ${layoutType}`}>
     {primaryMedia && (
@@ -1512,38 +1514,26 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
           )}
 
           <div className="feed-results-bar">
-            <span>
-              Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
-            </span>
-            {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || sortBy !== 'recent') && (
-              <button
-                type="button"
-                className="clear-filters-btn"
-                onClick={() => {
-                  setSelectedCategory('Todas');
-                  setSearchTerm('');
-                  setSortBy('recent');
-                }}
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </div>
-          <section className="stories-section">
-  <StoriesUploader currentUser={user} onStoryUploaded={fetchStories} />
-  {storiesLoading ? (
-    <p>Cargando historias...</p>
-  ) : (
-    <StoriesBar
-      stories={stories}
-      currentUser={user}
-      onOpenStoryViewer={openStoryViewer}
-    />
+  <span>
+    Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
+  </span>
+  {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || hashtagFilter.trim() !== '' || sortBy !== 'recent') && (
+    <button
+      type="button"
+      className="clear-filters-btn"
+      onClick={() => {
+        setSelectedCategory('Todas');
+        setSearchTerm('');
+        setHashtagFilter('');
+        setSortBy('recent');
+      }}
+    >
+      Limpiar filtros
+    </button>
   )}
-</section>
+</div>
 
-          <div className="feed-container">
-            {hashtagFilter && (
+{hashtagFilter && (
   <div className="active-hashtag-filter">
     <span>Filtrando por {hashtagFilter}</span>
     <button
@@ -1555,7 +1545,23 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
     </button>
   </div>
 )}
-            {loadingFeed ? (
+
+<section className="stories-section">
+  <StoriesUploader currentUser={user} onStoryUploaded={fetchStories} />
+  {storiesLoading ? (
+    <p>Cargando historias...</p>
+  ) : (
+    <StoriesBar
+      stories={stories}
+      currentUser={user}
+      onOpenStoryViewer={openStoryViewer}
+    />
+  )}
+  </section>
+
+  <div className="feed-container">
+
+           {loadingFeed ? (
               <div className="loading-state">
                 <div className="loading-spinner"></div>
                 <p>Cargando reconocimientos...</p>
@@ -1741,7 +1747,7 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
 
   return (
     <div className={`App ${darkMode ? 'dark' : ''}`}>
-      <Routes>
+    <Routes>
   <Route
     path="/login"
     element={
@@ -1761,89 +1767,97 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
     element={user ? dashboardView : <Navigate to="/login" replace />}
   />
 
-
   <Route
-  path="/reconocimiento/:id"
-  element={
-    <RecognitionPage
-      recognitions={recognitions}
-      onBack={() => navigate('/')}
-      onOpenImageViewer={openImageViewer}
-      currentUserId={user?.id}
-      onOpenProfile={openUserProfile}
-      renderReactionBar={renderReactionBar}
-      renderFavoriteButton={(recognitionId) => (
-        <div className="recognition-favorite-row">
-          <button
-            type="button"
-            className={`recognition-favorite-btn ${
-              favoriteIds[recognitionId] ? 'is-favorite' : ''
-            }`}
-            onClick={() => handleFavoriteToggle(recognitionId)}
-            disabled={Boolean(favoritingIds[recognitionId])}
-          >
-            {favoritingIds[recognitionId]
-              ? 'Guardando...'
-              : favoriteIds[recognitionId]
-              ? '★ Guardado'
-              : '☆ Guardar'}
-          </button>
-        </div>
-      )}
-      onHashtagClick={(tag) => {
-        navigate('/', {
-          state: { hashtagFilter: `#${tag}` },
-        });
-      }}
-    />
-  }
-/>
-
-  <Route
-     path="/perfil"
+    path="/reconocimiento/:id"
     element={
-    user ? (
-      <ProfilePage
-        currentUser={user}
-        loggedInUserId={user?.id}
-        recognitions={recognitions}
-         onBack={() => navigate('/')}
-         onOpenImageViewer={openImageViewer}
-          darkMode={darkMode}
-        onOpenEditProfile={openEditProfileModal}
-        isOwnProfile={true}
-      onFavoritesChanged={refreshGlobalFavorites}
-      onOpenRecognition={(recognitionId) => {
-       navigate('/', {
-     state: { highlightRecognitionId: recognitionId },
-       });
-      }}
-      />
-    ) : (
-      <Navigate to="/login" replace />
-    )
-  }
+      user ? (
+        <RecognitionPage
+          recognitions={recognitions}
+          onBack={() => navigate('/')}
+          onOpenImageViewer={openImageViewer}
+          currentUserId={user?.id}
+          onOpenProfile={openUserProfile}
+          renderReactionBar={renderReactionBar}
+          renderFavoriteButton={(recognitionId) => (
+            <div className="recognition-favorite-row">
+              <button
+                type="button"
+                className={`recognition-favorite-btn ${
+                  favoriteIds[recognitionId] ? 'is-favorite' : ''
+                }`}
+                onClick={() => handleFavoriteToggle(recognitionId)}
+                disabled={Boolean(favoritingIds[recognitionId])}
+              >
+                {favoritingIds[recognitionId]
+                  ? 'Guardando...'
+                  : favoriteIds[recognitionId]
+                  ? '★ Guardado'
+                  : '☆ Guardar'}
+              </button>
+            </div>
+          )}
+          onHashtagClick={(tag) => {
+            navigate('/', {
+              state: { hashtagFilter: `#${tag}` },
+            });
+          }}
+        />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
   />
 
   <Route
-     path="/perfil"
-  element={
-    user ? (
-      <ProfilePage
-        currentUser={user}
-        loggedInUserId={user?.id}
-        recognitions={recognitions}
-        onBack={() => navigate('/')}
-        onOpenImageViewer={openImageViewer}
-        darkMode={darkMode}
-        onOpenEditProfile={openEditProfileModal}
-        isOwnProfile={true}
-        onFavoritesChanged={refreshGlobalFavorites}
-      />
-    ) : (
-      <Navigate to="/login" replace />
-    )
-  }
+    path="/perfil"
+    element={
+      user ? (
+        <ProfilePage
+          currentUser={user}
+          loggedInUserId={user?.id}
+          recognitions={recognitions}
+          onBack={() => navigate('/')}
+          onOpenImageViewer={openImageViewer}
+          darkMode={darkMode}
+          onOpenEditProfile={openEditProfileModal}
+          isOwnProfile={true}
+          onFavoritesChanged={refreshGlobalFavorites}
+          onOpenRecognition={(recognitionId) => {
+            navigate('/', {
+              state: { highlightRecognitionId: recognitionId },
+            });
+          }}
+        />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
+  />
+
+  <Route
+    path="/perfil/:userId"
+    element={
+      user ? (
+        <ProfilePage
+          currentUser={user}
+          loggedInUserId={user?.id}
+          recognitions={recognitions}
+          onBack={() => navigate('/')}
+          onOpenImageViewer={openImageViewer}
+          darkMode={darkMode}
+          onOpenEditProfile={openEditProfileModal}
+          isOwnProfile={false}
+          onFavoritesChanged={refreshGlobalFavorites}
+          onOpenRecognition={(recognitionId) => {
+            navigate('/', {
+              state: { highlightRecognitionId: recognitionId },
+            });
+          }}
+        />
+      ) : (
+        <Navigate to="/login" replace />
+      )
+    }
   />
 
   <Route
