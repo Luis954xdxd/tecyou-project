@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
+import { renderTextWithHashtags } from '../textFormatters';
 
 const API_BASE = 'http://localhost:5000';
 
+
 function ProfilePage({
-  currentUser,
+    currentUser,
   loggedInUserId,
   recognitions,
   onBack,
@@ -14,6 +16,8 @@ function ProfilePage({
   darkMode,
   onOpenEditProfile,
   isOwnProfile,
+  onFavoritesChanged,
+  onOpenRecognition,
 }) {
   const navigate = useNavigate();
   const { userId } = useParams();
@@ -22,6 +26,11 @@ function ProfilePage({
   const [showAllGallery, setShowAllGallery] = useState(false);
   const [profileSearch, setProfileSearch] = useState('');
   const [loadingViewedProfile, setLoadingViewedProfile] = useState(false);
+  
+  const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [savedReactionTotals, setSavedReactionTotals] = useState({});
+  const [savedReactionUsersMap, setSavedReactionUsersMap] = useState({});
 
   const [viewedProfile, setViewedProfile] = useState(
     isOwnProfile
@@ -42,12 +51,140 @@ function ProfilePage({
         }
       : null
   );
+  const fetchSavedRecognitionReactions = async (recognitionId) => {
+   try {
+    const response = await axios.get(
+      `${API_BASE}/api/recognitions/${recognitionId}/reactions`
+    );
 
+    console.log('Reactions response', recognitionId, response.data);
+
+    const totals = Array.isArray(response.data?.totals) ? response.data.totals : [];
+    const users = Array.isArray(response.data?.users) ? response.data.users : [];
+
+    const totalsMap = {
+      like: 0,
+      celebrate: 0,
+      inspire: 0,
+      love: 0,
+    };
+
+    totals.forEach((item) => {
+      totalsMap[item.reaction_type] = Number(item.total) || 0;
+    });
+
+    console.log('Totals map for', recognitionId, totalsMap);
+
+    setSavedReactionTotals((prev) => ({
+      ...prev,
+      [recognitionId]: totalsMap,
+    }));
+
+    setSavedReactionUsersMap((prev) => ({
+      ...prev,
+      [recognitionId]: users,
+    }));
+  } catch (error) {
+    console.error(`Error cargando reacciones de guardado ${recognitionId}:`, error);
+  }
+};
+
+const fetchAllSavedReactions = async (savedRecognitions) => {
+  try {
+    if (!Array.isArray(savedRecognitions) || savedRecognitions.length === 0) {
+      setSavedReactionTotals({});
+      setSavedReactionUsersMap({});
+      return;
+    }
+
+    await Promise.all(
+      savedRecognitions.map((rec) => fetchSavedRecognitionReactions(rec.id))
+    );
+  } catch (error) {
+    console.error('Error cargando reacciones de guardados:', error);
+  }
+};
   const resolveImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
     return `${API_BASE}${url}`;
   };
+
+  const reactionMeta = {
+  like: { icon: '👍', label: 'Me gusta' },
+  celebrate: { icon: '🎉', label: 'Celebrar' },
+  inspire: { icon: '💡', label: 'Inspirar' },
+  love: { icon: '❤️', label: 'Encanta' },
+  };
+   
+  const fetchFavorites = async () => {
+  try {
+    console.log('fetchFavorites -> loggedInUserId:', loggedInUserId);
+    console.log('fetchFavorites -> isOwnProfile:', isOwnProfile);
+
+    if (!loggedInUserId || !isOwnProfile) {
+      setFavoriteRecognitions([]);
+      setSavedReactionTotals({});
+      setSavedReactionUsersMap({});
+      return;
+    }
+
+    setLoadingFavorites(true);
+
+    const response = await axios.get(
+      `${API_BASE}/api/recognitions/favorites/${loggedInUserId}`
+    );
+
+    console.log('fetchFavorites -> response.data:', response.data);
+
+    const favorites = Array.isArray(response.data) ? response.data : [];
+    setFavoriteRecognitions(favorites);
+
+    await fetchAllSavedReactions(favorites);
+  } catch (error) {
+    console.error('Error cargando favoritos del perfil:', error);
+  } finally {
+    setLoadingFavorites(false);
+  }
+  };
+
+  
+
+  const handleRemoveFavoriteFromProfile = async (recognitionId) => {
+  try {
+    if (!loggedInUserId) return;
+
+    await axios.delete(
+      `${API_BASE}/api/recognitions/${recognitionId}/favorite`,
+      {
+        data: { user_id: loggedInUserId },
+      }
+    );
+
+    setFavoriteRecognitions((prev) =>
+      prev.filter((item) => Number(item.id) !== Number(recognitionId))
+    );
+
+    if (onFavoritesChanged) {
+      await onFavoritesChanged();
+    }
+  } catch (error) {
+    console.error('Error quitando guardado desde perfil:', error);
+  }
+  };
+  
+
+  useEffect(() => {
+  if (activeTab === 'saved' && isOwnProfile) {
+    fetchFavorites();
+  }
+    }, [activeTab, isOwnProfile, loggedInUserId]);
+
+    useEffect(() => {
+  if (activeTab === 'saved' && favoriteRecognitions.length > 0) {
+    fetchAllSavedReactions(favoriteRecognitions);
+  }
+}, [favoriteRecognitions, activeTab]);
 
   useEffect(() => {
     if (isOwnProfile) {
@@ -368,6 +505,16 @@ function ProfilePage({
             >
               Perfil
             </button>
+            {isOwnProfile && (
+                   <button
+                    type="button"
+                    className={`profile-twitter-tab ${activeTab === 'saved' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('saved')}
+                >
+                 Guardados
+                </button>
+)}
+
           </div>
 
           <div className="profile-twitter-content">
@@ -442,6 +589,9 @@ function ProfilePage({
           </button>
         )}
       </div>
+
+
+
     );
   })}
 </div>
@@ -467,8 +617,16 @@ function ProfilePage({
                             year: 'numeric',
                           })}
                         </span>
-                        <p>“{rec.message}”</p>
+                            <p className="message-with-hashtags">
+                                {renderTextWithHashtags(rec.message, (tag) => {
+                                   console.log('Hashtag clicado:', tag);
+                                      })}
+                                    </p>
                       </div>
+
+
+
+
                     ))
                   )}
                 </div>
@@ -493,8 +651,23 @@ function ProfilePage({
                             year: 'numeric',
                           })}
                         </span>
-                        <p>“{rec.message}”</p>
+                       <p className="message-with-hashtags">
+                        {renderTextWithHashtags(rec.message, (tag) => {
+                         console.log('Hashtag clicado:', tag);
+                            })}
+                      </p>
+                      
+                      
+                      
+                      
+                      
+                      
                       </div>
+
+
+
+                            
+
                     ))
                   )}
                 </div>
@@ -523,6 +696,151 @@ function ProfilePage({
                 </div>
               </section>
             )}
+
+            {activeTab === 'saved' && isOwnProfile && (
+              <section className="profile-twitter-section">
+                <div className="profile-twitter-section-head">
+                  <h2>Reconocimientos guardados</h2>
+                </div>
+
+                {loadingFavorites ? (
+                  <p className="profile-twitter-empty">Cargando guardados...</p>
+                ) : favoriteRecognitions.length === 0 ? (
+                  <p className="profile-twitter-empty">
+                  Aún no has guardado reconocimientos.
+                </p>
+                ) : (
+               <div className="profile-twitter-rec-list">
+                  {favoriteRecognitions.map((rec) => (
+                  <div key={rec.id} className="saved-recognition-feed-card">
+                <div className="saved-recognition-top">
+                  <div className="saved-recognition-badge">
+                  {rec.category}
+                  </div>
+
+                  <span className="saved-recognition-date">
+                  {new Date(rec.created_at).toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                })}
+               </span>
+
+
+
+    <div className="saved-reactions-row">
+  {['like', 'celebrate', 'inspire', 'love'].map((type) => (
+    <div key={type} className="saved-reaction-pill">
+      <span className="saved-reaction-icon">
+        {reactionMeta[type].icon}
+      </span>
+      <span className="saved-reaction-count">
+        {savedReactionTotals[Number(rec.id)]?.[type] || 0}
+      </span>
+    </div>
+  ))}
+</div>
+  </div>
+
+  <div className="saved-recognition-header">
+    <strong>{rec.sender_name}</strong>
+    <span className="saved-recognition-arrow">reconoció a</span>
+    <strong>{rec.receiver_name}</strong>
+  </div>
+
+  <div className="saved-recognition-message-box">
+    <p className="message-with-hashtags">
+  {renderTextWithHashtags(rec.message, (tag) => {
+    console.log('Hashtag clicado:', tag);
+  })}
+</p>
+  </div>
+
+  {Array.isArray(rec.media) && rec.media.length > 0 && (
+    <div className={`saved-media-grid media-count-${rec.media.length}`}>
+      {rec.media.map((item) =>
+        item.media_type === 'video' ? (
+          <video
+            key={item.id}
+            className="saved-media-item clickable"
+            src={`${API_BASE}${item.media_url}`}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+            
+          />
+        ) : (
+          <img
+            key={item.id}
+            className="saved-media-item clickable"
+            src={`${API_BASE}${item.media_url}`}
+            alt="Media del reconocimiento guardado"
+            onClick={() => {
+              const imageItems = rec.media
+                .filter((m) => m.media_type === 'image')
+                .map((m) => ({
+                  ...m,
+                  fullUrl: resolveImageUrl(m.media_url),
+                }));
+
+              const clickedIndex = imageItems.findIndex((m) => m.id === item.id);
+
+              if (onOpenImageViewer && clickedIndex >= 0) {
+                onOpenImageViewer(imageItems, clickedIndex);
+              }
+            }}
+          />
+        )
+      )}
+    </div>
+  )}
+     
+
+
+{savedReactionUsersMap[Number(rec.id)]?.length > 0 && (
+  <div className="saved-reaction-users">
+    {savedReactionUsersMap[Number(rec.id)].slice(0, 3).map((user) => (
+      <span key={user.user_id} className="saved-reaction-user">
+        {user.display_name || user.user_name || user.fullname || 'Usuario'}
+      </span>
+    ))}
+  </div>
+)}
+
+
+  <div className="saved-recognition-actions">
+    <button
+      type="button"
+      className="saved-open-btn"
+      onClick={() => onOpenRecognition?.(rec.id)}
+    >
+      Ver publicación
+    </button>
+
+    <button
+      type="button"
+      className="saved-remove-btn"
+      onClick={() => handleRemoveFavoriteFromProfile(rec.id)}
+    >
+      ★ Quitar de guardados
+    </button>
+    </div>
+
+  
+  </div>
+   
+   
+   
+    
+
+
+               ))}
+          </div>
+         )}
+      </section>
+      )}
           </div>
         </main>
 

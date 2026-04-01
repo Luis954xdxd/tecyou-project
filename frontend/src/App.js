@@ -17,13 +17,19 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './styles/auth.css';
 import {clearUserSession,getUserSession,saveUserSession,} from './utils/authStorage';
+import RecognitionPage from './pages/RecognitionPage';
+import { renderTextWithHashtags } from './textFormatters';
+import StoriesUploader from './components/StoriesUploader';
+import StoriesBar from './components/StoriesBar';
+import StoryViewer from './components/StoryViewer';
+
 
 const API_BASE = 'http://localhost:5000';
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
-
+  const recognitionRefs = useRef({});
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('tec_you_dark_mode');
     return saved === 'true';
@@ -36,6 +42,7 @@ function App() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
+  const [hashtagFilter, setHashtagFilter] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -68,6 +75,16 @@ function App() {
 
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
+  // AGREGADO: estados para favoritos
+  const [favoriteIds, setFavoriteIds] = useState({});
+  const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
+  const [favoritingIds, setFavoritingIds] = useState({});
+
+  const [stories, setStories] = useState([]);
+const [storiesLoading, setStoriesLoading] = useState(false);
+const [storyViewer, setStoryViewer] = useState({isOpen: false,stories: [],currentIndex: 0,});
+  // AGREGADO: pestaña activa del perfil
+  
   const [imageViewer, setImageViewer] = useState({
     isOpen: false,
     images: [],
@@ -76,14 +93,14 @@ function App() {
 
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
-
+  
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '👍' },
     { key: 'celebrate', label: 'Excelente', emoji: '🎉' },
     { key: 'inspire', label: 'Inspirador', emoji: '💡' },
     { key: 'love', label: 'Agradezco', emoji: '❤️' },
   ];
-
+  
   useEffect(() => {
     localStorage.setItem('tec_you_dark_mode', String(darkMode));
     if (darkMode) document.body.classList.add('dark');
@@ -149,6 +166,33 @@ function App() {
       };
     });
   };
+
+  const openStoryViewer = (storiesList, startIndex = 0) => {
+  setStoryViewer({
+    isOpen: true,
+    stories: storiesList,
+    currentIndex: startIndex,
+  });
+};
+
+const closeStoryViewer = () => {
+  setStoryViewer({
+    isOpen: false,
+    stories: [],
+    currentIndex: 0,
+  });
+};
+
+const nextStory = () => {
+  setStoryViewer((prev) => {
+    if (!prev.stories.length) return prev;
+    const nextIndex = prev.currentIndex + 1;
+    if (nextIndex >= prev.stories.length) {
+      return { isOpen: false, stories: [], currentIndex: 0 };
+    }
+    return { ...prev, currentIndex: nextIndex };
+  });
+};
 
   const sectionSearchItems = [
     { id: 'hero-section', title: 'Inicio / Resumen', description: 'Vista general', keywords: ['inicio', 'resumen', 'principal'] },
@@ -231,19 +275,37 @@ function App() {
       console.error('Error al obtener las reacciones del feed:', err);
     }
   };
-
+  const refreshGlobalFavorites = async () => {
+  await fetchFavorites();
+  };
   const fetchFeed = async () => {
     try {
-      setLoadingFeed(true);
-      const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
-      setRecognitions(response.data);
-      await fetchAllReactionsForFeed(response.data);
-    } catch (err) {
-      console.error('Error al obtener el feed:', err);
-    } finally {
-      setLoadingFeed(false);
+    setLoadingFeed(true);
+    const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
+    setRecognitions(response.data);
+    await fetchAllReactionsForFeed(response.data);
+
+    // AGREGADO: refrescar favoritos junto con el feed
+    if (user?.id) {
+      await fetchFavorites();
     }
+  } catch (err) {
+    console.error('Error al obtener el feed:', err);
+  } finally {
+    setLoadingFeed(false);
+  }
   };
+  const fetchStories = async () => {
+  try {
+    setStoriesLoading(true);
+    const response = await axios.get(`${API_BASE}/api/stories/active`);
+    setStories(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Error cargando historias:', error);
+  } finally {
+    setStoriesLoading(false);
+  }
+};
 
   const fetchUserProfile = async (userId) => {
     try {
@@ -280,20 +342,49 @@ function App() {
   };
 
   const handleRefreshAllProfileData = async () => {
-    if (!user?.id) return;
+     if (!user?.id) return;
     await fetchUserProfile(user.id);
     await fetchFeed();
+    await fetchStories();
+
+    // AGREGADO: refrescar favoritos del usuario
+    await fetchFavorites();
   };
 
   const handleAuthSuccess = (loggedUser) => {
   setUser(loggedUser);
   saveUserSession(loggedUser);
-};
+  };
 
-const handleLogout = () => {
+  const handleLogout = () => {
   setUser(null);
   clearUserSession();
   navigate('/login');
+  };
+
+
+  const handleShareRecognition = async (recognition) => {
+  try {
+    const shareUrl = `${window.location.origin}/reconocimiento/${recognition.id}`;
+
+    const shareText = `Mira este reconocimiento en ¡Tec! ¡you!
+${recognition.sender_name} reconoció a ${recognition.receiver_name}
+"${recognition.message}"`;
+
+    if (navigator.share) {
+      await navigator.share({
+        title: '¡Tec! ¡you! - Reconocimiento',
+        text: shareText,
+        url: shareUrl,
+      });
+      return;
+    }
+
+    await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+    alert('Enlace copiado al portapapeles.');
+  } catch (error) {
+    console.error('Error al compartir reconocimiento:', error);
+  }
 };
 
   useEffect(() => {
@@ -323,9 +414,37 @@ const handleLogout = () => {
       if (e.key === 'ArrowLeft') goToPrevImage();
     };
 
+
+    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [imageViewer.isOpen]);
+    
+
+  useEffect(() => {
+       const recognitionId = location.state?.highlightRecognitionId;
+
+    if (!recognitionId || recognitions.length === 0) return;
+    if (location.pathname !== '/') return;
+
+    const target = recognitionRefs.current[recognitionId];
+
+    if (target) {
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    }
+  }, [location.pathname, location.state, recognitions]);
+    
+useEffect(() => {
+  const incomingHashtag = location.state?.hashtagFilter;
+
+  if (incomingHashtag) {
+    setHashtagFilter(incomingHashtag);
+  }
+}, [location.state]);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -395,41 +514,50 @@ const handleLogout = () => {
   );
 
   const filteredRecognitions = useMemo(() => {
-    const filtered = recognitions.filter((rec) => {
-      const matchesCategory =
-        selectedCategory === 'Todas' || rec.category === selectedCategory;
+  const filtered = recognitions.filter((rec) => {
+    const matchesCategory =
+      selectedCategory === 'Todas' || rec.category === selectedCategory;
 
-      const query = searchTerm.trim().toLowerCase();
-      const matchesSearch =
-        query === '' ||
-        rec.sender_name?.toLowerCase().includes(query) ||
-        rec.receiver_name?.toLowerCase().includes(query) ||
-        rec.message?.toLowerCase().includes(query) ||
-        rec.category?.toLowerCase().includes(query);
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      query === '' ||
+      rec.sender_name?.toLowerCase().includes(query) ||
+      rec.receiver_name?.toLowerCase().includes(query) ||
+      rec.message?.toLowerCase().includes(query) ||
+      rec.category?.toLowerCase().includes(query);
 
-      return matchesCategory && matchesSearch;
-    });
+    const activeHashtag = hashtagFilter.trim().toLowerCase();
+    const matchesHashtag =
+      activeHashtag === '' ||
+      rec.message?.toLowerCase().includes(activeHashtag);
 
-    const sorted = [...filtered];
+    return matchesCategory && matchesSearch && matchesHashtag;
+  });
 
-    switch (sortBy) {
-      case 'oldest':
-        sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        break;
-      case 'az':
-        sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
-        break;
-      case 'category':
-        sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
-        break;
-      case 'recent':
-      default:
-        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        break;
-    }
+  const sorted = [...filtered];
 
-    return sorted;
-  }, [recognitions, selectedCategory, searchTerm, sortBy]);
+  switch (sortBy) {
+    case 'oldest':
+      sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      break;
+    case 'az':
+      sorted.sort((a, b) =>
+        (a.sender_name || '').localeCompare(b.sender_name || '', 'es')
+      );
+      break;
+    case 'category':
+      sorted.sort((a, b) =>
+        (a.category || '').localeCompare(b.category || '', 'es')
+      );
+      break;
+    case 'recent':
+    default:
+      sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      break;
+  }
+
+  return sorted;
+}, [recognitions, selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
   const activeFilterLabels = useMemo(() => {
     const labels = [];
@@ -485,6 +613,85 @@ const handleLogout = () => {
     } finally {
       setReactingIds((prev) => ({ ...prev, [recId]: false }));
     }
+  };
+     
+  // AGREGADO: obtener favoritos del usuario
+  const fetchFavorites = async () => {
+  try {
+    if (!user?.id) {
+      setFavoriteIds({});
+      setFavoriteRecognitions([]);
+      return;
+    }
+
+    const response = await axios.get(
+      `${API_BASE}/api/recognitions/favorites/${user.id}`
+    );
+
+    const favorites = Array.isArray(response.data) ? response.data : [];
+    setFavoriteRecognitions(favorites);
+
+    const idsMap = {};
+    favorites.forEach((item) => {
+      idsMap[item.id] = true;
+    });
+
+    setFavoriteIds(idsMap);
+  } catch (err) {
+    console.error('Error al obtener favoritos:', err);
+  }
+  };
+
+  // AGREGADO: guardar o quitar favorito
+  const handleFavoriteToggle = async (recognitionId) => {
+  try {
+    if (!user?.id) return;
+
+    setFavoritingIds((prev) => ({ ...prev, [recognitionId]: true }));
+
+    const isFavorite = Boolean(favoriteIds[recognitionId]);
+
+    if (isFavorite) {
+      await axios.delete(
+        `${API_BASE}/api/recognitions/${recognitionId}/favorite`,
+        {
+          data: { user_id: user.id },
+        }
+      );
+
+      setFavoriteIds((prev) => ({
+        ...prev,
+        [recognitionId]: false,
+      }));
+
+      setFavoriteRecognitions((prev) =>
+        prev.filter((item) => Number(item.id) !== Number(recognitionId))
+      );
+    } else {
+      await axios.post(
+        `${API_BASE}/api/recognitions/${recognitionId}/favorite`,
+        {
+          user_id: user.id,
+        }
+      );
+
+      setFavoriteIds((prev) => ({
+        ...prev,
+        [recognitionId]: true,
+      }));
+
+      await fetchFavorites();
+    }
+  } catch (err) {
+    console.error('Error al cambiar favorito:', err);
+    alert(
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      'No se pudo actualizar el favorito.'
+    );
+  } finally {
+    setFavoritingIds((prev) => ({ ...prev, [recognitionId]: false }));
+  }
   };
 
   const handleProfileImageChange = async (e) => {
@@ -747,7 +954,7 @@ const handleLogout = () => {
       </div>
     );
   };
-
+  
 const getComposedRecognitionMedia = (mediaItems = []) => {
   if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
     return {
@@ -784,7 +991,7 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
       remainingCount,
     };
   }
-
+   
   // Si no hay video, usamos solo imágenes
   const primaryMedia = imageItems[0] || null;
   const secondaryMedia = imageItems.slice(1);
@@ -896,9 +1103,10 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
               return (
                 <article
                   key={rec.id}
-                  className={`featured-card ${categoryMeta.className} ${
-                    index === 0 ? 'featured-card-large' : ''
-                  }`}
+                  ref={(el) => {
+                    recognitionRefs.current[rec.id] = el;
+                   }}
+                    className="recognition-card"
                 >
                   <div className="featured-card-top">
                     <span className={`badge-category ${categoryMeta.className}`}>
@@ -932,7 +1140,9 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                         </button>
                       </p>
 
-                      <p className="featured-message-text">“{rec.message}”</p>
+                      <p className="featured-message-text">{renderTextWithHashtags(rec.message, (tag) => {
+                        setHashtagFilter(`#${tag}`);
+                          })}</p>
                       {recMedia.length > 0 && (
   <div className={`recognition-media-premium ${layoutType}`}>
     {primaryMedia && (
@@ -1013,6 +1223,31 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                       />
 
                       {renderReactionBar(rec.id)}
+                      
+                      <div className="recognition-favorite-row">
+                      <button
+                        type="button"
+                        className={`recognition-favorite-btn ${
+                          favoriteIds[rec.id] ? 'is-favorite' : ''
+                       }`}
+                       onClick={() => handleFavoriteToggle(rec.id)}
+                      disabled={Boolean(favoritingIds[rec.id])}
+                    >
+                      {favoritingIds[rec.id]
+                        ? 'Guardando...'
+                        : favoriteIds[rec.id]
+                        ? '★ Guardado'
+                         : '☆ Guardar'}
+                    </button>
+
+                    <button
+                    type="button"
+                    className="recognition-share-btn"
+                    onClick={() => handleShareRecognition(rec)}
+                      >
+                    ⤴ Compartir
+                    </button>
+                  </div>
                     </div>
                   </div>
                 </article>
@@ -1294,8 +1529,32 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
               </button>
             )}
           </div>
+          <section className="stories-section">
+  <StoriesUploader currentUser={user} onStoryUploaded={fetchStories} />
+  {storiesLoading ? (
+    <p>Cargando historias...</p>
+  ) : (
+    <StoriesBar
+      stories={stories}
+      currentUser={user}
+      onOpenStoryViewer={openStoryViewer}
+    />
+  )}
+</section>
 
           <div className="feed-container">
+            {hashtagFilter && (
+  <div className="active-hashtag-filter">
+    <span>Filtrando por {hashtagFilter}</span>
+    <button
+      type="button"
+      className="clear-hashtag-filter-btn"
+      onClick={() => setHashtagFilter('')}
+    >
+      Quitar filtro
+    </button>
+  </div>
+)}
             {loadingFeed ? (
               <div className="loading-state">
                 <div className="loading-spinner"></div>
@@ -1329,6 +1588,17 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                       <span className="date">{formatDate(rec.created_at)}</span>
                     </div>
 
+
+                    <div className="recognition-extra-actions">
+                      <button
+                        type="button"
+                        className="recognition-share-btn"
+                        onClick={() => handleShareRecognition(rec)}
+                          >
+                          ⤴ Compartir
+                      </button>
+                    </div>
+
                     <div className="recognition-main-row">
                       <div className={`recognition-icon-box ${categoryMeta.className}`}>
                         {categoryMeta.icon}
@@ -1353,7 +1623,9 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                           </button>
                         </p>
 
-                        <p className="message-text">“{rec.message}”</p> 
+                        <p className="message-text">{renderTextWithHashtags(rec.message, (tag) => {
+                              setHashtagFilter(`#${tag}`);
+                              })}</p> 
                         {recMedia.length > 0 && (
   <div className={`recognition-media-premium ${layoutType}`}>
     {primaryMedia && (
@@ -1437,6 +1709,23 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                         />
 
                         {renderReactionBar(rec.id)}
+                        
+                        <div className="recognition-favorite-row">
+                          <button
+                            type="button"
+                            className={`recognition-favorite-btn ${
+                              favoriteIds[rec.id] ? 'is-favorite' : ''
+                            }`}
+                            onClick={() => handleFavoriteToggle(rec.id)}
+                            disabled={Boolean(favoritingIds[rec.id])}
+                          >
+                            {favoritingIds[rec.id]
+                              ? 'Guardando...'
+                              : favoriteIds[rec.id]
+                              ? '★ Guardado'
+                              : '☆ Guardar'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1472,44 +1761,89 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
     element={user ? dashboardView : <Navigate to="/login" replace />}
   />
 
+
   <Route
-    path="/perfil"
+  path="/reconocimiento/:id"
+  element={
+    <RecognitionPage
+      recognitions={recognitions}
+      onBack={() => navigate('/')}
+      onOpenImageViewer={openImageViewer}
+      currentUserId={user?.id}
+      onOpenProfile={openUserProfile}
+      renderReactionBar={renderReactionBar}
+      renderFavoriteButton={(recognitionId) => (
+        <div className="recognition-favorite-row">
+          <button
+            type="button"
+            className={`recognition-favorite-btn ${
+              favoriteIds[recognitionId] ? 'is-favorite' : ''
+            }`}
+            onClick={() => handleFavoriteToggle(recognitionId)}
+            disabled={Boolean(favoritingIds[recognitionId])}
+          >
+            {favoritingIds[recognitionId]
+              ? 'Guardando...'
+              : favoriteIds[recognitionId]
+              ? '★ Guardado'
+              : '☆ Guardar'}
+          </button>
+        </div>
+      )}
+      onHashtagClick={(tag) => {
+        navigate('/', {
+          state: { hashtagFilter: `#${tag}` },
+        });
+      }}
+    />
+  }
+/>
+
+  <Route
+     path="/perfil"
     element={
-      user ? (
-        <ProfilePage
-          currentUser={user}
-          loggedInUserId={user?.id}
-          recognitions={recognitions}
-          onBack={() => navigate('/')}
-          onOpenImageViewer={openImageViewer}
+    user ? (
+      <ProfilePage
+        currentUser={user}
+        loggedInUserId={user?.id}
+        recognitions={recognitions}
+         onBack={() => navigate('/')}
+         onOpenImageViewer={openImageViewer}
           darkMode={darkMode}
-          onOpenEditProfile={openEditProfileModal}
-          isOwnProfile={true}
-        />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
+        onOpenEditProfile={openEditProfileModal}
+        isOwnProfile={true}
+      onFavoritesChanged={refreshGlobalFavorites}
+      onOpenRecognition={(recognitionId) => {
+       navigate('/', {
+     state: { highlightRecognitionId: recognitionId },
+       });
+      }}
+      />
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
   />
 
   <Route
-    path="/perfil/:userId"
-    element={
-      user ? (
-        <ProfilePage
-          currentUser={user}
-          loggedInUserId={user?.id}
-          recognitions={recognitions}
-          onBack={() => navigate('/')}
-          onOpenImageViewer={openImageViewer}
-          darkMode={darkMode}
-          onOpenEditProfile={openEditProfileModal}
-          isOwnProfile={false}
-        />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
+     path="/perfil"
+  element={
+    user ? (
+      <ProfilePage
+        currentUser={user}
+        loggedInUserId={user?.id}
+        recognitions={recognitions}
+        onBack={() => navigate('/')}
+        onOpenImageViewer={openImageViewer}
+        darkMode={darkMode}
+        onOpenEditProfile={openEditProfileModal}
+        isOwnProfile={true}
+        onFavoritesChanged={refreshGlobalFavorites}
+      />
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
   />
 
   <Route
@@ -1727,6 +2061,11 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
           </div>
         </div>
       )}
+      <StoryViewer
+  storyViewer={storyViewer}
+  onClose={closeStoryViewer}
+  onNext={nextStory}
+/>
 
       {showScrollTop && location.pathname === '/' && (
         <button

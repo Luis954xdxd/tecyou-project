@@ -383,6 +383,174 @@ router.get('/:id/reactions', async (req, res) => {
 });
 
 // ===============================
+// FAVORITOS / GUARDADOS
+// ===============================
+router.post('/:id/favorite', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    const recognitionOwner = await pool.query(
+      `SELECT receiver_id FROM recognitions WHERE id = $1`,
+      [id]
+    );
+
+    if (recognitionOwner.rows.length === 0) {
+      return res.status(404).json({ error: 'Reconocimiento no encontrado.' });
+    }
+
+    const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
+
+    const favorite = await pool.query(
+      `INSERT INTO recognition_favorites (user_id, recognition_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, recognition_id) DO NOTHING
+       RETURNING *`,
+      [user_id, id]
+    );
+
+    if (favorite.rows.length === 0) {
+      return res.json({
+        alreadyFavorited: true,
+        message: 'El reconocimiento ya estaba guardado.',
+      });
+    }
+
+    if (receiverId && Number(receiverId) !== Number(user_id)) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          receiverId,
+          user_id,
+          'favorite_received',
+          'Guardaron tu reconocimiento',
+          'Un usuario guardó tu reconocimiento en favoritos.',
+          Number(id),
+        ]
+      );
+    }
+
+    return res.json({
+      success: true,
+      favorite: favorite.rows[0],
+    });
+  } catch (err) {
+    console.error('Error en POST /:id/favorite:', err.message);
+    res.status(500).send('Error al guardar en favoritos.');
+  }
+});
+
+// Quitar reconocimiento de favoritos
+router.delete('/:id/favorite', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    const deleted = await pool.query(
+      `DELETE FROM recognition_favorites
+       WHERE recognition_id = $1 AND user_id = $2
+       RETURNING *`,
+      [id, user_id]
+    );
+
+    if (deleted.rows.length === 0) {
+      return res.status(404).json({ error: 'Ese favorito no existe.' });
+    }
+
+    return res.json({
+      removed: true,
+      favorite: deleted.rows[0],
+    });
+  } catch (err) {
+    console.error('Error en DELETE /:id/favorite:', err.message);
+    res.status(500).send('Error al eliminar de favoritos.');
+  }
+});
+
+// Ver si un reconocimiento está guardado por un usuario
+router.get('/:id/favorite-status/:userId', async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+
+    const result = await pool.query(
+      `SELECT 1
+       FROM recognition_favorites
+       WHERE recognition_id = $1 AND user_id = $2
+       LIMIT 1`,
+      [id, userId]
+    );
+
+    return res.json({
+      is_favorite: result.rows.length > 0,
+    });
+  } catch (err) {
+    console.error('Error en GET /:id/favorite-status/:userId:', err.message);
+    res.status(500).send('Error al verificar favorito.');
+  }
+});
+
+// Obtener todos los favoritos de un usuario
+router.get('/favorites/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const favorites = await pool.query(
+      `SELECT
+          r.id,
+          r.sender_id,
+          r.receiver_id,
+          r.message,
+          r.category,
+          r.created_at,
+          COALESCE(u1.display_name, u1.fullname, u1.email) AS sender_name,
+          COALESCE(u2.display_name, u2.fullname, u2.email) AS receiver_name,
+          rf.created_at AS favorited_at,
+          COALESCE(
+            json_agg(
+              DISTINCT jsonb_build_object(
+                'id', rm.id,
+                'media_url', rm.media_url,
+                'media_type', rm.media_type
+              )
+            ) FILTER (WHERE rm.id IS NOT NULL),
+            '[]'
+          ) AS media
+       FROM recognition_favorites rf
+       INNER JOIN recognitions r
+         ON rf.recognition_id = r.id
+       LEFT JOIN users u1
+         ON r.sender_id = u1.id
+       LEFT JOIN users u2
+         ON r.receiver_id = u2.id
+       LEFT JOIN recognition_media rm
+         ON r.id = rm.recognition_id
+       WHERE rf.user_id = $1
+       GROUP BY
+         r.id,
+         u1.id,
+         u2.id,
+         rf.created_at
+       ORDER BY rf.created_at DESC`,
+      [userId]
+    );
+
+    return res.json(favorites.rows);
+  } catch (err) {
+    console.error('Error en GET /favorites/:userId:', err.message);
+    res.status(500).send('Error al obtener favoritos.');
+  }
+});
+
+// ===============================
 // AGREGAR COMENTARIO O RESPUESTA
 // ===============================
 router.post('/:id/comments', async (req, res) => {
@@ -560,6 +728,58 @@ router.get('/:id/comments', async (req, res) => {
     console.error('Error en GET /:id/comments:', err.message);
     res.status(500).send('Error al obtener comentarios.');
   }
+
+
+
+
 });
+
+
+// ===============================
+// OBTENER RECONOCIMIENTO POR ID
+// ===============================
+router.get('/:id/detail', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const recognition = await pool.query(`
+      SELECT
+        r.*,
+        COALESCE(s.display_name, s.fullname) AS sender_name,
+        s.fullname AS sender_fullname,
+        s.profile_image_url AS sender_profile_image,
+        COALESCE(rec.display_name, rec.fullname) AS receiver_name,
+        rec.fullname AS receiver_fullname,
+        rec.profile_image_url AS receiver_profile_image,
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', rm.id,
+              'media_url', rm.media_url,
+              'media_type', rm.media_type
+            )
+          ) FILTER (WHERE rm.id IS NOT NULL),
+          '[]'
+        ) AS media
+      FROM recognitions r
+      JOIN users s ON r.sender_id = s.id
+      JOIN users rec ON r.receiver_id = rec.id
+      LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
+      WHERE r.id = $1
+      GROUP BY r.id, s.id, rec.id
+    `, [id]);
+
+    if (recognition.rows.length === 0) {
+      return res.status(404).json({ error: 'Reconocimiento no encontrado.' });
+    }
+
+    res.json(recognition.rows[0]);
+  } catch (err) {
+    console.error('Error en GET /:id/detail:', err.message);
+    res.status(500).send('Error al obtener reconocimiento.');
+  }
+});
+
+
 
 module.exports = router;
