@@ -31,8 +31,11 @@ app.get('/', (req, res) => {
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
-  console.error('Error detectado:', err.stack);
-  res.status(500).send('Algo salió mal en el servidor.');
+  console.error('Error detectado:', err.stack || err.message);
+
+  res.status(500).json({
+    error: err.message || 'Algo salió mal en el servidor.',
+  });
 });
 
 app.listen(PORT, () => {

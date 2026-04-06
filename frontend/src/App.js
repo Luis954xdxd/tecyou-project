@@ -22,7 +22,7 @@ import { renderTextWithHashtags } from './textFormatters';
 import StoriesUploader from './components/StoriesUploader';
 import StoriesBar from './components/StoriesBar';
 import StoryViewer from './components/StoryViewer';
-
+import CreateStoryModal from './components/CreateStoryModal';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -81,10 +81,20 @@ function App() {
   const [favoritingIds, setFavoritingIds] = useState({});
 
   const [stories, setStories] = useState([]);
-const [storiesLoading, setStoriesLoading] = useState(false);
-const [storyViewer, setStoryViewer] = useState({isOpen: false,stories: [],currentIndex: 0,});
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [storyViewer, setStoryViewer] = useState({isOpen: false,stories: [],currentIndex: 0,});
   // AGREGADO: pestaña activa del perfil
   
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [storyCommentsMap, setStoryCommentsMap] = useState({});
+  const [storyReactionsMap, setStoryReactionsMap] = useState({});
+  const [storyViewsMap, setStoryViewsMap] = useState({});
+  const [allUsers, setAllUsers] = useState([]);
+
+
+
+
+
   const [imageViewer, setImageViewer] = useState({
     isOpen: false,
     images: [],
@@ -167,32 +177,8 @@ const [storyViewer, setStoryViewer] = useState({isOpen: false,stories: [],curren
     });
   };
 
-  const openStoryViewer = (storiesList, startIndex = 0) => {
-  setStoryViewer({
-    isOpen: true,
-    stories: storiesList,
-    currentIndex: startIndex,
-  });
-};
 
-const closeStoryViewer = () => {
-  setStoryViewer({
-    isOpen: false,
-    stories: [],
-    currentIndex: 0,
-  });
-};
 
-const nextStory = () => {
-  setStoryViewer((prev) => {
-    if (!prev.stories.length) return prev;
-    const nextIndex = prev.currentIndex + 1;
-    if (nextIndex >= prev.stories.length) {
-      return { isOpen: false, stories: [], currentIndex: 0 };
-    }
-    return { ...prev, currentIndex: nextIndex };
-  });
-};
 
   const sectionSearchItems = [
     { id: 'hero-section', title: 'Inicio / Resumen', description: 'Vista general', keywords: ['inicio', 'resumen', 'principal'] },
@@ -295,18 +281,233 @@ const nextStory = () => {
     setLoadingFeed(false);
   }
   };
-  const fetchStories = async () => {
+  //
+    const fetchStoryComments = async (storyId) => {
   try {
-    setStoriesLoading(true);
-    const response = await axios.get(`${API_BASE}/api/stories/active`);
-    setStories(Array.isArray(response.data) ? response.data : []);
+    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/comments`);
+    setStoryCommentsMap((prev) => ({
+      ...prev,
+      [storyId]: response.data,
+    }));
   } catch (error) {
-    console.error('Error cargando historias:', error);
-  } finally {
-    setStoriesLoading(false);
+    console.error('Error al obtener comentarios de historia:', error);
   }
 };
 
+const handleStoryComment = async (storyId, comment) => {
+  try {
+    await axios.post(`${API_BASE}/api/stories/${storyId}/comments`, {
+      user_id: user.id,
+      comment,
+    });
+    await fetchStoryComments(storyId);
+  } catch (error) {
+    console.error('Error al comentar historia:', error);
+    alert(error.response?.data?.error || 'No se pudo comentar la historia.');
+  }
+};
+
+const fetchStoryReactions = async (storyId) => {
+  try {
+    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/reactions`);
+    setStoryReactionsMap((prev) => ({
+      ...prev,
+      [storyId]: response.data,
+    }));
+  } catch (error) {
+    console.error('Error al obtener reacciones de historia:', error);
+  }
+};
+
+const handleStoryReaction = async (storyId, reactionType) => {
+  try {
+    console.log('Reaccionando historia:', { storyId, reactionType, userId: user?.id });
+
+    await axios.post(`${API_BASE}/api/stories/${storyId}/react`, {
+      user_id: user.id,
+      reaction_type: reactionType,
+    });
+
+    await fetchStoryReactions(storyId);
+  } catch (error) {
+    console.error('Error al reaccionar historia:', error);
+    console.error('Respuesta backend:', error.response?.data);
+
+    alert(
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      'No se pudo reaccionar a la historia.'
+    );
+  }
+};
+
+const fetchStoryViews = async (storyId) => {
+  try {
+    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/views`);
+    setStoryViewsMap((prev) => ({
+      ...prev,
+      [storyId]: response.data,
+    }));
+  } catch (error) {
+    console.error('Error al obtener vistas de historia:', error);
+  }
+};
+
+const openStoryViewer = async (userStories, index = 0) => {
+  setStoryViewer({
+    isOpen: true,
+    stories: userStories,
+    currentIndex: index,
+  });
+
+  const story = userStories[index];
+  if (!story || !user?.id) return;
+
+  try {
+    await axios.post(`${API_BASE}/api/stories/${story.id}/view`, {
+      viewer_id: user.id,
+    });
+
+    await fetchStoryViews(story.id);
+    await fetchStoryReactions(story.id);
+    await fetchStoryComments(story.id);
+  } catch (error) {
+    console.error('Error al abrir historia:', error);
+  }
+};
+
+const closeStoryViewer = () => {
+  setStoryViewer({
+    isOpen: false,
+    stories: [],
+    currentIndex: 0,
+  });
+};
+
+const nextStory = async () => {
+  if (!storyViewer.stories.length) return;
+
+  const nextIndex = storyViewer.currentIndex + 1;
+
+  if (nextIndex >= storyViewer.stories.length) {
+    closeStoryViewer();
+    return;
+  }
+
+  const nextStoryItem = storyViewer.stories[nextIndex];
+
+  setStoryViewer((prev) => ({
+    ...prev,
+    currentIndex: nextIndex,
+  }));
+
+  if (user?.id && nextStoryItem) {
+    try {
+      await axios.post(`${API_BASE}/api/stories/${nextStoryItem.id}/view`, {
+        viewer_id: user.id,
+      });
+
+      await fetchStoryViews(nextStoryItem.id);
+      await fetchStoryReactions(nextStoryItem.id);
+      await fetchStoryComments(nextStoryItem.id);
+    } catch (error) {
+      console.error('Error al avanzar historia:', error);
+    }
+  }
+};
+
+const prevStory = async () => {
+  if (storyViewer.currentIndex <= 0) return;
+
+  const prevIndex = storyViewer.currentIndex - 1;
+  const prevStoryItem = storyViewer.stories[prevIndex];
+
+  setStoryViewer((prev) => ({
+    ...prev,
+    currentIndex: prevIndex,
+  }));
+
+  if (user?.id && prevStoryItem) {
+    try {
+      await axios.post(`${API_BASE}/api/stories/${prevStoryItem.id}/view`, {
+        viewer_id: user.id,
+      });
+
+      await fetchStoryViews(prevStoryItem.id);
+      await fetchStoryReactions(prevStoryItem.id);
+      await fetchStoryComments(prevStoryItem.id);
+    } catch (error) {
+      console.error('Error al retroceder historia:', error);
+    }
+  }
+};
+
+const groupedStories = useMemo(() => {
+  const groups = {};
+  stories.forEach((story) => {
+    if (!groups[story.user_id]) {
+      groups[story.user_id] = {
+        user_id: story.user_id,
+        fullname: story.fullname,
+        display_name: story.display_name,
+        profile_image_url: resolveImageUrl(story.profile_image_url),
+        stories: [],
+      };
+    }
+    groups[story.user_id].stories.push({
+      ...story,
+      profile_image_url: resolveImageUrl(story.profile_image_url),
+    });
+  });
+  return Object.values(groups);
+}, [stories]);
+
+const fetchStories = async () => {
+  try {
+    if (!user?.id) return;
+    const response = await axios.get(`${API_BASE}/api/stories/feed/${user.id}`);
+    setStories(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Error al obtener historias:', error);
+  }
+};
+
+const fetchAllUsersForStories = async () => {
+  try {
+    const response = await axios.get(`${API_BASE}/api/users/all`, {
+      params: { currentUserId: user?.id },
+    });
+    setAllUsers(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Error al obtener usuarios para historias:', error);
+  }
+};
+
+const handleCreateStory = async (formData) => {
+  try {
+    formData.append('user_id', user.id);
+
+    const res = await axios.post(
+      `${API_BASE}/api/stories/create`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+
+    console.log('Historia creada:', res.data);
+
+    setShowCreateStoryModal(false);
+    fetchStories();
+  } catch (error) {
+    console.error('ERROR COMPLETO:', error);
+    console.error('ERROR RESPONSE:', error.response?.data);
+
+    alert(
+      error.response?.data?.error ||
+      'No se pudo subir la historia.'
+    );
+  }
+};
+  //
   const fetchUserProfile = async (userId) => {
     try {
       setLoadingProfile(true);
@@ -386,6 +587,13 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     console.error('Error al compartir reconocimiento:', error);
   }
 };
+
+useEffect(() => {
+  if (user?.id) {
+    fetchStories();
+    fetchAllUsersForStories();
+  }
+}, [user?.id]);
 
   useEffect(() => {
     if (user?.id) {
@@ -1546,18 +1754,18 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
   </div>
 )}
 
-<section className="stories-section">
-  <StoriesUploader currentUser={user} onStoryUploaded={fetchStories} />
+  <section className="stories-section">
   {storiesLoading ? (
     <p>Cargando historias...</p>
   ) : (
     <StoriesBar
-      stories={stories}
+      groupedStories={groupedStories}
       currentUser={user}
-      onOpenStoryViewer={openStoryViewer}
+      onOpenStory={openStoryViewer}
+      onCreateStory={() => setShowCreateStoryModal(true)}
     />
   )}
-  </section>
+</section>
 
   <div className="feed-container">
 
@@ -2075,11 +2283,29 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
           </div>
         </div>
       )}
-      <StoryViewer
-  storyViewer={storyViewer}
-  onClose={closeStoryViewer}
-  onNext={nextStory}
+
+        <CreateStoryModal
+     isOpen={showCreateStoryModal}
+  onClose={() => setShowCreateStoryModal(false)}
+  onSubmit={handleCreateStory}
+  users={allUsers.filter((u) => Number(u.id) !== Number(user?.id))}
 />
+
+        <StoryViewer
+      storyViewer={storyViewer}
+      onClose={closeStoryViewer}
+      onNext={nextStory}
+      onPrev={prevStory}
+      onReact={handleStoryReaction}
+      onComment={handleStoryComment}
+      comments={storyCommentsMap}
+      reactions={storyReactionsMap}
+      views={storyViewsMap}
+      currentUser={user}
+     />
+      
+
+
 
       {showScrollTop && location.pathname === '/' && (
         <button
