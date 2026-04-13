@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [formData, setFormData] = useState({
@@ -14,6 +14,21 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [visibilityType, setVisibilityType] = useState('public');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [excludedUsers, setExcludedUsers] = useState([]);
+
+  /* AGREGADO:
+     Esto bloquea el scroll de la página principal mientras el modal está abierto.
+     Así, cuando el modal esté visible, se moverá el modal y no la página de atrás.
+  */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -151,6 +166,10 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             onChange={handleAudioChange}
           />
 
+          {/* AGREGADO:
+              Texto de ayuda para explicarle al usuario que aquí puede subir
+              un audio opcional para la historia.
+          */}
           <div className="story-field-help">
             Sube un audio opcional para acompañar tu historia.
           </div>
@@ -163,6 +182,9 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             onChange={(e) => setMusicStartSeconds(Number(e.target.value || 0))}
           />
 
+          {/* AGREGADO:
+              Explica desde qué segundo empezará a sonar el audio.
+          */}
           <div className="story-field-help">
             Aquí indicas desde qué segundo debe empezar a sonar el audio.
           </div>
@@ -177,8 +199,12 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             placeholder="Duración de la historia (segundos)"
           />
 
+          {/* AGREGADO:
+              Explica cuánto durará la historia antes de pasar a la siguiente.
+          */}
           <div className="story-field-help">
-            Tiempo total que dura la historia antes de pasar a la siguiente. Máximo 300 segundos (5 minutos).
+            Tiempo total que dura la historia antes de pasar a la siguiente.
+            Máximo 300 segundos (5 minutos).
           </div>
 
           <select
@@ -200,6 +226,11 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
           {visibilityType === 'only_selected' && (
             <div className="story-users-box">
               <strong>Selecciona quién sí puede verla</strong>
+
+              {/* AGREGADO:
+                  Esta lista puede crecer mucho, por eso en CSS se le pondrá
+                  scroll propio también.
+              */}
               <div className="story-users-list">
                 {users?.length > 0 ? (
                   users.map((user) => (
@@ -222,6 +253,11 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
           {visibilityType === 'exclude_selected' && (
             <div className="story-users-box">
               <strong>Selecciona quién NO puede verla</strong>
+
+              {/* AGREGADO:
+                  Igual que arriba, esta lista también tendrá scroll propio
+                  si hay muchos usuarios.
+              */}
               <div className="story-users-list">
                 {users?.length > 0 ? (
                   users.map((user) => (

@@ -444,6 +444,7 @@ const prevStory = async () => {
 
 const groupedStories = useMemo(() => {
   const groups = {};
+
   stories.forEach((story) => {
     if (!groups[story.user_id]) {
       groups[story.user_id] = {
@@ -454,11 +455,13 @@ const groupedStories = useMemo(() => {
         stories: [],
       };
     }
+
     groups[story.user_id].stories.push({
       ...story,
       profile_image_url: resolveImageUrl(story.profile_image_url),
     });
   });
+
   return Object.values(groups);
 }, [stories]);
 

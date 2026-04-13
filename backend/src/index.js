@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const recognitionRoutes = require('./routes/recognitionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const storyRoutes = require('./routes/storyRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/recognitions', recognitionRoutes);
 app.use('/api/stories', storyRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {

@@ -15,6 +15,9 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sending, setSending] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [classifyingAI, setClassifyingAI] = useState(false);
+  const [aiClassification, setAiClassification] = useState(null);
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [formFeedback, setFormFeedback] = useState({
     type: '',
@@ -71,6 +74,11 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 
   const handleChange = (e) => {
     setFormFeedback({ type: '', message: '' });
+
+    if (e.target.name === 'message') {
+      setAiClassification(null);
+    }
+
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -127,6 +135,115 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     setSelectedMedia((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
+  const handleGenerateRecognitionWithAI = async () => {
+    try {
+      setFormFeedback({ type: '', message: '' });
+
+      const baseText = formData.message.trim();
+
+      if (!baseText) {
+        setFormFeedback({
+          type: 'error',
+          message: 'Primero escribe una idea base en el mensaje para que la IA pueda mejorarlo.',
+        });
+        return;
+      }
+
+      setGeneratingAI(true);
+
+      const response = await axios.post(`${API_BASE}/api/ai/generate-recognition`, {
+        baseText,
+        recognitionType: formData.category,
+        receiverName: selectedUser
+          ? selectedUser.display_name || selectedUser.fullname || ''
+          : '',
+        senderName: '',
+      });
+
+      if (!response.data?.ok || !response.data?.improvedText) {
+        throw new Error('La IA no devolvió un texto válido.');
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        message: response.data.improvedText,
+      }));
+
+      setAiClassification(null);
+
+      setFormFeedback({
+        type: 'success',
+        message: 'La IA mejoró tu mensaje. Puedes revisarlo antes de enviarlo.',
+      });
+    } catch (error) {
+      console.error('Error al mejorar reconocimiento con IA:', error);
+
+      setFormFeedback({
+        type: 'error',
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          'No se pudo mejorar el mensaje con IA.',
+      });
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const handleClassifyRecognitionWithAI = async () => {
+    try {
+      setFormFeedback({ type: '', message: '' });
+
+      const message = formData.message.trim();
+
+      if (!message) {
+        setFormFeedback({
+          type: 'error',
+          message: 'Primero escribe un mensaje para poder clasificarlo con IA.',
+        });
+        return;
+      }
+
+      setClassifyingAI(true);
+
+      const response = await axios.post(`${API_BASE}/api/ai/classify-recognition`, {
+        message,
+      });
+
+      if (!response.data?.ok || !response.data?.classification) {
+        throw new Error('La IA no devolvió una clasificación válida.');
+      }
+
+      const classification = response.data.classification;
+
+      setAiClassification(classification);
+
+      if (classification.category) {
+        setFormData((prev) => ({
+          ...prev,
+          category: classification.category,
+        }));
+      }
+
+      setFormFeedback({
+        type: 'success',
+        message: 'La IA analizó tu reconocimiento y sugirió una categoría automáticamente.',
+      });
+    } catch (error) {
+      console.error('Error al clasificar reconocimiento con IA:', error);
+
+      setFormFeedback({
+        type: 'error',
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          'No se pudo clasificar el reconocimiento con IA.',
+      });
+    } finally {
+      setClassifyingAI(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormFeedback({ type: '', message: '' });
@@ -173,6 +290,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       setSearchResults([]);
       setSelectedUser(null);
       setSelectedMedia([]);
+      setAiClassification(null);
 
       setFormFeedback({
         type: 'success',
@@ -337,6 +455,52 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             onChange={handleChange}
             required
           />
+
+          <div className="recognition-ai-actions">
+            <button
+              type="button"
+              className="btn-generate-ai"
+              onClick={handleGenerateRecognitionWithAI}
+              disabled={generatingAI || sending || classifyingAI}
+            >
+              <span>{generatingAI ? 'Generando...' : '✨ Mejorar con IA'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-generate-ai"
+              onClick={handleClassifyRecognitionWithAI}
+              disabled={classifyingAI || sending || generatingAI}
+            >
+              <span>{classifyingAI ? 'Clasificando...' : '🧠 Clasificar con IA'}</span>
+            </button>
+          </div>
+
+          <small className="field-hint">
+            Escribe una idea base, mejora la redacción con IA y luego clasifica automáticamente el reconocimiento.
+          </small>
+
+          {aiClassification && (
+            <div className="ai-classification-box">
+              <strong>Clasificación sugerida por IA</strong>
+
+              <div className="ai-classification-row">
+                <span><strong>Categoría:</strong> {aiClassification.category}</span>
+                <span><strong>Sentimiento:</strong> {aiClassification.sentiment}</span>
+                <span><strong>Intensidad:</strong> {aiClassification.intensity}</span>
+              </div>
+
+              {Array.isArray(aiClassification.tags) && aiClassification.tags.length > 0 && (
+                <div className="ai-tags-row">
+                  {aiClassification.tags.map((tag, index) => (
+                    <span key={`${tag}-${index}`} className="ai-tag-chip">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="input-group-custom">
@@ -403,7 +567,11 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
           )}
         </div>
 
-        <button type="submit" className="btn-submit" disabled={sending}>
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={sending || generatingAI || classifyingAI}
+        >
           {sending ? 'Enviando...' : 'Enviar reconocimiento'}
         </button>
 

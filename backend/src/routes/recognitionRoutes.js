@@ -5,6 +5,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { moderateText } = require('../../moderationService');
+const {
+  classifyRecognitionText,
+  generateBadgeMetadata,
+} = require('../services/aiService');
 
 // ===============================
 // CONFIGURACIÓN DE UPLOADS
@@ -118,7 +122,14 @@ const createMentionNotifications = async ({
 // ===============================
 router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
   try {
-    const { sender_id, receiver_id, receiver_control_number, message, category } = req.body;
+    const {
+      sender_id,
+      receiver_id,
+      receiver_control_number,
+      message,
+      category,
+      ai_refined_message,
+    } = req.body;
 
     const moderation = await moderateText(message);
 
@@ -155,11 +166,74 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
       });
     }
 
+    // ===============================
+    // IA: CLASIFICACIÓN + METADATOS DE INSIGNIA
+    // NOTA: si falla la IA, NO bloqueamos el envío
+    // ===============================
+    let aiCategory = null;
+    let aiSentiment = null;
+    let aiIntensity = null;
+    let aiTags = [];
+    let aiBadgeTitle = null;
+    let aiBadgePrompt = null;
+
+    try {
+      const classification = await classifyRecognitionText({
+        message,
+      });
+
+      aiCategory = classification.category || null;
+      aiSentiment = classification.sentiment || null;
+      aiIntensity = classification.intensity || null;
+      aiTags = Array.isArray(classification.tags) ? classification.tags : [];
+
+      try {
+        const badgeMeta = await generateBadgeMetadata({
+          message,
+          category: aiCategory || category,
+          sentiment: aiSentiment || 'positivo',
+          intensity: aiIntensity || 'media',
+          tags: aiTags,
+        });
+
+        aiBadgeTitle = badgeMeta.badgeTitle || null;
+        aiBadgePrompt = badgeMeta.badgePrompt || null;
+      } catch (badgeError) {
+        console.error('Error generando metadatos de insignia:', badgeError.message);
+      }
+    } catch (classificationError) {
+      console.error('Error clasificando reconocimiento con IA:', classificationError.message);
+    }
+
     const newRecognition = await pool.query(
-      `INSERT INTO recognitions (sender_id, receiver_id, message, category)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [sender_id, finalReceiverId, message, category]
+      `INSERT INTO recognitions (
+        sender_id,
+        receiver_id,
+        message,
+        ai_refined_message,
+        category,
+        ai_category,
+        ai_sentiment,
+        ai_intensity,
+        ai_tags,
+        ai_badge_title,
+        ai_badge_prompt
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *`,
+      [
+        sender_id,
+        finalReceiverId,
+        message,
+        ai_refined_message || null,
+        category,
+        aiCategory,
+        aiSentiment,
+        aiIntensity,
+        aiTags.length ? aiTags : null,
+        aiBadgeTitle,
+        aiBadgePrompt,
+      ]
     );
 
     const recognitionId = newRecognition.rows[0].id;
@@ -509,7 +583,15 @@ router.get('/favorites/:userId', async (req, res) => {
           r.sender_id,
           r.receiver_id,
           r.message,
+          r.ai_refined_message,
           r.category,
+          r.ai_category,
+          r.ai_sentiment,
+          r.ai_intensity,
+          r.ai_tags,
+          r.ai_badge_title,
+          r.ai_badge_prompt,
+          r.ai_badge_image_url,
           r.created_at,
           COALESCE(u1.display_name, u1.fullname, u1.email) AS sender_name,
           COALESCE(u2.display_name, u2.fullname, u2.email) AS receiver_name,
@@ -728,12 +810,7 @@ router.get('/:id/comments', async (req, res) => {
     console.error('Error en GET /:id/comments:', err.message);
     res.status(500).send('Error al obtener comentarios.');
   }
-
-
-
-
 });
-
 
 // ===============================
 // OBTENER RECONOCIMIENTO POR ID
@@ -742,7 +819,8 @@ router.get('/:id/detail', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const recognition = await pool.query(`
+    const recognition = await pool.query(
+      `
       SELECT
         r.*,
         COALESCE(s.display_name, s.fullname) AS sender_name,
@@ -767,7 +845,9 @@ router.get('/:id/detail', async (req, res) => {
       LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
       WHERE r.id = $1
       GROUP BY r.id, s.id, rec.id
-    `, [id]);
+      `,
+      [id]
+    );
 
     if (recognition.rows.length === 0) {
       return res.status(404).json({ error: 'Reconocimiento no encontrado.' });
@@ -779,7 +859,5 @@ router.get('/:id/detail', async (req, res) => {
     res.status(500).send('Error al obtener reconocimiento.');
   }
 });
-
-
 
 module.exports = router;
