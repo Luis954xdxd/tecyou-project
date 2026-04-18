@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import FramedAvatar from './FramedAvatar';
  
 const API_BASE = 'http://localhost:5000';
  
@@ -8,11 +9,6 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [processingFollow, setProcessingFollow] = useState(false);
  
-  const resolveImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_BASE}${url}`;
-  };
  
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('es-MX', {
@@ -90,19 +86,13 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
             {/* Avatar + botón seguir */}
             <div className="public-profile-avatar-row">
               <div className="public-profile-avatar-wrap">
-                {profileData.user.profile_image_url ? (
-                  <img
-                    src={resolveImageUrl(profileData.user.profile_image_url)}
-                    alt={profileData.user.display_name}
-                    className="public-profile-avatar"
-                  />
-                ) : (
-                  <div className="public-profile-avatar-fallback">
-                    {(profileData.user.display_name || profileData.user.fullname || 'TSJ')
-                      .split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()}
-                  </div>
-                )}
-              </div>
+  <FramedAvatar
+    imageUrl={profileData.user.profile_image_url}
+    name={profileData.user.display_name || profileData.user.fullname}
+    frameCode={profileData.user.equipped_frame_code}
+    sizeClass="size-public"
+  />
+</div>
  
               {Number(profileData.user.id) !== Number(currentUserId) && (
                 <button

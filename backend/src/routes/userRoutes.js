@@ -4,6 +4,9 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const {
+    evaluateAndUnlockAchievementsForUser,
+} = require('../services/achievementService');
 
 // Asegurar carpeta de uploads
 const uploadDir = path.join(__dirname, '..', 'uploads', 'profiles');
@@ -53,6 +56,7 @@ router.get('/search', async (req, res) => {
                 u.bio,
                 u.tags,
                 u.is_verified,
+                afd.code AS equipped_frame_code,
                 EXISTS (
                     SELECT 1
                     FROM user_follows uf
@@ -60,6 +64,11 @@ router.get('/search', async (req, res) => {
                       AND uf.following_id = u.id
                 ) AS is_following
              FROM users u
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE
                 LOWER(COALESCE(u.display_name, u.fullname)) LIKE LOWER($1)
                 OR LOWER(u.fullname) LIKE LOWER($1)
@@ -93,6 +102,7 @@ router.get('/all', async (req, res) => {
                 u.bio,
                 u.tags,
                 u.is_verified,
+                afd.code AS equipped_frame_code,
                 EXISTS (
                     SELECT 1
                     FROM user_follows uf
@@ -100,6 +110,11 @@ router.get('/all', async (req, res) => {
                       AND uf.following_id = u.id
                 ) AS is_following
              FROM users u
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              ORDER BY COALESCE(u.display_name, u.fullname) ASC`,
             [currentUserId]
         );
@@ -131,6 +146,7 @@ router.get('/profile/:id', async (req, res) => {
                 u.location,
                 u.is_verified,
                 u.created_at,
+                afd.code AS equipped_frame_code,
                 (
                     SELECT COUNT(*)
                     FROM user_follows uf
@@ -142,6 +158,11 @@ router.get('/profile/:id', async (req, res) => {
                     WHERE uf.follower_id = u.id
                 )::int AS following_count
              FROM users u
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE u.id = $1`,
             [id]
         );
@@ -206,7 +227,21 @@ router.put('/profile/:id', async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado.' });
         }
 
-        res.json(updatedUser.rows[0]);
+        let progress = null;
+
+        try {
+            progress = await evaluateAndUnlockAchievementsForUser(Number(id), {
+                sourceType: 'profile_updated',
+                sourceId: Number(id),
+            });
+        } catch (progressError) {
+            console.error('Error evaluando progreso tras editar perfil:', progressError.message);
+        }
+
+        res.json({
+            ...updatedUser.rows[0],
+            progress,
+        });
     } catch (err) {
         console.error('Error en PUT /profile/:id:', err.message);
         res.status(500).send('Error al actualizar el perfil.');
@@ -249,7 +284,21 @@ router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res
             return res.status(404).json({ error: 'Usuario no encontrado.' });
         }
 
-        res.json(updatedUser.rows[0]);
+        let progress = null;
+
+        try {
+            progress = await evaluateAndUnlockAchievementsForUser(Number(id), {
+                sourceType: 'profile_photo_updated',
+                sourceId: Number(id),
+            });
+        } catch (progressError) {
+            console.error('Error evaluando progreso tras subir foto:', progressError.message);
+        }
+
+        res.json({
+            ...updatedUser.rows[0],
+            progress,
+        });
     } catch (err) {
         console.error('Error en POST /profile/:id/photo:', err.message);
         res.status(500).send('Error al subir la foto de perfil.');
@@ -292,7 +341,21 @@ router.post('/profile/:id/cover', upload.single('coverImage'), async (req, res) 
             return res.status(404).json({ error: 'Usuario no encontrado.' });
         }
 
-        res.json(updatedUser.rows[0]);
+        let progress = null;
+
+        try {
+            progress = await evaluateAndUnlockAchievementsForUser(Number(id), {
+                sourceType: 'profile_cover_updated',
+                sourceId: Number(id),
+            });
+        } catch (progressError) {
+            console.error('Error evaluando progreso tras subir portada:', progressError.message);
+        }
+
+        res.json({
+            ...updatedUser.rows[0],
+            progress,
+        });
     } catch (err) {
         console.error('Error en POST /profile/:id/cover:', err.message);
         res.status(500).send('Error al subir la portada.');
@@ -390,9 +453,15 @@ router.get('/:id/following', async (req, res) => {
                 u.bio,
                 u.tags,
                 u.is_verified,
+                afd.code AS equipped_frame_code,
                 uf.created_at AS followed_at
              FROM user_follows uf
              JOIN users u ON uf.following_id = u.id
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE uf.follower_id = $1
              ORDER BY COALESCE(u.display_name, u.fullname) ASC`,
             [id]
@@ -422,9 +491,15 @@ router.get('/:id/followers', async (req, res) => {
                 u.bio,
                 u.tags,
                 u.is_verified,
+                afd.code AS equipped_frame_code,
                 uf.created_at AS followed_at
              FROM user_follows uf
              JOIN users u ON uf.follower_id = u.id
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE uf.following_id = $1
              ORDER BY COALESCE(u.display_name, u.fullname) ASC`,
             [id]
@@ -458,6 +533,7 @@ router.get('/:id/public', async (req, res) => {
                 u.location,
                 u.is_verified,
                 u.created_at,
+                afd.code AS equipped_frame_code,
                 EXISTS (
                     SELECT 1
                     FROM user_follows uf
@@ -484,6 +560,11 @@ router.get('/:id/public', async (req, res) => {
                     WHERE r.receiver_id = u.id
                 )::int AS recognitions_received
              FROM users u
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE u.id = $1`,
             [id, viewerId]
         );
@@ -548,10 +629,16 @@ router.get('/:id/activity', async (req, res) => {
                     r.created_at,
                     COALESCE(s.display_name, s.fullname) AS actor_name,
                     s.profile_image_url AS actor_profile_image,
+                    sender_frame.code AS actor_frame_code,
                     r.message AS content,
                     r.category AS extra
                 FROM recognitions r
                 JOIN users s ON r.sender_id = s.id
+                LEFT JOIN user_avatar_frames sender_uaf
+                  ON sender_uaf.user_id = s.id
+                 AND sender_uaf.is_equipped = TRUE
+                LEFT JOIN avatar_frame_definitions sender_frame
+                  ON sender_frame.id = sender_uaf.frame_id
                 WHERE r.receiver_id = $1
 
                 UNION ALL
@@ -561,10 +648,16 @@ router.get('/:id/activity', async (req, res) => {
                     uf.created_at,
                     COALESCE(u.display_name, u.fullname) AS actor_name,
                     u.profile_image_url AS actor_profile_image,
+                    follower_frame.code AS actor_frame_code,
                     NULL AS content,
                     NULL AS extra
                 FROM user_follows uf
                 JOIN users u ON uf.follower_id = u.id
+                LEFT JOIN user_avatar_frames follower_uaf
+                  ON follower_uaf.user_id = u.id
+                 AND follower_uaf.is_equipped = TRUE
+                LEFT JOIN avatar_frame_definitions follower_frame
+                  ON follower_frame.id = follower_uaf.frame_id
                 WHERE uf.following_id = $1
 
                 UNION ALL
@@ -574,11 +667,17 @@ router.get('/:id/activity', async (req, res) => {
                     rr.created_at,
                     COALESCE(u.display_name, u.fullname) AS actor_name,
                     u.profile_image_url AS actor_profile_image,
+                    reactor_frame.code AS actor_frame_code,
                     rr.reaction_type AS content,
                     NULL AS extra
                 FROM recognition_reactions rr
                 JOIN users u ON rr.user_id = u.id
                 JOIN recognitions r ON rr.recognition_id = r.id
+                LEFT JOIN user_avatar_frames reactor_uaf
+                  ON reactor_uaf.user_id = u.id
+                 AND reactor_uaf.is_equipped = TRUE
+                LEFT JOIN avatar_frame_definitions reactor_frame
+                  ON reactor_frame.id = reactor_uaf.frame_id
                 WHERE r.receiver_id = $1
                   AND rr.user_id <> $1
             ) activity_feed
@@ -616,8 +715,7 @@ router.get('/:id/notifications', async (req, res) => {
              FROM notifications n
              LEFT JOIN users u ON n.actor_id = u.id
              WHERE n.user_id = $1
-             ORDER BY n.created_at DESC
-             LIMIT 30`,
+             ORDER BY n.created_at DESC`,
             [id]
         );
 
@@ -628,64 +726,21 @@ router.get('/:id/notifications', async (req, res) => {
     }
 });
 
-// CONTADOR DE NO LEÍDAS
-router.get('/:id/notifications/unread-count', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await pool.query(
-            `SELECT COUNT(*)::int AS total
-             FROM notifications
-             WHERE user_id = $1 AND is_read = FALSE`,
-            [id]
-        );
-
-        res.json({ total: result.rows[0].total });
-    } catch (err) {
-        console.error('Error en unread-count:', err.message);
-        res.status(500).send('Error al obtener contador de notificaciones.');
-    }
-});
-
-// MARCAR UNA COMO LEÍDA
-router.patch('/notifications/:notificationId/read', async (req, res) => {
-    try {
-        const { notificationId } = req.params;
-
-        const result = await pool.query(
-            `UPDATE notifications
-             SET is_read = TRUE
-             WHERE id = $1
-             RETURNING *`,
-            [notificationId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Notificación no encontrada.' });
-        }
-
-        res.json(result.rows[0]);
-    } catch (err) {
-        console.error('Error al marcar notificación como leída:', err.message);
-        res.status(500).send('Error al actualizar la notificación.');
-    }
-});
-
-// MARCAR TODAS COMO LEÍDAS
-router.patch('/:id/notifications/read-all', async (req, res) => {
+// MARCAR NOTIFICACIONES COMO LEÍDAS
+router.patch('/:id/notifications/read', async (req, res) => {
     try {
         const { id } = req.params;
 
         await pool.query(
             `UPDATE notifications
              SET is_read = TRUE
-             WHERE user_id = $1 AND is_read = FALSE`,
+             WHERE user_id = $1`,
             [id]
         );
 
         res.json({ success: true });
     } catch (err) {
-        console.error('Error al marcar todas como leídas:', err.message);
+        console.error('Error en PATCH /:id/notifications/read:', err.message);
         res.status(500).send('Error al actualizar notificaciones.');
     }
 });

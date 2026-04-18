@@ -10,6 +10,10 @@ const {
   generateBadgeMetadata,
 } = require('../services/aiService');
 
+const {
+  evaluateAndUnlockAchievementsForUser,
+} = require('../services/achievementService');
+
 // ===============================
 // CONFIGURACIÓN DE UPLOADS
 // ===============================
@@ -275,10 +279,44 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
       );
     }
 
+    // ===============================
+    // LOGROS / MARCOS / RECOMPENSAS
+    // ===============================
+    let senderProgress = null;
+    let receiverProgress = null;
+
+    try {
+      senderProgress = await evaluateAndUnlockAchievementsForUser(
+        Number(sender_id),
+        {
+          sourceType: 'recognition_sent',
+          sourceId: recognitionId,
+        }
+      );
+    } catch (progressError) {
+      console.error('Error evaluando progreso del remitente:', progressError.message);
+    }
+
+    try {
+      receiverProgress = await evaluateAndUnlockAchievementsForUser(
+        Number(finalReceiverId),
+        {
+          sourceType: 'recognition_received',
+          sourceId: recognitionId,
+        }
+      );
+    } catch (progressError) {
+      console.error('Error evaluando progreso del receptor:', progressError.message);
+    }
+
     res.json({
       success: true,
       message: '¡Reconocimiento enviado con éxito!',
       data: newRecognition.rows[0],
+      progress : {
+        sender : senderProgress,
+        receiver: receiverProgress,
+      },
     });
   } catch (err) {
     console.error('Error en /send:', err.message);
@@ -292,31 +330,53 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 router.get('/feed', async (req, res) => {
   try {
     const feed = await pool.query(`
-      SELECT
-        r.*,
-        COALESCE(s.display_name, s.fullname) AS sender_name,
-        s.fullname AS sender_fullname,
-        s.profile_image_url AS sender_profile_image,
-        COALESCE(rec.display_name, rec.fullname) AS receiver_name,
-        rec.fullname AS receiver_fullname,
-        rec.profile_image_url AS receiver_profile_image,
-        COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'id', rm.id,
-              'media_url', rm.media_url,
-              'media_type', rm.media_type
-            )
-          ) FILTER (WHERE rm.id IS NOT NULL),
-          '[]'
-        ) AS media
-      FROM recognitions r
-      JOIN users s ON r.sender_id = s.id
-      JOIN users rec ON r.receiver_id = rec.id
-      LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
-      GROUP BY r.id, s.id, rec.id
-      ORDER BY r.created_at DESC
-    `);
+  SELECT
+    r.*,
+    COALESCE(s.display_name, s.fullname) AS sender_name,
+    s.fullname AS sender_fullname,
+    s.profile_image_url AS sender_profile_image,
+    sender_frame.code AS sender_frame_code,
+
+    COALESCE(rec.display_name, rec.fullname) AS receiver_name,
+    rec.fullname AS receiver_fullname,
+    rec.profile_image_url AS receiver_profile_image,
+    receiver_frame.code AS receiver_frame_code,
+
+    COALESCE(
+      json_agg(
+        DISTINCT jsonb_build_object(
+          'id', rm.id,
+          'media_url', rm.media_url,
+          'media_type', rm.media_type
+        )
+      ) FILTER (WHERE rm.id IS NOT NULL),
+      '[]'
+    ) AS media
+  FROM recognitions r
+  JOIN users s ON r.sender_id = s.id
+  JOIN users rec ON r.receiver_id = rec.id
+
+  LEFT JOIN user_avatar_frames sender_uaf
+    ON sender_uaf.user_id = s.id
+   AND sender_uaf.is_equipped = TRUE
+  LEFT JOIN avatar_frame_definitions sender_frame
+    ON sender_frame.id = sender_uaf.frame_id
+
+  LEFT JOIN user_avatar_frames receiver_uaf
+    ON receiver_uaf.user_id = rec.id
+   AND receiver_uaf.is_equipped = TRUE
+  LEFT JOIN avatar_frame_definitions receiver_frame
+    ON receiver_frame.id = receiver_uaf.frame_id
+
+  LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
+  GROUP BY
+    r.id,
+    s.id,
+    rec.id,
+    sender_frame.code,
+    receiver_frame.code
+  ORDER BY r.created_at DESC
+`);
 
     res.json(feed.rows);
   } catch (err) {
@@ -385,6 +445,16 @@ router.post('/:id/react', async (req, res) => {
           ]
         );
       }
+      try {
+        if (receiverId) {
+          await evaluateAndUnlockAchievementsForUser(Number(receiverId), {
+            sourceType: 'reaction_received',
+            sourceId: Number(id),
+          });
+        }
+      } catch (progressError) {
+        console.error('Error evaluando logro por reacción actualizada:', progressError.message);
+      }
 
       return res.json(updated.rows[0]);
     }
@@ -409,6 +479,16 @@ router.post('/:id/react', async (req, res) => {
           Number(id),
         ]
       );
+    }
+    try {
+      if (receiverId) {
+        await evaluateAndUnlockAchievementsForUser(Number(receiverId), {
+          sourceType: 'reaction_received',
+          sourceId: Number(id),
+        });
+      }
+    } catch (progressError) {
+      console.error('Error evaluando logro por reacción creada:', progressError.message);
     }
 
     res.json(created.rows[0]);
@@ -744,6 +824,16 @@ router.post('/:id/comments', async (req, res) => {
           Number(id),
         ]
       );
+    }
+    try {
+      if (receiverId) {
+        await evaluateAndUnlockAchievementsForUser(Number(receiverId), {
+          sourceType: 'comment_received',
+          sourceId: Number(id),
+        });
+      }
+    } catch (progressError) {
+      console.error('Error evaluando logro por comentario recibido:', progressError.message);
     }
 
     res.json(commentWithUser.rows[0]);

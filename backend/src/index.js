@@ -8,6 +8,7 @@ const recognitionRoutes = require('./routes/recognitionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const storyRoutes = require('./routes/storyRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const progressRoutes = require('./routes/progressRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +26,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/recognitions', recognitionRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {

@@ -273,13 +273,15 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         payload.append('recognitionMedia', file);
       });
 
-      await axios.post(`${API_BASE}/api/recognitions/send`, payload, {
+      const response = await axios.post(`${API_BASE}/api/recognitions/send`, payload, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      onRecognitionSent();
+      if (onRecognitionSent) {
+        await onRecognitionSent(response.data);
+      }
 
       setFormData({
         receiver_control_number: '',

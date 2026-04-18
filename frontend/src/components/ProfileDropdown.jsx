@@ -1,6 +1,18 @@
 import React, { useState, useRef } from 'react';
+import FramedAvatar from './FramedAvatar';
 
-function ProfileDropdown({ user, displayName, profileImage, getInitials, openEditProfileModal, fileInputRef, onLogout, onGoToProfile, darkMode, onToggleDark }) {
+function ProfileDropdown({
+  user,
+  displayName,
+  profileImage,
+  getInitials,
+  openEditProfileModal,
+  fileInputRef,
+  onLogout,
+  onGoToProfile,
+  darkMode,
+  onToggleDark,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -12,7 +24,7 @@ function ProfileDropdown({ user, displayName, profileImage, getInitials, openEdi
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 300); // 300ms de gracia antes de cerrar
+    }, 300);
   };
 
   return (
@@ -21,28 +33,28 @@ function ProfileDropdown({ user, displayName, profileImage, getInitials, openEdi
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button className="nav-profile-trigger">
-        {profileImage ? (
-          <img src={profileImage} alt={displayName} className="nav-profile-image" />
-        ) : (
-          <div className="nav-profile-image nav-dropdown-avatar-fallback">
-            {getInitials(displayName || user?.fullname)}
-          </div>
-        )}
+      <button className="nav-profile-trigger" type="button">
+        <FramedAvatar
+          imageUrl={profileImage || user?.profile_image_url}
+          name={displayName || user?.display_name || user?.fullname}
+          frameCode={user?.equipped_frame_code}
+          sizeClass="size-nav"
+        />
       </button>
 
       {isOpen && (
         <div className="nav-profile-dropdown">
           <div className="nav-profile-dropdown-header">
-            {profileImage ? (
-              <img src={profileImage} alt={displayName} className="nav-dropdown-avatar" />
-            ) : (
-              <div className="nav-dropdown-avatar-fallback">
-                {getInitials(displayName || user?.fullname)}
-              </div>
-            )}
+            <FramedAvatar
+              imageUrl={profileImage || user?.profile_image_url}
+              name={displayName || user?.display_name || user?.fullname}
+              frameCode={user?.equipped_frame_code}
+              sizeClass="size-directory"
+              className="nav-dropdown-framed-avatar"
+            />
+
             <div className="nav-dropdown-userinfo">
-              <strong>{displayName || user?.fullname}</strong>
+              <strong>{displayName || user?.display_name || user?.fullname}</strong>
               <span>{user?.email}</span>
             </div>
           </div>
@@ -52,38 +64,53 @@ function ProfileDropdown({ user, displayName, profileImage, getInitials, openEdi
           </div>
 
           <div className="nav-dropdown-actions">
-            <button className="nav-dropdown-btn" onClick={() => {
-              setIsOpen(false);
-              openEditProfileModal();
-            }}>
+            <button
+              className="nav-dropdown-btn"
+              onClick={() => {
+                setIsOpen(false);
+                openEditProfileModal();
+              }}
+            >
               Editar perfil
             </button>
 
-            <button className="nav-dropdown-btn" onClick={() => {
-              setIsOpen(false);
-              fileInputRef.current?.click();
-            }}>
+            <button
+              className="nav-dropdown-btn"
+              onClick={() => {
+                setIsOpen(false);
+                fileInputRef.current?.click();
+              }}
+            >
               Cambiar foto
             </button>
 
-            <button className="nav-dropdown-btn" onClick={() => {
-              onToggleDark();
-              setIsOpen(false);
-            }}>
+            <button
+              className="nav-dropdown-btn"
+              onClick={() => {
+                onToggleDark();
+                setIsOpen(false);
+              }}
+            >
               {darkMode ? '☀️ Modo claro' : '🌙 Modo oscuro'}
             </button>
 
-            <button className="nav-dropdown-btn" onClick={() => {
-              setIsOpen(false);
-              onGoToProfile();
-            }}>
+            <button
+              className="nav-dropdown-btn"
+              onClick={() => {
+                setIsOpen(false);
+                onGoToProfile();
+              }}
+            >
               Ir al perfil
             </button>
 
-            <button className="nav-dropdown-btn danger" onClick={() => {
-              setIsOpen(false);
-              onLogout();
-            }}>
+            <button
+              className="nav-dropdown-btn danger"
+              onClick={() => {
+                setIsOpen(false);
+                onLogout();
+              }}
+            >
               Cerrar sesión
             </button>
           </div>

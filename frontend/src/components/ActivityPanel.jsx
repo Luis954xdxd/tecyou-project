@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import FramedAvatar from './FramedAvatar';
 
 const API_BASE = 'http://localhost:5000';
 
 function ActivityPanel({ userId }) {
   const [activities, setActivities] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
-
-  const resolveImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_BASE}${url}`;
-  };
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -48,7 +43,9 @@ function ActivityPanel({ userId }) {
         love: '❤️ reaccionó con aprecio a uno de tus reconocimientos',
       };
 
-      return `${item.actor_name} ${reactionMap[item.content] || 'reaccionó a uno de tus reconocimientos'}`;
+      return `${item.actor_name} ${
+        reactionMap[item.content] || 'reaccionó a uno de tus reconocimientos'
+      }`;
     }
 
     return 'Nueva actividad';
@@ -88,22 +85,12 @@ function ActivityPanel({ userId }) {
             activities.map((item, index) => (
               <div key={`${item.type}-${index}-${item.created_at}`} className="activity-item">
                 <div className="activity-avatar">
-                  {item.actor_profile_image ? (
-                    <img
-                      src={resolveImageUrl(item.actor_profile_image)}
-                      alt={item.actor_name}
-                      className="activity-avatar-image"
-                    />
-                  ) : (
-                    <div className="activity-avatar-fallback">
-                      {(item.actor_name || 'TSJ')
-                        .split(' ')
-                        .slice(0, 2)
-                        .map((word) => word[0])
-                        .join('')
-                        .toUpperCase()}
-                    </div>
-                  )}
+                  <FramedAvatar
+                    imageUrl={item.actor_profile_image}
+                    name={item.actor_name}
+                    frameCode={item.actor_frame_code}
+                    sizeClass="size-activity"
+                  />
                 </div>
 
                 <div className="activity-meta">

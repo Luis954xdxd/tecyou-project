@@ -10352,6 +10352,932 @@ body.dark .create-story-close-btn {
   color: #f8fafc;
 }
 
+.progress-panel-wrapper {
+  display: grid;
+  gap: 18px;
+}
+
+.progress-loading-box,
+.progress-empty-state {
+  padding: 18px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #334155;
+}
+
+.progress-feedback {
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.progress-feedback.success {
+  background: rgba(16, 185, 129, 0.10);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.16);
+}
+
+.progress-feedback.error {
+  background: rgba(239, 68, 68, 0.10);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.16);
+}
+
+.progress-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.progress-summary-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.progress-summary-card span {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.progress-summary-card strong {
+  font-size: 1.35rem;
+  color: #1e293b;
+}
+
+.progress-section-card {
+  background: #ffffff;
+  border-radius: 22px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.progress-section-head {
+  display: grid;
+  gap: 6px;
+}
+
+.progress-section-head h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.progress-section-head p {
+  margin: 0;
+  color: #64748b;
+}
+
+.progress-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.progress-metric-item {
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.progress-metric-item span {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.progress-metric-item strong {
+  color: #1e293b;
+  font-size: 1.2rem;
+}
+
+.progress-category-box {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-category-box h4,
+.equipped-frame-box h4 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.progress-category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.progress-category-pill,
+.equipped-frame-pill,
+.frame-rarity-chip,
+.badge-rarity-chip,
+.badge-category-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.progress-category-pill {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.equipped-frame-pill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.achievement-grid,
+.badge-grid,
+.frame-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.achievement-card,
+.badge-card,
+.frame-card {
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: #f8fafc;
+}
+
+.achievement-card {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.achievement-card.unlocked {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.10), rgba(59, 130, 246, 0.08));
+}
+
+.achievement-card.locked {
+  opacity: 0.82;
+}
+
+.achievement-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  font-size: 1.4rem;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+.achievement-body {
+  display: grid;
+  gap: 6px;
+}
+
+.achievement-body strong {
+  color: #0f172a;
+}
+
+.achievement-body p {
+  margin: 0;
+  color: #475569;
+}
+
+.achievement-meta {
+  color: #6366f1;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.badge-card {
+  display: grid;
+  gap: 10px;
+}
+
+.badge-card-top {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge-rarity-chip {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.badge-category-chip {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.badge-card strong {
+  color: #0f172a;
+}
+
+.badge-card p,
+.badge-card small {
+  margin: 0;
+  color: #475569;
+}
+
+.badge-reason-box {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.badge-reason-box span {
+  color: #475569;
+  font-weight: 700;
+}
+
+.badge-reason-box p {
+  margin: 0;
+  color: #1e293b;
+}
+
+.frame-card {
+  display: grid;
+  gap: 10px;
+}
+
+.frame-card.unlocked {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.10), rgba(249, 115, 22, 0.08));
+}
+
+.frame-card.locked {
+  opacity: 0.8;
+}
+
+.frame-card.equipped {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+}
+
+.frame-card strong {
+  color: #0f172a;
+}
+
+.frame-card p {
+  margin: 0;
+  color: #475569;
+}
+
+.frame-rarity-chip {
+  width: fit-content;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.frame-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #64748b;
+}
+
+.frame-status-line {
+  font-weight: 700;
+  color: #334155;
+}
+
+.frame-unlocked-summary {
+  padding-top: 4px;
+  color: #334155;
+}
+
+.teacher-badge-panel {
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.06), rgba(168, 85, 247, 0.05));
+}
+
+.badge-assignment-form {
+  display: grid;
+  gap: 14px;
+}
+
+.App.dark .progress-loading-box,
+.App.dark .progress-empty-state,
+.App.dark .progress-summary-card,
+.App.dark .progress-section-card,
+.App.dark .achievement-icon,
+.App.dark .badge-reason-box {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.App.dark .progress-summary-card strong,
+.App.dark .progress-section-head h3,
+.App.dark .progress-metric-item strong,
+.App.dark .achievement-body strong,
+.App.dark .badge-card strong,
+.App.dark .frame-card strong,
+.App.dark .equipped-frame-box h4,
+.App.dark .progress-category-box h4,
+.App.dark .badge-reason-box p,
+.App.dark .frame-status-line {
+  color: #f8fafc;
+}
+
+.App.dark .progress-section-head p,
+.App.dark .progress-summary-card span,
+.App.dark .progress-metric-item span,
+.App.dark .achievement-body p,
+.App.dark .badge-card p,
+.App.dark .badge-card small,
+.App.dark .frame-card p,
+.App.dark .frame-requirements,
+.App.dark .badge-reason-box span {
+  color: #cbd5e1;
+}
+
+.App.dark .progress-metric-item,
+.App.dark .achievement-card,
+.App.dark .badge-card,
+.App.dark .frame-card {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+.App.dark .progress-category-pill {
+  background: rgba(79, 70, 229, 0.18);
+  color: #c7d2fe;
+}
+
+.App.dark .equipped-frame-pill,
+.App.dark .frame-rarity-chip {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+}
+
+.App.dark .badge-rarity-chip {
+  background: rgba(139, 92, 246, 0.16);
+  color: #ddd6fe;
+}
+
+.App.dark .badge-category-chip {
+  background: rgba(59, 130, 246, 0.16);
+  color: #bfdbfe;
+}
+
+.achievement-unlock-overlay {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.achievement-unlock-toast {
+  position: relative;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  border-radius: 22px;
+  overflow: hidden;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(30, 41, 59, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: achievementToastIn 0.55s ease both;
+  pointer-events: auto;
+}
+
+.achievement-unlock-glow {
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(
+    120deg,
+    rgba(250, 204, 21, 0.16),
+    rgba(168, 85, 247, 0.16),
+    rgba(59, 130, 246, 0.16)
+  );
+  filter: blur(18px);
+  opacity: 0.9;
+  z-index: 0;
+}
+
+.achievement-unlock-topbar,
+.achievement-unlock-content,
+.achievement-unlock-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.achievement-unlock-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.achievement-unlock-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  font-weight: 800;
+  color: #facc15;
+  text-transform: uppercase;
+}
+
+.achievement-unlock-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.achievement-unlock-content {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.achievement-unlock-icon-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+}
+
+.achievement-unlock-icon-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(250, 204, 21, 0.55);
+  box-shadow:
+    0 0 18px rgba(250, 204, 21, 0.35),
+    0 0 34px rgba(168, 85, 247, 0.18);
+  animation: achievementRingPulse 1.8s ease-in-out infinite;
+}
+
+.achievement-unlock-icon {
+  position: relative;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b);
+  color: #111827;
+  font-size: 1.8rem;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.35);
+}
+
+.achievement-unlock-body {
+  display: grid;
+  gap: 6px;
+}
+
+.achievement-unlock-body h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.12rem;
+}
+
+.achievement-unlock-body p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.achievement-unlock-rarity {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.achievement-unlock-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.achievement-unlock-footer-text {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+@keyframes achievementToastIn {
+  0% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes achievementRingPulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+}
+
+@media (max-width: 640px) {
+  .achievement-unlock-overlay {
+    top: 16px;
+    right: 12px;
+    left: 12px;
+  }
+
+  .achievement-unlock-toast {
+    width: 100%;
+  }
+
+  .achievement-unlock-content {
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+  }
+
+  .achievement-unlock-icon-wrap {
+    width: 64px;
+    height: 64px;
+  }
+
+  .achievement-unlock-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.45rem;
+  }
+}
+
+.profile-twitter-avatar-wrap.stylized-frame-wrap {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.profile-twitter-avatar-base {
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.profile-twitter-avatar,
+.profile-twitter-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.profile-twitter-avatar-frame-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+
+  width: 350px;  /* 🔥 MÁS GRANDE */
+  height: 350px;
+
+  object-fit: contain;
+
+  transform: translate(-50%, -40%) scale(1.25); /* 🔥 CLAVE */
+  
+  pointer-events: none;
+  z-index: 2;
+
+  filter: drop-shadow(0 12px 30px rgba(0,0,0,0.45));
+}
+
+/* =========================================================
+   AJUSTES GLOBALES DE AVATARES + MARCOS + ESPACIADO
+   PÉGALO HASTA EL FINAL DE App.css
+========================================================= */
+
+/* 1. Espaciado mejor para Guardar / Compartir */
+.recognition-favorite-row {
+  display: flex;
+  align-items: center;
+  gap: 16px !important;
+  margin-top: 18px !important;
+  flex-wrap: wrap;
+}
+
+.recognition-share-btn {
+  margin-left: 2px;
+}
+
+/* 2. Todos estos avatares ahora circulares */
+.directory-user-avatar,
+.directory-user-avatar-fallback,
+.activity-avatar-image,
+.activity-avatar-fallback,
+.public-profile-avatar,
+.public-profile-avatar-fallback,
+.nav-dropdown-avatar,
+.nav-dropdown-avatar-fallback,
+.notification-avatar-image,
+.notification-avatar-fallback,
+.reaction-user-avatar,
+.reaction-user-avatar-fallback,
+.user-search-avatar-image,
+.user-search-avatar-fallback,
+.selected-user-avatar,
+.selected-user-avatar-fallback {
+  border-radius: 999px !important;
+}
+
+/* 3. Wrapper reutilizable para avatar con marco */
+.framed-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.framed-avatar-circle {
+  position: relative;
+  z-index: 1;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.framed-avatar-image,
+.framed-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.framed-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+.framed-avatar-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 2;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.38));
+}
+
+/* tamaños */
+.framed-avatar.size-nav {
+  width: 46px;
+  height: 46px;
+}
+
+.framed-avatar.size-nav .framed-avatar-circle {
+  width: 38px;
+  height: 38px;
+}
+
+.framed-avatar.size-nav .framed-avatar-frame {
+  width: 66px;
+  height: 66px;
+}
+
+.framed-avatar.size-directory {
+  width: 78px;
+  height: 78px;
+}
+
+.framed-avatar.size-directory .framed-avatar-circle {
+  width: 52px;
+  height: 52px;
+}
+
+.framed-avatar.size-directory .framed-avatar-frame {
+  width: 96px;
+  height: 96px;
+}
+
+.framed-avatar.size-activity {
+  width: 70px;
+  height: 70px;
+}
+
+.framed-avatar.size-activity .framed-avatar-circle {
+  width: 48px;
+  height: 48px;
+}
+
+.framed-avatar.size-activity .framed-avatar-frame {
+  width: 88px;
+  height: 88px;
+}
+
+.framed-avatar.size-public {
+  width: 200px;
+  height: 200px;
+}
+
+.framed-avatar.size-public .framed-avatar-circle {
+  width: 160px;
+  height: 160px;
+}
+
+.framed-avatar.size-public .framed-avatar-frame {
+  width: 230px;
+  height: 230px;
+}
+
+.framed-avatar.size-feed {
+  width: 68px;
+  height: 68px;
+}
+
+.framed-avatar.size-feed .framed-avatar-circle {
+  width: 58px;
+  height: 58px;
+}
+
+.framed-avatar.size-feed .framed-avatar-frame {
+  width: 140px;
+  height: 140px;
+  transform: translate(-50%, -40%) scale(1.02);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+}
+
+/* fila del autor en feed */
+.recognition-author-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.recognition-author-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.recognition-author-meta .main-text,
+.recognition-author-meta .featured-main-text {
+  margin-bottom: 10px;
+}
+
+/* para que el avatar del feed no se vea cuadrado jamás */
+.recognition-author-avatar {
+  flex-shrink: 0;
+}
+
+/* modo oscuro */
+.App.dark .framed-avatar-circle {
+  background: #0b1730;
+}
+
+.recognition-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.recognition-header-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.recognition-author-avatar {
+  flex-shrink: 0;
+}
+
+.recognition-main-row {
+  display: block;
+}
+
+.featured-card-body {
+  display: block;
+}
+
+.recognition-body {
+  width: 100%;
+}
+
+.recognition-favorite-row {
+  display: flex;
+  align-items: center;
+  gap: 16px !important;
+  margin-top: 18px !important;
+  flex-wrap: wrap;
+}
+
+.recognition-share-btn {
+  margin-left: 2px;
+}
+
+
+.directory-user-avatar,
+.directory-user-avatar-fallback,
+.public-profile-avatar,
+.public-profile-avatar-fallback,
+.nav-profile-image,
+.nav-profile-fallback {
+  border-radius: 999px !important;
+}
+
+.recognition-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.recognition-header-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.recognition-author-avatar {
+  flex-shrink: 0;
+}
+
+.recognition-main-row,
+.featured-card-body {
+  display: block;
+}
+
+.recognition-body {
+  width: 100%;
+}
+
+.recognition-favorite-row {
+  display: flex;
+  align-items: center;
+  gap: 16px !important;
+  margin-top: 18px !important;
+  flex-wrap: wrap;
+}
+
+.recognition-share-btn {
+  margin-left: 2px;
+}
+
+/* FORZAR TODOS LOS AVATARES A SER CIRCULARES */
+img[class*="avatar"],
+div[class*="avatar"] img {
+  border-radius: 50% !important;
+}
+
+.nav-dropdown-framed-avatar {
+  margin-right: 4px;
+}
+
+.activity-avatar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-shrink: 0;
+}
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import FramedAvatar from './FramedAvatar';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -11,11 +12,7 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
   const [loadingFollowing, setLoadingFollowing] = useState(false);
   const [processingFollowId, setProcessingFollowId] = useState(null);
 
-  const resolveImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `${API_BASE}${url}`;
-  };
+ 
 
   const fetchUsers = async () => {
     try {
@@ -132,22 +129,12 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
                 filteredUsers.map((user) => (
                   <div key={user.id} className="directory-user-card">
                     <div className="directory-user-main">
-                      {user.profile_image_url ? (
-                        <img
-                          src={resolveImageUrl(user.profile_image_url)}
-                          alt={user.display_name}
-                          className="directory-user-avatar"
-                        />
-                      ) : (
-                        <div className="directory-user-avatar-fallback">
-                          {(user.display_name || user.fullname || 'TSJ')
-                            .split(' ')
-                            .slice(0, 2)
-                            .map((word) => word[0])
-                            .join('')
-                            .toUpperCase()}
-                        </div>
-                      )}
+                      <FramedAvatar
+                      imageUrl={user.profile_image_url}
+                      name={user.display_name || user.fullname}
+                      frameCode={user.equipped_frame_code}
+                      sizeClass="size-directory"
+                      />
 
                       <div className="directory-user-meta">
                         <button
@@ -213,22 +200,12 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
                 following.map((user) => (
                   <div key={user.id} className="directory-user-card compact">
                     <div className="directory-user-main">
-                      {user.profile_image_url ? (
-                        <img
-                          src={resolveImageUrl(user.profile_image_url)}
-                          alt={user.display_name}
-                          className="directory-user-avatar"
-                        />
-                      ) : (
-                        <div className="directory-user-avatar-fallback">
-                          {(user.display_name || user.fullname || 'TSJ')
-                            .split(' ')
-                            .slice(0, 2)
-                            .map((word) => word[0])
-                            .join('')
-                            .toUpperCase()}
-                        </div>
-                      )}
+                      <FramedAvatar
+                      imageUrl={user.profile_image_url}
+                      name={user.display_name || user.fullname}
+                      frameCode={user.equipped_frame_code}
+                      sizeClass="size-directory"
+                      />
 
                       <div className="directory-user-meta">
                         <button

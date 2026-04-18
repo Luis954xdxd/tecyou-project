@@ -3,6 +3,12 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import { renderTextWithHashtags } from '../textFormatters';
+import ProgressPanel from '../components/ProgressPanel';
+import copperFrame from '../assets/frames/copper-frame.png';
+import silverFrame from '../assets/frames/silver-frame.png';
+import goldFrame from '../assets/frames/gold-frame.png';
+import crimsonRubyFrame from '../assets/frames/crimson-ruby-frame.png';
+import diamondFrame from '../assets/frames/diamond-frame.png';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -18,6 +24,7 @@ function ProfilePage({
   isOwnProfile,
   onFavoritesChanged,
   onOpenRecognition,
+  onBadgeAssigned,
 }) {
   const navigate = useNavigate();
   const { userId } = useParams();
@@ -26,6 +33,7 @@ function ProfilePage({
   const [showAllGallery, setShowAllGallery] = useState(false);
   const [profileSearch, setProfileSearch] = useState('');
   const [loadingViewedProfile, setLoadingViewedProfile] = useState(false);
+  const [equippedFrame, setEquippedFrame] = useState(null);
   
   const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
@@ -110,6 +118,23 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
     return `${API_BASE}${url}`;
   };
 
+  const getFrameAsset = (frameCode) => {
+    switch (frameCode) {
+      case 'copper_frame':
+        return copperFrame;
+      case 'silver_frame':
+        return silverFrame;
+      case 'gold_frame':
+        return goldFrame;
+      case 'crimson_ruby_frame':
+        return crimsonRubyFrame;
+      case 'diamond_frame':
+        return diamondFrame;
+      default:
+        return null;
+    }
+  };
+
   const reactionMeta = {
   like: { icon: '👍', label: 'Me gusta' },
   celebrate: { icon: '🎉', label: 'Celebrar' },
@@ -172,6 +197,21 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
     console.error('Error quitando guardado desde perfil:', error);
   }
   };
+
+  const fetchEquippedFrame = async (targetUserId) => {
+    try {
+      if (!targetUserId) return;
+
+      const response = await axios.get(
+        `${API_BASE}/api/progress/${targetUserId}/summary`
+      );
+
+      setEquippedFrame(response.data?.summary?.equipped_frame || null);
+    } catch (error) {
+      console.error('Error al obtener marco equipado:', error);
+      setEquippedFrame(null);
+    }
+  };
   
 
   useEffect(() => {
@@ -203,6 +243,7 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
         followers_count: Number(currentUser?.followers_count || 0),
         following_count: Number(currentUser?.following_count || 0),
       });
+      fetchEquippedFrame(currentUser?.id);
       return;
     }
 
@@ -236,6 +277,7 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
           profile_image_url: resolveImageUrl(profile.profile_image_url),
           cover_image_url: resolveImageUrl(profile.cover_image_url),
         });
+        await fetchEquippedFrame(profile.id);
       } catch (err) {
         console.error('Error al cargar perfil público:', err);
       } finally {
@@ -328,6 +370,7 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
       : ['Comunidad TSJ', 'Reconocimiento positivo'];
 
   const profileImage = resolveImageUrl(viewedProfile?.profile_image_url);
+  const equippedFrameAsset = getFrameAsset(equippedFrame?.code);
   const coverImage = resolveImageUrl(viewedProfile?.cover_image_url);
   const birthDate = viewedProfile?.birth_date || '';
   const locationText = viewedProfile?.location || '';
@@ -403,13 +446,23 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
           </div>
 
           <div className="profile-twitter-header">
-            <div className="profile-twitter-avatar-wrap">
-              {profileImage ? (
-                <img src={profileImage} alt="Perfil" className="profile-twitter-avatar" />
-              ) : (
-                <div className="profile-twitter-avatar-fallback">{initials}</div>
-              )}
-            </div>
+            <div className="profile-twitter-avatar-wrap stylized-frame-wrap">
+  <div className="profile-twitter-avatar-base">
+    {profileImage ? (
+      <img src={profileImage} alt="Perfil" className="profile-twitter-avatar" />
+    ) : (
+      <div className="profile-twitter-avatar-fallback">{initials}</div>
+    )}
+  </div>
+
+  {equippedFrameAsset && (
+    <img
+      src={equippedFrameAsset}
+      alt={equippedFrame?.name || 'Marco de avatar'}
+      className="profile-twitter-avatar-frame-image"
+    />
+  )}
+</div>
 
             <div className="profile-twitter-header-actions">
               {isOwnProfile ? (
@@ -474,6 +527,11 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
               <span><strong>{recognitionsSent.length}</strong> Enviados</span>
               <span><strong>{recognitionsReceived.length}</strong> Recibidos</span>
             </div>
+            {equippedFrame && (
+              <div className="profile-equipped-frame-chip">
+                Marco equipado: {equippedFrame.name}
+              </div>
+            )}
           </div>
 
           <div className="profile-twitter-tabs">
@@ -504,6 +562,29 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
               onClick={() => setActiveTab('about')}
             >
               Perfil
+            </button>
+            <button
+              type="button"
+              className={`profile-twitter-tab ${activeTab === 'achievements' ? 'active' : ''}`}
+              onClick={() => setActiveTab('achievements')}
+            >
+              Logros
+            </button>
+
+            <button
+              type="button"
+              className={`profile-twitter-tab ${activeTab === 'badges' ? 'active' : ''}`}
+              onClick={() => setActiveTab('badges')}
+            >
+              Insignias
+            </button>
+
+            <button
+              type="button"
+              className={`profile-twitter-tab ${activeTab === 'frames' ? 'active' : ''}`}
+              onClick={() => setActiveTab('frames')}
+            >
+              Marcos
             </button>
             {isOwnProfile && (
                    <button
@@ -695,6 +776,16 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
                   </div>
                 </div>
               </section>
+            )}
+            {(activeTab === 'achievements' ||
+              activeTab === 'badges' ||
+              activeTab === 'frames') && (
+              <ProgressPanel
+                profileUserId={profileUserId}
+                currentUser={currentUser}
+                isOwnProfile={isOwnProfile}
+                onBadgeAssigned={onBadgeAssigned}
+              />
             )}
 
             {activeTab === 'saved' && isOwnProfile && (

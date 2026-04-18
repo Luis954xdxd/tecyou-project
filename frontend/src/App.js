@@ -16,13 +16,15 @@ import logoTSJ from './assets/logo-tsj.png';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import './styles/auth.css';
-import {clearUserSession,getUserSession,saveUserSession,} from './utils/authStorage';
+import { clearUserSession, getUserSession, saveUserSession } from './utils/authStorage';
 import RecognitionPage from './pages/RecognitionPage';
 import { renderTextWithHashtags } from './textFormatters';
 import StoriesUploader from './components/StoriesUploader';
 import StoriesBar from './components/StoriesBar';
 import StoryViewer from './components/StoryViewer';
 import CreateStoryModal from './components/CreateStoryModal';
+import FramedAvatar from './components/FramedAvatar';
+import AchievementUnlockToast from './components/AchievementUnlockToast';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -43,7 +45,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [hashtagFilter, setHashtagFilter] = useState('');
-  const [sortBy, setSortBy] = useState('recent'); 
+  const [sortBy, setSortBy] = useState('recent');
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [profileImage, setProfileImage] = useState(null);
@@ -75,25 +77,26 @@ function App() {
 
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
 
-  // AGREGADO: estados para favoritos
   const [favoriteIds, setFavoriteIds] = useState({});
   const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
   const [favoritingIds, setFavoritingIds] = useState({});
 
   const [stories, setStories] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(false);
-  const [storyViewer, setStoryViewer] = useState({isOpen: false,stories: [],currentIndex: 0,});
-  // AGREGADO: pestaña activa del perfil
-  
+  const [storyViewer, setStoryViewer] = useState({
+    isOpen: false,
+    stories: [],
+    currentIndex: 0,
+  });
+
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+  const [unlockQueue, setUnlockQueue] = useState([]);
+  const [activeUnlockItem, setActiveUnlockItem] = useState(null);
+  const [showUnlockToast, setShowUnlockToast] = useState(false);
   const [storyCommentsMap, setStoryCommentsMap] = useState({});
   const [storyReactionsMap, setStoryReactionsMap] = useState({});
   const [storyViewsMap, setStoryViewsMap] = useState({});
   const [allUsers, setAllUsers] = useState([]);
-
-
-
-
 
   const [imageViewer, setImageViewer] = useState({
     isOpen: false,
@@ -102,15 +105,16 @@ function App() {
   });
 
   const fileInputRef = useRef(null);
+  const modalProfileInputRef = useRef(null);
   const coverInputRef = useRef(null);
-  
+
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '👍' },
     { key: 'celebrate', label: 'Excelente', emoji: '🎉' },
     { key: 'inspire', label: 'Inspirador', emoji: '💡' },
     { key: 'love', label: 'Agradezco', emoji: '❤️' },
   ];
-  
+
   useEffect(() => {
     localStorage.setItem('tec_you_dark_mode', String(darkMode));
     if (darkMode) document.body.classList.add('dark');
@@ -176,9 +180,6 @@ function App() {
       };
     });
   };
-
-
-
 
   const sectionSearchItems = [
     { id: 'hero-section', title: 'Inicio / Resumen', description: 'Vista general', keywords: ['inicio', 'resumen', 'principal'] },
@@ -261,256 +262,252 @@ function App() {
       console.error('Error al obtener las reacciones del feed:', err);
     }
   };
+
   const refreshGlobalFavorites = async () => {
-  await fetchFavorites();
+    await fetchFavorites();
   };
+
   const fetchFeed = async () => {
     try {
-    setLoadingFeed(true);
-    const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
-    setRecognitions(response.data);
-    await fetchAllReactionsForFeed(response.data);
+      setLoadingFeed(true);
+      const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
+      setRecognitions(response.data);
+      await fetchAllReactionsForFeed(response.data);
 
-    // AGREGADO: refrescar favoritos junto con el feed
-    if (user?.id) {
-      await fetchFavorites();
+      if (user?.id) {
+        await fetchFavorites();
+      }
+    } catch (err) {
+      console.error('Error al obtener el feed:', err);
+    } finally {
+      setLoadingFeed(false);
     }
-  } catch (err) {
-    console.error('Error al obtener el feed:', err);
-  } finally {
-    setLoadingFeed(false);
-  }
   };
-  //
-    const fetchStoryComments = async (storyId) => {
-  try {
-    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/comments`);
-    setStoryCommentsMap((prev) => ({
-      ...prev,
-      [storyId]: response.data,
-    }));
-  } catch (error) {
-    console.error('Error al obtener comentarios de historia:', error);
-  }
-};
 
-const handleStoryComment = async (storyId, comment) => {
-  try {
-    await axios.post(`${API_BASE}/api/stories/${storyId}/comments`, {
-      user_id: user.id,
-      comment,
-    });
-    await fetchStoryComments(storyId);
-  } catch (error) {
-    console.error('Error al comentar historia:', error);
-    alert(error.response?.data?.error || 'No se pudo comentar la historia.');
-  }
-};
-
-const fetchStoryReactions = async (storyId) => {
-  try {
-    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/reactions`);
-    setStoryReactionsMap((prev) => ({
-      ...prev,
-      [storyId]: response.data,
-    }));
-  } catch (error) {
-    console.error('Error al obtener reacciones de historia:', error);
-  }
-};
-
-const handleStoryReaction = async (storyId, reactionType) => {
-  try {
-    console.log('Reaccionando historia:', { storyId, reactionType, userId: user?.id });
-
-    await axios.post(`${API_BASE}/api/stories/${storyId}/react`, {
-      user_id: user.id,
-      reaction_type: reactionType,
-    });
-
-    await fetchStoryReactions(storyId);
-  } catch (error) {
-    console.error('Error al reaccionar historia:', error);
-    console.error('Respuesta backend:', error.response?.data);
-
-    alert(
-      error.response?.data?.error ||
-      error.response?.data?.message ||
-      'No se pudo reaccionar a la historia.'
-    );
-  }
-};
-
-const fetchStoryViews = async (storyId) => {
-  try {
-    const response = await axios.get(`${API_BASE}/api/stories/${storyId}/views`);
-    setStoryViewsMap((prev) => ({
-      ...prev,
-      [storyId]: response.data,
-    }));
-  } catch (error) {
-    console.error('Error al obtener vistas de historia:', error);
-  }
-};
-
-const openStoryViewer = async (userStories, index = 0) => {
-  setStoryViewer({
-    isOpen: true,
-    stories: userStories,
-    currentIndex: index,
-  });
-
-  const story = userStories[index];
-  if (!story || !user?.id) return;
-
-  try {
-    await axios.post(`${API_BASE}/api/stories/${story.id}/view`, {
-      viewer_id: user.id,
-    });
-
-    await fetchStoryViews(story.id);
-    await fetchStoryReactions(story.id);
-    await fetchStoryComments(story.id);
-  } catch (error) {
-    console.error('Error al abrir historia:', error);
-  }
-};
-
-const closeStoryViewer = () => {
-  setStoryViewer({
-    isOpen: false,
-    stories: [],
-    currentIndex: 0,
-  });
-};
-
-const nextStory = async () => {
-  if (!storyViewer.stories.length) return;
-
-  const nextIndex = storyViewer.currentIndex + 1;
-
-  if (nextIndex >= storyViewer.stories.length) {
-    closeStoryViewer();
-    return;
-  }
-
-  const nextStoryItem = storyViewer.stories[nextIndex];
-
-  setStoryViewer((prev) => ({
-    ...prev,
-    currentIndex: nextIndex,
-  }));
-
-  if (user?.id && nextStoryItem) {
+  const fetchStoryComments = async (storyId) => {
     try {
-      await axios.post(`${API_BASE}/api/stories/${nextStoryItem.id}/view`, {
+      const response = await axios.get(`${API_BASE}/api/stories/${storyId}/comments`);
+      setStoryCommentsMap((prev) => ({
+        ...prev,
+        [storyId]: response.data,
+      }));
+    } catch (error) {
+      console.error('Error al obtener comentarios de historia:', error);
+    }
+  };
+
+  const handleStoryComment = async (storyId, comment) => {
+    try {
+      await axios.post(`${API_BASE}/api/stories/${storyId}/comments`, {
+        user_id: user.id,
+        comment,
+      });
+      await fetchStoryComments(storyId);
+    } catch (error) {
+      console.error('Error al comentar historia:', error);
+      alert(error.response?.data?.error || 'No se pudo comentar la historia.');
+    }
+  };
+
+  const fetchStoryReactions = async (storyId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/stories/${storyId}/reactions`);
+      setStoryReactionsMap((prev) => ({
+        ...prev,
+        [storyId]: response.data,
+      }));
+    } catch (error) {
+      console.error('Error al obtener reacciones de historia:', error);
+    }
+  };
+
+  const handleStoryReaction = async (storyId, reactionType) => {
+    try {
+      console.log('Reaccionando historia:', { storyId, reactionType, userId: user?.id });
+
+      await axios.post(`${API_BASE}/api/stories/${storyId}/react`, {
+        user_id: user.id,
+        reaction_type: reactionType,
+      });
+
+      await fetchStoryReactions(storyId);
+    } catch (error) {
+      console.error('Error al reaccionar historia:', error);
+      console.error('Respuesta backend:', error.response?.data);
+
+      alert(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          'No se pudo reaccionar a la historia.'
+      );
+    }
+  };
+
+  const fetchStoryViews = async (storyId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/stories/${storyId}/views`);
+      setStoryViewsMap((prev) => ({
+        ...prev,
+        [storyId]: response.data,
+      }));
+    } catch (error) {
+      console.error('Error al obtener vistas de historia:', error);
+    }
+  };
+
+  const openStoryViewer = async (userStories, index = 0) => {
+    setStoryViewer({
+      isOpen: true,
+      stories: userStories,
+      currentIndex: index,
+    });
+
+    const story = userStories[index];
+    if (!story || !user?.id) return;
+
+    try {
+      await axios.post(`${API_BASE}/api/stories/${story.id}/view`, {
         viewer_id: user.id,
       });
 
-      await fetchStoryViews(nextStoryItem.id);
-      await fetchStoryReactions(nextStoryItem.id);
-      await fetchStoryComments(nextStoryItem.id);
+      await fetchStoryViews(story.id);
+      await fetchStoryReactions(story.id);
+      await fetchStoryComments(story.id);
     } catch (error) {
-      console.error('Error al avanzar historia:', error);
+      console.error('Error al abrir historia:', error);
     }
-  }
-};
+  };
 
-const prevStory = async () => {
-  if (storyViewer.currentIndex <= 0) return;
+  const closeStoryViewer = () => {
+    setStoryViewer({
+      isOpen: false,
+      stories: [],
+      currentIndex: 0,
+    });
+  };
 
-  const prevIndex = storyViewer.currentIndex - 1;
-  const prevStoryItem = storyViewer.stories[prevIndex];
+  const nextStory = async () => {
+    if (!storyViewer.stories.length) return;
 
-  setStoryViewer((prev) => ({
-    ...prev,
-    currentIndex: prevIndex,
-  }));
+    const nextIndex = storyViewer.currentIndex + 1;
 
-  if (user?.id && prevStoryItem) {
-    try {
-      await axios.post(`${API_BASE}/api/stories/${prevStoryItem.id}/view`, {
-        viewer_id: user.id,
-      });
-
-      await fetchStoryViews(prevStoryItem.id);
-      await fetchStoryReactions(prevStoryItem.id);
-      await fetchStoryComments(prevStoryItem.id);
-    } catch (error) {
-      console.error('Error al retroceder historia:', error);
+    if (nextIndex >= storyViewer.stories.length) {
+      closeStoryViewer();
+      return;
     }
-  }
-};
 
-const groupedStories = useMemo(() => {
-  const groups = {};
+    const nextStoryItem = storyViewer.stories[nextIndex];
 
-  stories.forEach((story) => {
-    if (!groups[story.user_id]) {
-      groups[story.user_id] = {
-        user_id: story.user_id,
-        fullname: story.fullname,
-        display_name: story.display_name,
+    setStoryViewer((prev) => ({
+      ...prev,
+      currentIndex: nextIndex,
+    }));
+
+    if (user?.id && nextStoryItem) {
+      try {
+        await axios.post(`${API_BASE}/api/stories/${nextStoryItem.id}/view`, {
+          viewer_id: user.id,
+        });
+
+        await fetchStoryViews(nextStoryItem.id);
+        await fetchStoryReactions(nextStoryItem.id);
+        await fetchStoryComments(nextStoryItem.id);
+      } catch (error) {
+        console.error('Error al avanzar historia:', error);
+      }
+    }
+  };
+
+  const prevStory = async () => {
+    if (storyViewer.currentIndex <= 0) return;
+
+    const prevIndex = storyViewer.currentIndex - 1;
+    const prevStoryItem = storyViewer.stories[prevIndex];
+
+    setStoryViewer((prev) => ({
+      ...prev,
+      currentIndex: prevIndex,
+    }));
+
+    if (user?.id && prevStoryItem) {
+      try {
+        await axios.post(`${API_BASE}/api/stories/${prevStoryItem.id}/view`, {
+          viewer_id: user.id,
+        });
+
+        await fetchStoryViews(prevStoryItem.id);
+        await fetchStoryReactions(prevStoryItem.id);
+        await fetchStoryComments(prevStoryItem.id);
+      } catch (error) {
+        console.error('Error al retroceder historia:', error);
+      }
+    }
+  };
+
+  const groupedStories = useMemo(() => {
+    const groups = {};
+
+    stories.forEach((story) => {
+      if (!groups[story.user_id]) {
+        groups[story.user_id] = {
+          user_id: story.user_id,
+          fullname: story.fullname,
+          display_name: story.display_name,
+          profile_image_url: resolveImageUrl(story.profile_image_url),
+          stories: [],
+        };
+      }
+
+      groups[story.user_id].stories.push({
+        ...story,
         profile_image_url: resolveImageUrl(story.profile_image_url),
-        stories: [],
-      };
+      });
+    });
+
+    return Object.values(groups);
+  }, [stories]);
+
+  const fetchStories = async () => {
+    try {
+      if (!user?.id) return;
+      const response = await axios.get(`${API_BASE}/api/stories/feed/${user.id}`);
+      setStories(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error al obtener historias:', error);
     }
+  };
 
-    groups[story.user_id].stories.push({
-      ...story,
-      profile_image_url: resolveImageUrl(story.profile_image_url),
-    });
-  });
+  const fetchAllUsersForStories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/users/all`, {
+        params: { currentUserId: user?.id },
+      });
+      setAllUsers(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error al obtener usuarios para historias:', error);
+    }
+  };
 
-  return Object.values(groups);
-}, [stories]);
+  const handleCreateStory = async (formData) => {
+    try {
+      formData.append('user_id', user.id);
 
-const fetchStories = async () => {
-  try {
-    if (!user?.id) return;
-    const response = await axios.get(`${API_BASE}/api/stories/feed/${user.id}`);
-    setStories(Array.isArray(response.data) ? response.data : []);
-  } catch (error) {
-    console.error('Error al obtener historias:', error);
-  }
-};
+      const res = await axios.post(`${API_BASE}/api/stories/create`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-const fetchAllUsersForStories = async () => {
-  try {
-    const response = await axios.get(`${API_BASE}/api/users/all`, {
-      params: { currentUserId: user?.id },
-    });
-    setAllUsers(Array.isArray(response.data) ? response.data : []);
-  } catch (error) {
-    console.error('Error al obtener usuarios para historias:', error);
-  }
-};
+      console.log('Historia creada:', res.data);
 
-const handleCreateStory = async (formData) => {
-  try {
-    formData.append('user_id', user.id);
+      setShowCreateStoryModal(false);
+      fetchStories();
+    } catch (error) {
+      console.error('ERROR COMPLETO:', error);
+      console.error('ERROR RESPONSE:', error.response?.data);
 
-    const res = await axios.post(
-      `${API_BASE}/api/stories/create`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
+      alert(error.response?.data?.error || 'No se pudo subir la historia.');
+    }
+  };
 
-    console.log('Historia creada:', res.data);
-
-    setShowCreateStoryModal(false);
-    fetchStories();
-  } catch (error) {
-    console.error('ERROR COMPLETO:', error);
-    console.error('ERROR RESPONSE:', error.response?.data);
-
-    alert(
-      error.response?.data?.error ||
-      'No se pudo subir la historia.'
-    );
-  }
-};
-  //
   const fetchUserProfile = async (userId) => {
     try {
       setLoadingProfile(true);
@@ -546,57 +543,54 @@ const handleCreateStory = async (formData) => {
   };
 
   const handleRefreshAllProfileData = async () => {
-     if (!user?.id) return;
+    if (!user?.id) return;
     await fetchUserProfile(user.id);
     await fetchFeed();
     await fetchStories();
-
-    // AGREGADO: refrescar favoritos del usuario
     await fetchFavorites();
   };
 
   const handleAuthSuccess = (loggedUser) => {
-  setUser(loggedUser);
-  saveUserSession(loggedUser);
+    setUser(loggedUser);
+    saveUserSession(loggedUser);
   };
 
   const handleLogout = () => {
-  setUser(null);
-  clearUserSession();
-  navigate('/login');
+    setUser(null);
+    clearUserSession();
+    navigate('/login');
   };
 
-
   const handleShareRecognition = async (recognition) => {
-  try {
-    const shareUrl = `${window.location.origin}/reconocimiento/${recognition.id}`;
+    try {
+      const shareUrl = `${window.location.origin}/reconocimiento/${recognition.id}`;
 
-    const shareText = `Mira este reconocimiento en ¡Tec! ¡you!
+      const shareText = `Mira este reconocimiento en ¡Tec! ¡you!
 ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 "${recognition.message}"`;
 
-    if (navigator.share) {
-      await navigator.share({
-        title: '¡Tec! ¡you! - Reconocimiento',
-        text: shareText,
-        url: shareUrl,
-      });
-      return;
+      if (navigator.share) {
+        await navigator.share({
+          title: '¡Tec! ¡you! - Reconocimiento',
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+      alert('Enlace copiado al portapapeles.');
+    } catch (error) {
+      console.error('Error al compartir reconocimiento:', error);
     }
+  };
 
-    await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-    alert('Enlace copiado al portapapeles.');
-  } catch (error) {
-    console.error('Error al compartir reconocimiento:', error);
-  }
-};
-
-useEffect(() => {
-  if (user?.id) {
-    fetchStories();
-    fetchAllUsersForStories();
-  }
-}, [user?.id]);
+  useEffect(() => {
+    if (user?.id) {
+      fetchStories();
+      fetchAllUsersForStories();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id) {
@@ -625,16 +619,12 @@ useEffect(() => {
       if (e.key === 'ArrowLeft') goToPrevImage();
     };
 
-
-    
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [imageViewer.isOpen]);
-    
 
   useEffect(() => {
-       const recognitionId = location.state?.highlightRecognitionId;
+    const recognitionId = location.state?.highlightRecognitionId;
 
     if (!recognitionId || recognitions.length === 0) return;
     if (location.pathname !== '/') return;
@@ -642,20 +632,41 @@ useEffect(() => {
     const target = recognitionRefs.current[recognitionId];
 
     if (target) {
-    target.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
   }, [location.pathname, location.state, recognitions]);
-    
-  useEffect(() => {
-  const incomingHashtag = location.state?.hashtagFilter;
 
-  if (incomingHashtag) {
-    setHashtagFilter(incomingHashtag);
-  }
+  useEffect(() => {
+    const incomingHashtag = location.state?.hashtagFilter;
+
+    if (incomingHashtag) {
+      setHashtagFilter(incomingHashtag);
+    }
   }, [location.state]);
+
+  useEffect(() => {
+    if (!showUnlockToast && !activeUnlockItem && unlockQueue.length > 0) {
+      const nextItem = unlockQueue[0];
+
+      setActiveUnlockItem(nextItem);
+      setShowUnlockToast(true);
+
+      setUnlockQueue((prev) => prev.slice(1));
+    }
+  }, [unlockQueue, showUnlockToast, activeUnlockItem]);
+
+  useEffect(() => {
+    if (!showUnlockToast || !activeUnlockItem) return;
+
+    const timer = setTimeout(() => {
+      closeUnlockToast();
+    }, 4200);
+
+    return () => clearTimeout(timer);
+  }, [showUnlockToast, activeUnlockItem]);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -725,65 +736,64 @@ useEffect(() => {
   );
 
   const filteredRecognitions = useMemo(() => {
-  const filtered = recognitions.filter((rec) => {
-    const matchesCategory =
-      selectedCategory === 'Todas' || rec.category === selectedCategory;
+    const filtered = recognitions.filter((rec) => {
+      const matchesCategory =
+        selectedCategory === 'Todas' || rec.category === selectedCategory;
 
-    const query = searchTerm.trim().toLowerCase();
-    const matchesSearch =
-      query === '' ||
-      rec.sender_name?.toLowerCase().includes(query) ||
-      rec.receiver_name?.toLowerCase().includes(query) ||
-      rec.message?.toLowerCase().includes(query) ||
-      rec.category?.toLowerCase().includes(query);
+      const query = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        query === '' ||
+        rec.sender_name?.toLowerCase().includes(query) ||
+        rec.receiver_name?.toLowerCase().includes(query) ||
+        rec.message?.toLowerCase().includes(query) ||
+        rec.category?.toLowerCase().includes(query);
 
-    const activeHashtag = hashtagFilter.trim().toLowerCase();
-    const matchesHashtag =
-      activeHashtag === '' ||
-      rec.message?.toLowerCase().includes(activeHashtag);
+      const activeHashtag = hashtagFilter.trim().toLowerCase();
+      const matchesHashtag =
+        activeHashtag === '' || rec.message?.toLowerCase().includes(activeHashtag);
 
-    return matchesCategory && matchesSearch && matchesHashtag;
-  });
+      return matchesCategory && matchesSearch && matchesHashtag;
+    });
 
-  const sorted = [...filtered];
+    const sorted = [...filtered];
 
-  switch (sortBy) {
-    case 'oldest':
-      sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      break;
-    case 'az':
-      sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
-      break;
-    case 'category':
-      sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
-      break;
-    case 'recent':
-    default:
-      sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      break;
-  }
+    switch (sortBy) {
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        break;
+      case 'az':
+        sorted.sort((a, b) => (a.sender_name || '').localeCompare(b.sender_name || '', 'es'));
+        break;
+      case 'category':
+        sorted.sort((a, b) => (a.category || '').localeCompare(b.category || '', 'es'));
+        break;
+      case 'recent':
+      default:
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+    }
 
-  return sorted;
-}, [recognitions, selectedCategory, searchTerm, hashtagFilter, sortBy]);
+    return sorted;
+  }, [recognitions, selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
   const activeFilterLabels = useMemo(() => {
-  const labels = [];
+    const labels = [];
 
-  if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
-  if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
-  if (hashtagFilter.trim() !== '') labels.push(`Hashtag: ${hashtagFilter}`);
+    if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
+    if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
+    if (hashtagFilter.trim() !== '') labels.push(`Hashtag: ${hashtagFilter}`);
 
-  if (sortBy !== 'recent') {
-    const map = {
-      oldest: 'Orden: más antiguas',
-      az: 'Orden: A-Z',
-      category: 'Orden: categoría',
-    };
-    labels.push(map[sortBy]);
-  }
+    if (sortBy !== 'recent') {
+      const map = {
+        oldest: 'Orden: más antiguas',
+        az: 'Orden: A-Z',
+        category: 'Orden: categoría',
+      };
+      labels.push(map[sortBy]);
+    }
 
-  return labels;
-}, [selectedCategory, searchTerm, hashtagFilter, sortBy]);
+    return labels;
+  }, [selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
   const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
 
@@ -806,6 +816,73 @@ useEffect(() => {
     return reactionOptions.find((item) => item.key === selected) || null;
   };
 
+  const closeUnlockToast = () => {
+    setShowUnlockToast(false);
+
+    setTimeout(() => {
+      setActiveUnlockItem(null);
+    }, 250);
+  };
+
+  const enqueueUnlockItems = (items = []) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    setUnlockQueue((prev) => [...prev, ...items]);
+  };
+
+  const buildUnlockItemsFromProgress = (progressPayload) => {
+    if (!progressPayload) return [];
+
+    const collected = [];
+
+    const senderAchievements = progressPayload?.sender?.newlyUnlockedAchievements || [];
+    const receiverAchievements = progressPayload?.receiver?.newlyUnlockedAchievements || [];
+
+    const senderFrames = progressPayload?.sender?.newlyUnlockedFrames || [];
+    const receiverFrames = progressPayload?.receiver?.newlyUnlockedFrames || [];
+
+    senderAchievements.forEach((achievement) => {
+      collected.push({
+        type: 'achievement',
+        title: achievement.title,
+        description: achievement.description,
+        icon: achievement.icon,
+        rarity: achievement.rarity,
+      });
+    });
+
+    receiverAchievements.forEach((achievement) => {
+      collected.push({
+        type: 'achievement',
+        title: achievement.title,
+        description: achievement.description,
+        icon: achievement.icon,
+        rarity: achievement.rarity,
+      });
+    });
+
+    senderFrames.forEach((frame) => {
+      collected.push({
+        type: 'frame',
+        name: frame.name,
+        title: frame.name,
+        description: frame.description,
+        rarity: frame.rarity,
+      });
+    });
+
+    receiverFrames.forEach((frame) => {
+      collected.push({
+        type: 'frame',
+        name: frame.name,
+        title: frame.name,
+        description: frame.description,
+        rarity: frame.rarity,
+      });
+    });
+
+    return collected;
+  };
+
   const handleReactionSelect = async (recId, reactionKey) => {
     if (!user?.id) return;
 
@@ -825,84 +902,73 @@ useEffect(() => {
       setReactingIds((prev) => ({ ...prev, [recId]: false }));
     }
   };
-     
-  // AGREGADO: obtener favoritos del usuario
+
   const fetchFavorites = async () => {
-  try {
-    if (!user?.id) {
-      setFavoriteIds({});
-      setFavoriteRecognitions([]);
-      return;
+    try {
+      if (!user?.id) {
+        setFavoriteIds({});
+        setFavoriteRecognitions([]);
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE}/api/recognitions/favorites/${user.id}`);
+      const favorites = Array.isArray(response.data) ? response.data : [];
+      setFavoriteRecognitions(favorites);
+
+      const idsMap = {};
+      favorites.forEach((item) => {
+        idsMap[item.id] = true;
+      });
+
+      setFavoriteIds(idsMap);
+    } catch (err) {
+      console.error('Error al obtener favoritos:', err);
     }
-
-    const response = await axios.get(
-      `${API_BASE}/api/recognitions/favorites/${user.id}`
-    );
-
-    const favorites = Array.isArray(response.data) ? response.data : [];
-    setFavoriteRecognitions(favorites);
-
-    const idsMap = {};
-    favorites.forEach((item) => {
-      idsMap[item.id] = true;
-    });
-
-    setFavoriteIds(idsMap);
-  } catch (err) {
-    console.error('Error al obtener favoritos:', err);
-  }
   };
 
-  // AGREGADO: guardar o quitar favorito
   const handleFavoriteToggle = async (recognitionId) => {
-  try {
-    if (!user?.id) return;
+    try {
+      if (!user?.id) return;
 
-    setFavoritingIds((prev) => ({ ...prev, [recognitionId]: true }));
+      setFavoritingIds((prev) => ({ ...prev, [recognitionId]: true }));
 
-    const isFavorite = Boolean(favoriteIds[recognitionId]);
+      const isFavorite = Boolean(favoriteIds[recognitionId]);
 
-    if (isFavorite) {
-      await axios.delete(
-        `${API_BASE}/api/recognitions/${recognitionId}/favorite`,
-        {
+      if (isFavorite) {
+        await axios.delete(`${API_BASE}/api/recognitions/${recognitionId}/favorite`, {
           data: { user_id: user.id },
-        }
-      );
+        });
 
-      setFavoriteIds((prev) => ({
-        ...prev,
-        [recognitionId]: false,
-      }));
+        setFavoriteIds((prev) => ({
+          ...prev,
+          [recognitionId]: false,
+        }));
 
-      setFavoriteRecognitions((prev) =>
-        prev.filter((item) => Number(item.id) !== Number(recognitionId))
-      );
-    } else {
-      await axios.post(
-        `${API_BASE}/api/recognitions/${recognitionId}/favorite`,
-        {
+        setFavoriteRecognitions((prev) =>
+          prev.filter((item) => Number(item.id) !== Number(recognitionId))
+        );
+      } else {
+        await axios.post(`${API_BASE}/api/recognitions/${recognitionId}/favorite`, {
           user_id: user.id,
-        }
+        });
+
+        setFavoriteIds((prev) => ({
+          ...prev,
+          [recognitionId]: true,
+        }));
+
+        await fetchFavorites();
+      }
+    } catch (err) {
+      console.error('Error al cambiar favorito:', err);
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          'No se pudo actualizar el favorito.'
       );
-
-      setFavoriteIds((prev) => ({
-        ...prev,
-        [recognitionId]: true,
-      }));
-
-      await fetchFavorites();
+    } finally {
+      setFavoritingIds((prev) => ({ ...prev, [recognitionId]: false }));
     }
-  } catch (err) {
-    console.error('Error al cambiar favorito:', err);
-    alert(
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      'No se pudo actualizar el favorito.'
-    );
-  } finally {
-    setFavoritingIds((prev) => ({ ...prev, [recognitionId]: false }));
-  }
   };
 
   const handleProfileImageChange = async (e) => {
@@ -929,6 +995,8 @@ useEffect(() => {
       const updatedProfile = response.data;
       setProfileImage(resolveImageUrl(updatedProfile.profile_image_url));
       setUser((prev) => ({ ...prev, ...updatedProfile }));
+      const unlockItems = buildUnlockItemsFromProgress(response.data?.progress);
+      enqueueUnlockItems(unlockItems);
       await handleRefreshAllProfileData();
     } catch (err) {
       console.error('Error al subir la foto:', err);
@@ -962,6 +1030,8 @@ useEffect(() => {
       const updatedProfile = response.data;
       setCoverImage(resolveImageUrl(updatedProfile.cover_image_url));
       setUser((prev) => ({ ...prev, ...updatedProfile }));
+      const unlockItems = buildUnlockItemsFromProgress(response.data?.progress);
+      enqueueUnlockItems(unlockItems);
       await handleRefreshAllProfileData();
     } catch (err) {
       console.error('Error al subir portada:', err);
@@ -1018,6 +1088,8 @@ useEffect(() => {
 
       setUser((prev) => ({ ...prev, ...updatedProfile }));
       setShowEditProfileModal(false);
+      const unlockItems = buildUnlockItemsFromProgress(response.data?.progress);
+      enqueueUnlockItems(unlockItems);
       await handleRefreshAllProfileData();
     } catch (err) {
       console.error('Error al guardar perfil:', err);
@@ -1165,33 +1237,52 @@ useEffect(() => {
       </div>
     );
   };
-  
-const getComposedRecognitionMedia = (mediaItems = []) => {
-  if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
-    return {
-      primaryMedia: null,
-      imageOnlyMedia: [],
-      secondaryMedia: [],
-      layoutType: 'empty',
-      visibleSecondaryMedia: [],
-      remainingCount: 0,
-    };
-  }
 
-  const videoItems = mediaItems.filter((item) => item.media_type === 'video');
-  const imageItems = mediaItems.filter((item) => item.media_type === 'image');
+  const getComposedRecognitionMedia = (mediaItems = []) => {
+    if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
+      return {
+        primaryMedia: null,
+        imageOnlyMedia: [],
+        secondaryMedia: [],
+        layoutType: 'empty',
+        visibleSecondaryMedia: [],
+        remainingCount: 0,
+      };
+    }
 
-  // Si hay video, el video manda
-  if (videoItems.length > 0) {
-    const primaryMedia = videoItems[0];
-    const secondaryMedia = imageItems;
+    const videoItems = mediaItems.filter((item) => item.media_type === 'video');
+    const imageItems = mediaItems.filter((item) => item.media_type === 'image');
+
+    if (videoItems.length > 0) {
+      const primaryMedia = videoItems[0];
+      const secondaryMedia = imageItems;
+      const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
+      const remainingCount = Math.max(secondaryMedia.length - 3, 0);
+
+      let layoutType = 'video-only';
+      if (visibleSecondaryMedia.length === 1) layoutType = 'video-plus-1';
+      if (visibleSecondaryMedia.length === 2) layoutType = 'video-plus-2';
+      if (visibleSecondaryMedia.length >= 3) layoutType = 'video-plus-3';
+
+      return {
+        primaryMedia,
+        imageOnlyMedia: imageItems,
+        secondaryMedia,
+        layoutType,
+        visibleSecondaryMedia,
+        remainingCount,
+      };
+    }
+
+    const primaryMedia = imageItems[0] || null;
+    const secondaryMedia = imageItems.slice(1);
     const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
     const remainingCount = Math.max(secondaryMedia.length - 3, 0);
 
-    let layoutType = 'video-only';
-    if (visibleSecondaryMedia.length === 1) layoutType = 'video-plus-1';
-    if (visibleSecondaryMedia.length === 2) layoutType = 'video-plus-2';
-    if (visibleSecondaryMedia.length >= 3) layoutType = 'video-plus-3';
+    let layoutType = 'image-single';
+    if (imageItems.length === 2) layoutType = 'image-2';
+    if (imageItems.length === 3) layoutType = 'image-3';
+    if (imageItems.length >= 4) layoutType = 'image-4plus';
 
     return {
       primaryMedia,
@@ -1201,603 +1292,117 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
       visibleSecondaryMedia,
       remainingCount,
     };
-  }
-   
-  // Si no hay video, usamos solo imágenes
-  const primaryMedia = imageItems[0] || null;
-  const secondaryMedia = imageItems.slice(1);
-  const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
-  const remainingCount = Math.max(secondaryMedia.length - 3, 0);
-
-  let layoutType = 'image-single';
-  if (imageItems.length === 2) layoutType = 'image-2';
-  if (imageItems.length === 3) layoutType = 'image-3';
-  if (imageItems.length >= 4) layoutType = 'image-4plus';
-
-  return {
-    primaryMedia,
-    imageOnlyMedia: imageItems,
-    secondaryMedia,
-    layoutType,
-    visibleSecondaryMedia,
-    remainingCount,
   };
-};
- const dashboardView = user ? (
-  <>
-    <header className="main-nav">
-      <div className="nav-content">
-        <div className="nav-left">
-          <div className="nav-logo-mark image-logo-shell">
-            <img src={logoTSJ} alt="Logo TSJ" className="tsj-logo nav-logo" />
+
+  const dashboardView = user ? (
+    <>
+      <header className="main-nav">
+        <div className="nav-content">
+          <div className="nav-left">
+            <div className="nav-logo-mark image-logo-shell">
+              <img src={logoTSJ} alt="Logo TSJ" className="tsj-logo nav-logo" />
+            </div>
+
+            <div className="nav-title-group">
+              <span className="logo-text">
+                ¡Tec! <strong>¡you!</strong>
+              </span>
+              <small>Reconocimiento universitario</small>
+            </div>
           </div>
 
-          <div className="nav-title-group">
-            <span className="logo-text">
-              ¡Tec! <strong>¡you!</strong>
-            </span>
-            <small>Reconocimiento universitario</small>
-          </div>
-        </div>
+          <GlobalSectionSearch sections={sectionSearchItems} />
 
-        <GlobalSectionSearch sections={sectionSearchItems} />
+          <div className="user-info">
+            <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
 
-        <div className="user-info">
-          <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
-
-          <ProfileDropdown
-            user={user}
-            displayName={displayName}
-            profileImage={profileImage}
-            getInitials={getInitials}
-            openEditProfileModal={openEditProfileModal}
-            fileInputRef={fileInputRef}
-            onLogout={handleLogout}
-            onGoToProfile={() => navigate('/perfil')}
-            darkMode={darkMode}
-            onToggleDark={() => setDarkMode((prev) => !prev)}
-          />
-        </div>
-      </div>
-    </header>
-
-    <main className="dashboard-shell">
-      <section id="hero-section" className="hero-panel">
-        <div>
-          <p className="hero-kicker">Comunidad TSJ</p>
-          <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
-          <p className="hero-subtext">
-            Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
-          </p>
-        </div>
-
-        <div className="hero-stats">
-          <div className="stat-card">
-            <span>Total de reconocimientos</span>
-            <strong>{recognitions.length}</strong>
-          </div>
-          <div className="stat-card">
-            <span>Categoría destacada</span>
-            <strong>{featuredCategory}</strong>
-          </div>
-          <div className="stat-card">
-            <span>Usuario activo</span>
-            <strong>{(displayName || user?.fullname || '').split(' ')[0]}</strong>
+            <ProfileDropdown
+              user={user}
+              displayName={displayName}
+              profileImage={profileImage}
+              getInitials={getInitials}
+              openEditProfileModal={openEditProfileModal}
+              fileInputRef={fileInputRef}
+              onLogout={handleLogout}
+              onGoToProfile={() => navigate('/perfil')}
+              darkMode={darkMode}
+              onToggleDark={() => setDarkMode((prev) => !prev)}
+            />
           </div>
         </div>
-      </section>
+      </header>
 
-      <section id="featured-section" className="featured-section">
-        <div className="featured-header">
+      <main className="dashboard-shell">
+        <section id="hero-section" className="hero-panel">
           <div>
-            <p className="section-label">Destacados</p>
-            <h2>Reconocimientos recientes con mayor visibilidad</h2>
-          </div>
-          <p className="featured-subtext">
-            Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
-          </p>
-        </div>
-
-        <div className="featured-grid">
-          {featuredRecognitions.length === 0 ? (
-            <div className="featured-empty">
-              <div className="empty-icon">✦</div>
-              <h3>Aún no hay destacados</h3>
-              <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
-            </div>
-          ) : (
-            featuredRecognitions.map((rec, index) => {
-              const categoryMeta = getCategoryMeta(rec.category);
-              const recMedia = Array.isArray(rec.media)? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
-              const {primaryMedia,imageOnlyMedia,layoutType,visibleSecondaryMedia,remainingCount,} = getComposedRecognitionMedia(recMedia);
-
-              return (
-                <article
-                  key={rec.id}
-                  ref={(el) => {
-                    recognitionRefs.current[rec.id] = el;
-                   }}
-                    className="recognition-card"
-                >
-                  <div className="featured-card-top">
-                    <span className={`badge-category ${categoryMeta.className}`}>
-                      <span className="badge-icon">{categoryMeta.icon}</span>
-                      {rec.category}
-                    </span>
-                    <span className="date">{formatDate(rec.created_at)}</span>
-                  </div>
-
-                  <div className="featured-card-body">
-                    <div className={`recognition-icon-box ${categoryMeta.className}`}>
-                      {categoryMeta.icon}
-                    </div>
-
-                    <div>
-                      <p className="featured-main-text">
-                        <button
-                          type="button"
-                          className="inline-user-link"
-                          onClick={() => openUserProfile(rec.sender_id)}
-                        >
-                          {rec.sender_name}
-                        </button>{' '}
-                        reconoció a{' '}
-                        <button
-                          type="button"
-                          className="inline-user-link"
-                          onClick={() => openUserProfile(rec.receiver_id)}
-                        >
-                          {rec.receiver_name}
-                        </button>
-                      </p>
-
-                      <p className="featured-message-text">
-                          {renderTextWithHashtags(rec.message, (tag) => {
-                           setHashtagFilter(`#${tag}`);
-                              })}
-                      </p>
-                      {recMedia.length > 0 && (
-  <div className={`recognition-media-premium ${layoutType}`}>
-    {primaryMedia && (
-      <div className="recognition-media-premium-main">
-        {primaryMedia.media_type === 'video' ? (
-          <RecognitionVideoPlayer
-            src={primaryMedia.fullUrl}
-            className="recognition-media-premium-main-video"
-            autoPlayWhenVisible={true}
-            showDurationBadge={true}
-            
-          />
-        ) : (
-          <button
-            type="button"
-            className="recognition-media-premium-main-button"
-            onClick={() => {
-              const imageIndex = imageOnlyMedia.findIndex(
-                (item) => item.id === primaryMedia.id
-              );
-              if (imageIndex >= 0) {
-                openImageViewer(imageOnlyMedia, imageIndex);
-              }
-            }}
-          >
-            <img
-              src={primaryMedia.fullUrl}
-              alt="Media principal del reconocimiento"
-              className="recognition-media-premium-main-image"
-            />
-          </button>
-        )}
-      </div>
-    )}
-
-    {visibleSecondaryMedia.length > 0 && (
-      <div className="recognition-media-premium-secondary">
-        {visibleSecondaryMedia.map((item, mediaIndex) => {
-          const isLastVisible =
-            mediaIndex === visibleSecondaryMedia.length - 1 && remainingCount > 0;
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className="recognition-media-premium-secondary-item"
-              onClick={() => {
-                const imageIndex = imageOnlyMedia.findIndex(
-                  (mediaItem) => mediaItem.id === item.id
-                );
-                if (imageIndex >= 0) {
-                  openImageViewer(imageOnlyMedia, imageIndex);
-                }
-              }}
-            >
-              <img
-                src={item.fullUrl}
-                alt={`Media secundaria ${mediaIndex + 1}`}
-                className="recognition-media-premium-secondary-image"
-              />
-
-              {isLastVisible && (
-                <div className="recognition-media-premium-overlay">
-                  +{remainingCount}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
-                      <RecognitionComments
-                        recognitionId={rec.id}
-                        currentUserId={user?.id}
-                        onOpenProfile={openUserProfile}
-                      />
-
-                      {renderReactionBar(rec.id)}
-                      
-                      <div className="recognition-favorite-row">
-                      <button
-                        type="button"
-                        className={`recognition-favorite-btn ${
-                          favoriteIds[rec.id] ? 'is-favorite' : ''
-                       }`}
-                       onClick={() => handleFavoriteToggle(rec.id)}
-                      disabled={Boolean(favoritingIds[rec.id])}
-                    >
-                      {favoritingIds[rec.id]
-                        ? 'Guardando...'
-                        : favoriteIds[rec.id]
-                        ? '★ Guardado'
-                         : '☆ Guardar'}
-                    </button>
-
-                    <button
-                    type="button"
-                    className="recognition-share-btn"
-                    onClick={() => handleShareRecognition(rec)}
-                      >
-                    ⤴ Compartir
-                    </button>
-                  </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          )}
-        </div>
-      </section>
-
-      <section id="analytics-section" className="analytics-strip">
-        <div className="mini-stat">
-          <span>🤝 Colaboración</span>
-          <strong>{categoryCounts.Colaboración}</strong>
-        </div>
-        <div className="mini-stat">
-          <span>📚 Académico</span>
-          <strong>{categoryCounts.Académico}</strong>
-        </div>
-        <div className="mini-stat">
-          <span>⭐ Liderazgo</span>
-          <strong>{categoryCounts.Liderazgo}</strong>
-        </div>
-        <div className="mini-stat">
-          <span>💡 Creatividad</span>
-          <strong>{categoryCounts.Creatividad}</strong>
-        </div>
-      </section>
-
-      <section className="category-summary-section" id="category-summary-section">
-        <div className="category-summary-card">
-          <div className="category-summary-header">
-            <div>
-              <p className="section-label">Top categorías</p>
-              <h2>Distribución actual de reconocimientos</h2>
-            </div>
-            <p className="category-summary-subtext">
-              Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
+            <p className="hero-kicker">Comunidad TSJ</p>
+            <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
+            <p className="hero-subtext">
+              Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
             </p>
           </div>
 
-          <div className="category-bars">
-            {categorySummary.map((item) => {
-              const widthPercentage = maxCategoryCount > 0
-                ? (item.value / maxCategoryCount) * 100
-                : 0;
-
-              return (
-                <div key={item.name} className="category-bar-row">
-                  <div className="category-bar-label">
-                    <span className={`category-pill ${item.className}`}>
-                      {item.icon} {item.name}
-                    </span>
-                    <strong>{item.value}</strong>
-                  </div>
-
-                  <div className="category-bar-track">
-                    <div
-                      className={`category-bar-fill ${item.className}`}
-                      style={{ width: `${widthPercentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <UsersDirectory
-  currentUserId={user?.id}
-  onUserSelected={(selectedUser) => {
-    setRecognitionPrefillUser(selectedUser);
-
-    setTimeout(() => {
-      const formSection = document.getElementById('recognition-form-section');
-      if (formSection) {
-        formSection.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }
-    }, 120);
-  }}
-  onOpenProfile={openUserProfile}
-/>
-
-      <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
-
-      <ActivityPanel userId={user?.id} />
-
-      <section className="dashboard" id="dashboard-section">
-        <aside id="profile-section" className="sidebar">
-          <div className="profile-card">
-            <div className="profile-cover">
-              {coverImage ? (
-                <img src={coverImage} alt="Portada" className="profile-cover-image" />
-              ) : null}
+          <div className="hero-stats">
+            <div className="stat-card">
+              <span>Total de reconocimientos</span>
+              <strong>{recognitions.length}</strong>
             </div>
-
-            <div className="profile-card-body">
-              <div className="profile-avatar-wrap">
-                {profileImage ? (
-                  <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
-                ) : (
-                  <div className="profile-avatar-fallback">
-                    {getInitials(displayName || user?.fullname || '')}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  className="profile-photo-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Cambiar foto
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleProfileImageChange}
-                  className="hidden-file-input"
-                />
-              </div>
-
-              <div className="profile-main-info">
-                <div className="profile-status-row">
-                  <span className="profile-status-dot"></span>
-                  <span className="profile-status-text">
-                    {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
-                  </span>
-                </div>
-
-                <h3>{displayName || user?.fullname || ''}</h3>
-                <p className="profile-email">{user?.email || ''}</p>
-
-                <div className="profile-extra-meta">
-                  {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
-                  {birthDate && (
-                    <span className="profile-extra-chip">
-                      🎂{' '}
-                      {new Date(birthDate).toLocaleDateString('es-MX', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  )}
-                </div>
-
-                <div className="profile-tags">
-                  {profileTags.map((tag) => (
-                    <span key={tag} className="profile-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <p className="profile-bio">{profileBio}</p>
-
-                <button
-                  type="button"
-                  className="profile-edit-btn"
-                  onClick={openEditProfileModal}
-                >
-                  Editar perfil
-                </button>
-              </div>
-
-              <div className="profile-stats-grid">
-                <div className="profile-mini-stat">
-                  <span>Enviados</span>
-                  <strong>{recognitionsSentByUser}</strong>
-                </div>
-                <div className="profile-mini-stat">
-                  <span>Recibidos</span>
-                  <strong>{recognitionsReceivedByUser}</strong>
-                </div>
-                <div className="profile-mini-stat">
-                  <span>Reacciones</span>
-                  <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
-                </div>
-              </div>
+            <div className="stat-card">
+              <span>Categoría destacada</span>
+              <strong>{featuredCategory}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Usuario activo</span>
+              <strong>{(displayName || user?.fullname || '').split(' ')[0]}</strong>
             </div>
           </div>
+        </section>
 
-          <div className="panel-header">
-            <p className="section-label">Nuevo reconocimiento</p>
-            <h3>Haz visible una acción positiva</h3>
-          </div>
-
-          <div id="recognition-form-section">
-            <RecognitionForm
-              onRecognitionSent={fetchFeed}
-              senderId={user?.id}
-              preselectedUser={recognitionPrefillUser}
-            />
-          </div>
-        </aside>
-
-        <section id="feed-section" className="feed-section">
-          <div className="feed-header">
+        <section id="featured-section" className="featured-section">
+          <div className="featured-header">
             <div>
-              <p className="section-label">Muro de la comunidad</p>
-              <h2>Reconocimientos recientes</h2>
+              <p className="section-label">Destacados</p>
+              <h2>Reconocimientos recientes con mayor visibilidad</h2>
             </div>
-            <p className="feed-subtext">
-              Explora mensajes positivos, filtra por categoría y encuentra aportes de la comunidad.
+            <p className="featured-subtext">
+              Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
             </p>
           </div>
 
-          <div className="feed-toolbar">
-            <div className="feed-search">
-              <input
-                type="text"
-                placeholder="Buscar por nombre, mensaje o categoría..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="feed-toolbar-row">
-              <div className="category-filters">
-                {categoryOptions.map((category) => (
-                  <button
-                    key={category}
-                    className={`filter-chip ${selectedCategory === category ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(category)}
-                    type="button"
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-
-              <div className="sort-box">
-                <label htmlFor="sortSelect">Ordenar por</label>
-                <select
-                  id="sortSelect"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="sort-select"
-                >
-                  <option value="recent">Más recientes</option>
-                  <option value="oldest">Más antiguas</option>
-                  <option value="az">Nombre A-Z</option>
-                  <option value="category">Categoría</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {activeFilterLabels.length > 0 && (
-            <div className="active-filters-row">
-              {activeFilterLabels.map((label) => (
-                <span key={label} className="active-filter-chip">
-                  {label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="feed-results-bar">
-  <span>
-    Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
-  </span>
-  {(selectedCategory !== 'Todas' || searchTerm.trim() !== '' || hashtagFilter.trim() !== '' || sortBy !== 'recent') && (
-    <button
-      type="button"
-      className="clear-filters-btn"
-      onClick={() => {
-        setSelectedCategory('Todas');
-        setSearchTerm('');
-        setHashtagFilter('');
-        setSortBy('recent');
-      }}
-    >
-      Limpiar filtros
-    </button>
-  )}
-</div>
-
-{hashtagFilter && (
-  <div className="active-hashtag-filter">
-    <span>Filtrando por {hashtagFilter}</span>
-    <button
-      type="button"
-      className="clear-hashtag-filter-btn"
-      onClick={() => setHashtagFilter('')}
-    >
-      Quitar filtro
-    </button>
-  </div>
-)}
-
-  <section className="stories-section">
-  {storiesLoading ? (
-    <p>Cargando historias...</p>
-  ) : (
-    <StoriesBar
-      groupedStories={groupedStories}
-      currentUser={user}
-      onOpenStory={openStoryViewer}
-      onCreateStory={() => setShowCreateStoryModal(true)}
-    />
-  )}
-</section>
-
-  <div className="feed-container">
-
-           {loadingFeed ? (
-              <div className="loading-state">
-                <div className="loading-spinner"></div>
-                <p>Cargando reconocimientos...</p>
-              </div>
-            ) : filteredRecognitions.length === 0 ? (
-              <div className="empty-state">
+          <div className="featured-grid">
+            {featuredRecognitions.length === 0 ? (
+              <div className="featured-empty">
                 <div className="empty-icon">✦</div>
-                <h3>No se encontraron resultados</h3>
-                <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
+                <h3>Aún no hay destacados</h3>
+                <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
               </div>
             ) : (
-              filteredRecognitions.map((rec, index) => {
+              featuredRecognitions.map((rec, index) => {
                 const categoryMeta = getCategoryMeta(rec.category);
                 const recMedia = Array.isArray(rec.media)
-                 ? rec.media.map((item) => ({...item,fullUrl: resolveImageUrl(item.media_url),})): [];
+                  ? rec.media.map((item) => ({
+                      ...item,
+                      fullUrl: resolveImageUrl(item.media_url),
+                    }))
+                  : [];
 
-                 const {primaryMedia,imageOnlyMedia,layoutType,remainingCount,visibleSecondaryMedia,} = getComposedRecognitionMedia(recMedia);
+                const {
+                  primaryMedia,
+                  imageOnlyMedia,
+                  layoutType,
+                  visibleSecondaryMedia,
+                  remainingCount,
+                } = getComposedRecognitionMedia(recMedia);
 
                 return (
-                  <div
+                  <article
                     key={rec.id}
-                    className={`recognition-card ${categoryMeta.className}`}
-                    style={{ animationDelay: `${index * 0.04}s` }}
+                    ref={(el) => {
+                      recognitionRefs.current[rec.id] = el;
+                    }}
+                    className="recognition-card"
                   >
-                    <div className="card-top">
+                    <div className="featured-card-top">
                       <span className={`badge-category ${categoryMeta.className}`}>
                         <span className="badge-icon">{categoryMeta.icon}</span>
                         {rec.category}
@@ -1805,284 +1410,805 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                       <span className="date">{formatDate(rec.created_at)}</span>
                     </div>
 
+                    <div className="featured-card-body">
+  <div className="recognition-header-row">
+    <div className="recognition-author-avatar">
+      <FramedAvatar
+        imageUrl={rec.sender_profile_image}
+        name={rec.sender_name}
+        frameCode={rec.sender_frame_code}
+        sizeClass="size-feed"
+      />
+    </div>
 
-                    <div className="recognition-extra-actions">
-                      <button
-                        type="button"
-                        className="recognition-share-btn"
-                        onClick={() => handleShareRecognition(rec)}
-                          >
-                          ⤴ Compartir
-                      </button>
+    <div className="recognition-header-meta">
+      <p className="featured-main-text">
+        <button
+          type="button"
+          className="inline-user-link"
+          onClick={() => openUserProfile(rec.sender_id)}
+        >
+          {rec.sender_name}
+        </button>{' '}
+        reconoció a{' '}
+        <button
+          type="button"
+          className="inline-user-link"
+          onClick={() => openUserProfile(rec.receiver_id)}
+        >
+          {rec.receiver_name}
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <div className="recognition-body">
+    <p className="featured-message-text">
+      {renderTextWithHashtags(rec.message, (tag) => {
+        setHashtagFilter(`#${tag}`);
+      })}
+    </p>
+
+    {recMedia.length > 0 && (
+      <div className={`recognition-media-premium ${layoutType}`}>
+        {primaryMedia && (
+          <div className="recognition-media-premium-main">
+            {primaryMedia.media_type === 'video' ? (
+              <RecognitionVideoPlayer
+                src={primaryMedia.fullUrl}
+                className="recognition-media-premium-main-video"
+                autoPlayWhenVisible={true}
+                showDurationBadge={true}
+              />
+            ) : (
+              <button
+                type="button"
+                className="recognition-media-premium-main-button"
+                onClick={() => {
+                  const imageIndex = imageOnlyMedia.findIndex(
+                    (item) => item.id === primaryMedia.id
+                  );
+                  if (imageIndex >= 0) {
+                    openImageViewer(imageOnlyMedia, imageIndex);
+                  }
+                }}
+              >
+                <img
+                  src={primaryMedia.fullUrl}
+                  alt="Media principal del reconocimiento"
+                  className="recognition-media-premium-main-image"
+                />
+              </button>
+            )}
+          </div>
+        )}
+
+        {visibleSecondaryMedia.length > 0 && (
+          <div className="recognition-media-premium-secondary">
+            {visibleSecondaryMedia.map((item, mediaIndex) => {
+              const isLastVisible =
+                mediaIndex === visibleSecondaryMedia.length - 1 &&
+                remainingCount > 0;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="recognition-media-premium-secondary-item"
+                  onClick={() => {
+                    const imageIndex = imageOnlyMedia.findIndex(
+                      (mediaItem) => mediaItem.id === item.id
+                    );
+                    if (imageIndex >= 0) {
+                      openImageViewer(imageOnlyMedia, imageIndex);
+                    }
+                  }}
+                >
+                  <img
+                    src={item.fullUrl}
+                    alt={`Media secundaria ${mediaIndex + 1}`}
+                    className="recognition-media-premium-secondary-image"
+                  />
+
+                  {isLastVisible && (
+                    <div className="recognition-media-premium-overlay">
+                      +{remainingCount}
                     </div>
-
-                    <div className="recognition-main-row">
-                      <div className={`recognition-icon-box ${categoryMeta.className}`}>
-                        {categoryMeta.icon}
-                      </div>
-
-                      <div className="recognition-body">
-                        <p className="main-text">
-                          <button
-                            type="button"
-                            className="inline-user-link"
-                            onClick={() => openUserProfile(rec.sender_id)}
-                          >
-                            {rec.sender_name}
-                          </button>{' '}
-                          reconoció a{' '}
-                          <button
-                            type="button"
-                            className="inline-user-link"
-                            onClick={() => openUserProfile(rec.receiver_id)}
-                          >
-                            {rec.receiver_name}
-                          </button>
-                        </p>
-
-                        <p className="message-text">{renderTextWithHashtags(rec.message, (tag) => {
-                              setHashtagFilter(`#${tag}`);
-                              })}</p> 
-                        {recMedia.length > 0 && (
-  <div className={`recognition-media-premium ${layoutType}`}>
-    {primaryMedia && (
-      <div className="recognition-media-premium-main">
-        {primaryMedia.media_type === 'video' ? (
-          <RecognitionVideoPlayer
-            src={primaryMedia.fullUrl}
-            className="recognition-media-premium-main-video"
-            autoPlayWhenVisible={true}
-            showDurationBadge={true}
-            
-          />
-        ) : (
-          <button
-            type="button"
-            className="recognition-media-premium-main-button"
-            onClick={() => {
-              const imageIndex = imageOnlyMedia.findIndex(
-                (item) => item.id === primaryMedia.id
+                  )}
+                </button>
               );
-              if (imageIndex >= 0) {
-                openImageViewer(imageOnlyMedia, imageIndex);
-              }
-            }}
-          >
-            <img
-              src={primaryMedia.fullUrl}
-              alt="Media principal del reconocimiento"
-              className="recognition-media-premium-main-image"
-            />
-          </button>
+            })}
+          </div>
         )}
       </div>
     )}
 
-    {visibleSecondaryMedia.length > 0 && (
-      <div className="recognition-media-premium-secondary">
-        {visibleSecondaryMedia.map((item, mediaIndex) => {
-          const isLastVisible =
-            mediaIndex === visibleSecondaryMedia.length - 1 && remainingCount > 0;
+    <RecognitionComments
+      recognitionId={rec.id}
+      currentUserId={user?.id}
+      onOpenProfile={openUserProfile}
+    />
 
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className="recognition-media-premium-secondary-item"
-              onClick={() => {
-                const imageIndex = imageOnlyMedia.findIndex(
-                  (mediaItem) => mediaItem.id === item.id
-                );
-                if (imageIndex >= 0) {
-                  openImageViewer(imageOnlyMedia, imageIndex);
-                }
-              }}
-            >
-              <img
-                src={item.fullUrl}
-                alt={`Media secundaria ${mediaIndex + 1}`}
-                className="recognition-media-premium-secondary-image"
-              />
+    {renderReactionBar(rec.id)}
 
-              {isLastVisible && (
-                <div className="recognition-media-premium-overlay">
-                  +{remainingCount}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    )}
+    <div className="recognition-favorite-row">
+      <button
+        type="button"
+        className={`recognition-favorite-btn ${
+          favoriteIds[rec.id] ? 'is-favorite' : ''
+        }`}
+        onClick={() => handleFavoriteToggle(rec.id)}
+        disabled={Boolean(favoritingIds[rec.id])}
+      >
+        {favoritingIds[rec.id]
+          ? 'Guardando...'
+          : favoriteIds[rec.id]
+          ? '★ Guardado'
+          : '☆ Guardar'}
+      </button>
+
+      <button
+        type="button"
+        className="recognition-share-btn"
+        onClick={() => handleShareRecognition(rec)}
+      >
+        ⤴ Compartir
+      </button>
+    </div>
   </div>
-)}
-
-                        
-
-                        <RecognitionComments
-                          recognitionId={rec.id}
-                          currentUserId={user?.id}
-                          onOpenProfile={openUserProfile}
-                        />
-
-                        {renderReactionBar(rec.id)}
-                        
-                        <div className="recognition-favorite-row">
-                          <button
-                            type="button"
-                            className={`recognition-favorite-btn ${
-                              favoriteIds[rec.id] ? 'is-favorite' : ''
-                            }`}
-                            onClick={() => handleFavoriteToggle(rec.id)}
-                            disabled={Boolean(favoritingIds[rec.id])}
-                          >
-                            {favoritingIds[rec.id]
-                              ? 'Guardando...'
-                              : favoriteIds[rec.id]
-                              ? '★ Guardado'
-                              : '☆ Guardar'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+</div>
+                  </article>
                 );
               })
             )}
           </div>
         </section>
-      </section>
-    </main>
-  </>
-) : null;
+
+        <section id="analytics-section" className="analytics-strip">
+          <div className="mini-stat">
+            <span>🤝 Colaboración</span>
+            <strong>{categoryCounts.Colaboración}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>📚 Académico</span>
+            <strong>{categoryCounts.Académico}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>⭐ Liderazgo</span>
+            <strong>{categoryCounts.Liderazgo}</strong>
+          </div>
+          <div className="mini-stat">
+            <span>💡 Creatividad</span>
+            <strong>{categoryCounts.Creatividad}</strong>
+          </div>
+        </section>
+
+        <section className="category-summary-section" id="category-summary-section">
+          <div className="category-summary-card">
+            <div className="category-summary-header">
+              <div>
+                <p className="section-label">Top categorías</p>
+                <h2>Distribución actual de reconocimientos</h2>
+              </div>
+              <p className="category-summary-subtext">
+                Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
+              </p>
+            </div>
+
+            <div className="category-bars">
+              {categorySummary.map((item) => {
+                const widthPercentage =
+                  maxCategoryCount > 0 ? (item.value / maxCategoryCount) * 100 : 0;
+
+                return (
+                  <div key={item.name} className="category-bar-row">
+                    <div className="category-bar-label">
+                      <span className={`category-pill ${item.className}`}>
+                        {item.icon} {item.name}
+                      </span>
+                      <strong>{item.value}</strong>
+                    </div>
+
+                    <div className="category-bar-track">
+                      <div
+                        className={`category-bar-fill ${item.className}`}
+                        style={{ width: `${widthPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <UsersDirectory
+          currentUserId={user?.id}
+          onUserSelected={(selectedUser) => {
+            setRecognitionPrefillUser(selectedUser);
+
+            setTimeout(() => {
+              const formSection = document.getElementById('recognition-form-section');
+              if (formSection) {
+                formSection.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                });
+              }
+            }, 120);
+          }}
+          onOpenProfile={openUserProfile}
+        />
+
+        <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
+
+        <ActivityPanel userId={user?.id} />
+
+        <section className="dashboard" id="dashboard-section">
+          <aside id="profile-section" className="sidebar">
+            <div className="profile-card">
+              <div className="profile-cover">
+                {coverImage ? (
+                  <img src={coverImage} alt="Portada" className="profile-cover-image" />
+                ) : null}
+              </div>
+
+              <div className="profile-card-body">
+                <div className="profile-avatar-wrap">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
+                  ) : (
+                    <div className="profile-avatar-fallback">
+                      {getInitials(displayName || user?.fullname || '')}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="profile-photo-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Cambiar foto
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleProfileImageChange}
+                    className="hidden-file-input"
+                  />
+                </div>
+
+                <div className="profile-main-info">
+                  <div className="profile-status-row">
+                    <span className="profile-status-dot"></span>
+                    <span className="profile-status-text">
+                      {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
+                    </span>
+                  </div>
+
+                  <h3>{displayName || user?.fullname || ''}</h3>
+                  <p className="profile-email">{user?.email || ''}</p>
+
+                  <div className="profile-extra-meta">
+                    {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
+                    {birthDate && (
+                      <span className="profile-extra-chip">
+                        🎂{' '}
+                        {new Date(birthDate).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="profile-tags">
+                    {profileTags.map((tag) => (
+                      <span key={tag} className="profile-tag">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className="profile-bio">{profileBio}</p>
+
+                  <button
+                    type="button"
+                    className="profile-edit-btn"
+                    onClick={openEditProfileModal}
+                  >
+                    Editar perfil
+                  </button>
+                </div>
+
+                <div className="profile-stats-grid">
+                  <div className="profile-mini-stat">
+                    <span>Enviados</span>
+                    <strong>{recognitionsSentByUser}</strong>
+                  </div>
+                  <div className="profile-mini-stat">
+                    <span>Recibidos</span>
+                    <strong>{recognitionsReceivedByUser}</strong>
+                  </div>
+                  <div className="profile-mini-stat">
+                    <span>Reacciones</span>
+                    <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="panel-header">
+              <p className="section-label">Nuevo reconocimiento</p>
+              <h3>Haz visible una acción positiva</h3>
+            </div>
+
+            <div id="recognition-form-section">
+              <RecognitionForm
+                onRecognitionSent={async (responsePayload) => {
+                  await fetchFeed();
+                  const unlockItems = buildUnlockItemsFromProgress(responsePayload?.progress);
+                  enqueueUnlockItems(unlockItems);
+                }}
+                senderId={user?.id}
+                preselectedUser={recognitionPrefillUser}
+              />
+            </div>
+          </aside>
+
+          <section id="feed-section" className="feed-section">
+            <div className="feed-header">
+              <div>
+                <p className="section-label">Muro de la comunidad</p>
+                <h2>Reconocimientos recientes</h2>
+              </div>
+              <p className="feed-subtext">
+                Explora mensajes positivos, filtra por categoría y encuentra aportes de la comunidad.
+              </p>
+            </div>
+
+            <div className="feed-toolbar">
+              <div className="feed-search">
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, mensaje o categoría..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="feed-toolbar-row">
+                <div className="category-filters">
+                  {categoryOptions.map((category) => (
+                    <button
+                      key={category}
+                      className={`filter-chip ${selectedCategory === category ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(category)}
+                      type="button"
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="sort-box">
+                  <label htmlFor="sortSelect">Ordenar por</label>
+                  <select
+                    id="sortSelect"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="sort-select"
+                  >
+                    <option value="recent">Más recientes</option>
+                    <option value="oldest">Más antiguas</option>
+                    <option value="az">Nombre A-Z</option>
+                    <option value="category">Categoría</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {activeFilterLabels.length > 0 && (
+              <div className="active-filters-row">
+                {activeFilterLabels.map((label) => (
+                  <span key={label} className="active-filter-chip">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="feed-results-bar">
+              <span>
+                Mostrando <strong>{filteredRecognitions.length}</strong> resultado(s)
+              </span>
+              {(selectedCategory !== 'Todas' ||
+                searchTerm.trim() !== '' ||
+                hashtagFilter.trim() !== '' ||
+                sortBy !== 'recent') && (
+                <button
+                  type="button"
+                  className="clear-filters-btn"
+                  onClick={() => {
+                    setSelectedCategory('Todas');
+                    setSearchTerm('');
+                    setHashtagFilter('');
+                    setSortBy('recent');
+                  }}
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+
+            {hashtagFilter && (
+              <div className="active-hashtag-filter">
+                <span>Filtrando por {hashtagFilter}</span>
+                <button
+                  type="button"
+                  className="clear-hashtag-filter-btn"
+                  onClick={() => setHashtagFilter('')}
+                >
+                  Quitar filtro
+                </button>
+              </div>
+            )}
+
+            <section className="stories-section">
+              {storiesLoading ? (
+                <p>Cargando historias...</p>
+              ) : (
+                <StoriesBar
+                  groupedStories={groupedStories}
+                  currentUser={user}
+                  onOpenStory={openStoryViewer}
+                  onCreateStory={() => setShowCreateStoryModal(true)}
+                />
+              )}
+            </section>
+
+            <div className="feed-container">
+              {loadingFeed ? (
+                <div className="loading-state">
+                  <div className="loading-spinner"></div>
+                  <p>Cargando reconocimientos...</p>
+                </div>
+              ) : filteredRecognitions.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">✦</div>
+                  <h3>No se encontraron resultados</h3>
+                  <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
+                </div>
+              ) : (
+                filteredRecognitions.map((rec, index) => {
+                  const categoryMeta = getCategoryMeta(rec.category);
+                  const recMedia = Array.isArray(rec.media)
+                    ? rec.media.map((item) => ({
+                        ...item,
+                        fullUrl: resolveImageUrl(item.media_url),
+                      }))
+                    : [];
+
+                  const {
+                    primaryMedia,
+                    imageOnlyMedia,
+                    layoutType,
+                    remainingCount,
+                    visibleSecondaryMedia,
+                  } = getComposedRecognitionMedia(recMedia);
+
+                  return (
+                    <div
+                      key={rec.id}
+                      className={`recognition-card ${categoryMeta.className}`}
+                      style={{ animationDelay: `${index * 0.04}s` }}
+                    >
+                      <div className="card-top">
+                        <span className={`badge-category ${categoryMeta.className}`}>
+                          <span className="badge-icon">{categoryMeta.icon}</span>
+                          {rec.category}
+                        </span>
+                        <span className="date">{formatDate(rec.created_at)}</span>
+                      </div>
+
+                      <div className="recognition-extra-actions">
+                        <button
+                          type="button"
+                          className="recognition-share-btn"
+                          onClick={() => handleShareRecognition(rec)}
+                        >
+                          ⤴ Compartir
+                        </button>
+                      </div>
+                      <div className="recognition-main-row">
+  <div className="recognition-header-row">
+    <div className="recognition-author-avatar">
+      <FramedAvatar
+        imageUrl={rec.sender_profile_image}
+        name={rec.sender_name}
+        frameCode={rec.sender_frame_code}
+        sizeClass="size-feed"
+      />
+    </div>
+
+    <div className="recognition-header-meta">
+      <p className="main-text">
+        <button
+          type="button"
+          className="inline-user-link"
+          onClick={() => openUserProfile(rec.sender_id)}
+        >
+          {rec.sender_name}
+        </button>{' '}
+        reconoció a{' '}
+        <button
+          type="button"
+          className="inline-user-link"
+          onClick={() => openUserProfile(rec.receiver_id)}
+        >
+          {rec.receiver_name}
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <div className="recognition-body">
+    <p className="message-text">
+      {renderTextWithHashtags(rec.message, (tag) => {
+        setHashtagFilter(`#${tag}`);
+      })}
+    </p>
+
+    {recMedia.length > 0 && (
+      <div className={`recognition-media-premium ${layoutType}`}>
+        {primaryMedia && (
+          <div className="recognition-media-premium-main">
+            {primaryMedia.media_type === 'video' ? (
+              <RecognitionVideoPlayer
+                src={primaryMedia.fullUrl}
+                className="recognition-media-premium-main-video"
+                autoPlayWhenVisible={true}
+                showDurationBadge={true}
+              />
+            ) : (
+              <button
+                type="button"
+                className="recognition-media-premium-main-button"
+                onClick={() => {
+                  const imageIndex = imageOnlyMedia.findIndex(
+                    (item) => item.id === primaryMedia.id
+                  );
+                  if (imageIndex >= 0) {
+                    openImageViewer(imageOnlyMedia, imageIndex);
+                  }
+                }}
+              >
+                <img
+                  src={primaryMedia.fullUrl}
+                  alt="Media principal del reconocimiento"
+                  className="recognition-media-premium-main-image"
+                />
+              </button>
+            )}
+          </div>
+        )}
+
+        {visibleSecondaryMedia.length > 0 && (
+          <div className="recognition-media-premium-secondary">
+            {visibleSecondaryMedia.map((item, mediaIndex) => {
+              const isLastVisible =
+                mediaIndex === visibleSecondaryMedia.length - 1 &&
+                remainingCount > 0;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="recognition-media-premium-secondary-item"
+                  onClick={() => {
+                    const imageIndex = imageOnlyMedia.findIndex(
+                      (mediaItem) => mediaItem.id === item.id
+                    );
+                    if (imageIndex >= 0) {
+                      openImageViewer(imageOnlyMedia, imageIndex);
+                    }
+                  }}
+                >
+                  <img
+                    src={item.fullUrl}
+                    alt={`Media secundaria ${mediaIndex + 1}`}
+                    className="recognition-media-premium-secondary-image"
+                  />
+
+                  {isLastVisible && (
+                    <div className="recognition-media-premium-overlay">
+                      +{remainingCount}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    )}
+
+    <RecognitionComments
+      recognitionId={rec.id}
+      currentUserId={user?.id}
+      onOpenProfile={openUserProfile}
+    />
+
+    {renderReactionBar(rec.id)}
+
+    <div className="recognition-favorite-row">
+      <button
+        type="button"
+        className={`recognition-favorite-btn ${
+          favoriteIds[rec.id] ? 'is-favorite' : ''
+        }`}
+        onClick={() => handleFavoriteToggle(rec.id)}
+        disabled={Boolean(favoritingIds[rec.id])}
+      >
+        {favoritingIds[rec.id]
+          ? 'Guardando...'
+          : favoriteIds[rec.id]
+          ? '★ Guardado'
+          : '☆ Guardar'}
+      </button>
+    </div>
+  </div>
+</div>
+
+
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+        </section>
+      </main>
+    </>
+  ) : null;
 
   return (
     <div className={`App ${darkMode ? 'dark' : ''}`}>
-    <Routes>
-  <Route
-    path="/login"
-    element={
-      user ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleAuthSuccess} />
-    }
-  />
-
-  <Route
-    path="/registro"
-    element={
-      user ? <Navigate to="/" replace /> : <RegisterPage onRegisterSuccess={handleAuthSuccess} />
-    }
-  />
-
-  <Route
-    path="/"
-    element={user ? dashboardView : <Navigate to="/login" replace />}
-  />
-
-  <Route
-    path="/reconocimiento/:id"
-    element={
-      user ? (
-        <RecognitionPage
-          recognitions={recognitions}
-          onBack={() => navigate('/')}
-          onOpenImageViewer={openImageViewer}
-          currentUserId={user?.id}
-          onOpenProfile={openUserProfile}
-          renderReactionBar={renderReactionBar}
-          renderFavoriteButton={(recognitionId) => (
-            <div className="recognition-favorite-row">
-              <button
-                type="button"
-                className={`recognition-favorite-btn ${
-                  favoriteIds[recognitionId] ? 'is-favorite' : ''
-                }`}
-                onClick={() => handleFavoriteToggle(recognitionId)}
-                disabled={Boolean(favoritingIds[recognitionId])}
-              >
-                {favoritingIds[recognitionId]
-                  ? 'Guardando...'
-                  : favoriteIds[recognitionId]
-                  ? '★ Guardado'
-                  : '☆ Guardar'}
-              </button>
-            </div>
-          )}
-          onHashtagClick={(tag) => {
-            navigate('/', {
-              state: { hashtagFilter: `#${tag}` },
-            });
-          }}
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            user ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleAuthSuccess} />
+          }
         />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
-  />
 
-  <Route
-    path="/perfil"
-    element={
-      user ? (
-        <ProfilePage
-          currentUser={user}
-          loggedInUserId={user?.id}
-          recognitions={recognitions}
-          onBack={() => navigate('/')}
-          onOpenImageViewer={openImageViewer}
-          darkMode={darkMode}
-          onOpenEditProfile={openEditProfileModal}
-          isOwnProfile={true}
-          onFavoritesChanged={refreshGlobalFavorites}
-          onOpenRecognition={(recognitionId) => {
-            navigate('/', {
-              state: { highlightRecognitionId: recognitionId },
-            });
-          }}
+        <Route
+          path="/registro"
+          element={
+            user ? <Navigate to="/" replace /> : <RegisterPage onRegisterSuccess={handleAuthSuccess} />
+          }
         />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
-  />
 
-  <Route
-    path="/perfil/:userId"
-    element={
-      user ? (
-        <ProfilePage
-          currentUser={user}
-          loggedInUserId={user?.id}
-          recognitions={recognitions}
-          onBack={() => navigate('/')}
-          onOpenImageViewer={openImageViewer}
-          darkMode={darkMode}
-          onOpenEditProfile={openEditProfileModal}
-          isOwnProfile={false}
-          onFavoritesChanged={refreshGlobalFavorites}
-          onOpenRecognition={(recognitionId) => {
-            navigate('/', {
-              state: { highlightRecognitionId: recognitionId },
-            });
-          }}
+        <Route path="/" element={user ? dashboardView : <Navigate to="/login" replace />} />
+
+        <Route
+          path="/reconocimiento/:id"
+          element={
+            user ? (
+              <RecognitionPage
+                recognitions={recognitions}
+                onBack={() => navigate('/')}
+                onOpenImageViewer={openImageViewer}
+                currentUserId={user?.id}
+                onOpenProfile={openUserProfile}
+                renderReactionBar={renderReactionBar}
+                renderFavoriteButton={(recognitionId) => (
+                  <div className="recognition-favorite-row">
+                    <button
+                      type="button"
+                      className={`recognition-favorite-btn ${
+                        favoriteIds[recognitionId] ? 'is-favorite' : ''
+                      }`}
+                      onClick={() => handleFavoriteToggle(recognitionId)}
+                      disabled={Boolean(favoritingIds[recognitionId])}
+                    >
+                      {favoritingIds[recognitionId]
+                        ? 'Guardando...'
+                        : favoriteIds[recognitionId]
+                        ? '★ Guardado'
+                        : '☆ Guardar'}
+                    </button>
+                  </div>
+                )}
+                onHashtagClick={(tag) => {
+                  navigate('/', {
+                    state: { hashtagFilter: `#${tag}` },
+                  });
+                }}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
-      ) : (
-        <Navigate to="/login" replace />
-      )
-    }
-  />
 
-  <Route
-    path="*"
-    element={<Navigate to={user ? '/' : '/login'} replace />}
-  />
-</Routes>
+        <Route
+          path="/perfil"
+          element={
+            user ? (
+              <ProfilePage
+                currentUser={user}
+                loggedInUserId={user?.id}
+                recognitions={recognitions}
+                onBack={() => navigate('/')}
+                onOpenImageViewer={openImageViewer}
+                darkMode={darkMode}
+                onOpenEditProfile={openEditProfileModal}
+                isOwnProfile={true}
+                onFavoritesChanged={refreshGlobalFavorites}
+                onOpenRecognition={(recognitionId) => {
+                  navigate('/', {
+                    state: { highlightRecognitionId: recognitionId },
+                  });
+                }}
+                onBadgeAssigned={(badgeItem) => {
+                  enqueueUnlockItems([badgeItem]);
+                }}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/perfil/:userId"
+          element={
+            user ? (
+              <ProfilePage
+                currentUser={user}
+                loggedInUserId={user?.id}
+                recognitions={recognitions}
+                onBack={() => navigate('/')}
+                onOpenImageViewer={openImageViewer}
+                darkMode={darkMode}
+                onOpenEditProfile={openEditProfileModal}
+                isOwnProfile={false}
+                onFavoritesChanged={refreshGlobalFavorites}
+                onOpenRecognition={(recognitionId) => {
+                  navigate('/', {
+                    state: { highlightRecognitionId: recognitionId },
+                  });
+                }}
+                onBadgeAssigned={(badgeItem) => {
+                  enqueueUnlockItems([badgeItem]);
+                }}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
+      </Routes>
 
       {showEditProfileModal && (
         <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>
-          <div className="profile-modal premium-profile-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="profile-modal premium-profile-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="premium-profile-modal-cover">
               {coverImage ? (
-                <img src={coverImage} alt="Portada" className="premium-profile-modal-cover-image" />
+                <img
+                  src={coverImage}
+                  alt="Portada"
+                  className="premium-profile-modal-cover-image"
+                />
               ) : null}
 
               <button
@@ -2105,7 +2231,11 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
             <div className="premium-profile-modal-avatar-row">
               <div className="premium-profile-avatar-box">
                 {profileImage ? (
-                  <img src={profileImage} alt="Perfil" className="premium-profile-avatar-image" />
+                  <img
+                    src={profileImage}
+                    alt="Perfil"
+                    className="premium-profile-avatar-image"
+                  />
                 ) : (
                   <div className="premium-profile-avatar-fallback">
                     {getInitials(displayName || user.fullname)}
@@ -2115,7 +2245,7 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                 <button
                   type="button"
                   className="premium-avatar-btn"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => modalProfileInputRef.current?.click()}
                 >
                   Cambiar foto
                 </button>
@@ -2184,6 +2314,14 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
                 />
                 <small className="field-hint">Separa cada tag con coma.</small>
               </div>
+
+              <input
+                ref={modalProfileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleProfileImageChange}
+                className="hidden-file-input"
+              />
 
               <input
                 ref={coverInputRef}
@@ -2287,28 +2425,29 @@ const getComposedRecognitionMedia = (mediaItems = []) => {
         </div>
       )}
 
-        <CreateStoryModal
-     isOpen={showCreateStoryModal}
-  onClose={() => setShowCreateStoryModal(false)}
-  onSubmit={handleCreateStory}
-  users={allUsers.filter((u) => Number(u.id) !== Number(user?.id))}
-/>
+      <CreateStoryModal
+        isOpen={showCreateStoryModal}
+        onClose={() => setShowCreateStoryModal(false)}
+        onSubmit={handleCreateStory}
+        users={allUsers.filter((u) => Number(u.id) !== Number(user?.id))}
+      />
 
-        <StoryViewer
-      storyViewer={storyViewer}
-      onClose={closeStoryViewer}
-      onNext={nextStory}
-      onPrev={prevStory}
-      onReact={handleStoryReaction}
-      onComment={handleStoryComment}
-      comments={storyCommentsMap}
-      reactions={storyReactionsMap}
-      views={storyViewsMap}
-      currentUser={user}
-     />
-      
+      <StoryViewer
+        storyViewer={storyViewer}
+        onClose={closeStoryViewer}
+        onNext={nextStory}
+        onPrev={prevStory}
+        onReact={handleStoryReaction}
+        onComment={handleStoryComment}
+        comments={storyCommentsMap}
+        reactions={storyReactionsMap}
+        views={storyViewsMap}
+        currentUser={user}
+      />
 
-
+      {showUnlockToast && activeUnlockItem && (
+        <AchievementUnlockToast item={activeUnlockItem} onClose={closeUnlockToast} />
+      )}
 
       {showScrollTop && location.pathname === '/' && (
         <button
