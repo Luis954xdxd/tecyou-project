@@ -1654,31 +1654,35 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               </div>
 
               <div className="profile-card-body">
-                <div className="profile-avatar-wrap">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Perfil" className="profile-avatar-image" />
-                  ) : (
-                    <div className="profile-avatar-fallback">
-                      {getInitials(displayName || user?.fullname || '')}
-                    </div>
-                  )}
+                <div className="profile-avatar-row">
 
-                  <button
-                    type="button"
-                    className="profile-photo-btn"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Cambiar foto
-                  </button>
+  <FramedAvatar
+    imageUrl={profileImage || user?.profile_image_url}
+    name={displayName || user?.display_name || user?.fullname}
+    frameCode={user?.equipped_frame_code}
+    sizeClass="size-public"
+    className="profile-sidebar-framed-avatar"
+  />
 
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={handleProfileImageChange}
-                    className="hidden-file-input"
-                  />
-                </div>
+  <div className="profile-avatar-actions">
+    <button
+      type="button"
+      className="profile-photo-btn"
+      onClick={() => fileInputRef.current?.click()}
+    >
+      Cambiar foto
+    </button>
+
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/png,image/jpeg,image/jpg,image/webp"
+      onChange={handleProfileImageChange}
+      className="hidden-file-input"
+    />
+  </div>
+
+</div>
 
                 <div className="profile-main-info">
                   <div className="profile-status-row">

@@ -52,29 +52,47 @@ function NotificationsPanel({ userId, onOpenProfile }) {
     return item.title || 'Nueva notificación';
   };
 
-  const fetchNotifications = async () => {
-    if (!userId) return;
+ const fetchNotifications = async () => {
+  if (!userId) return;
 
-    try {
-      setLoadingNotifications(true);
+  try {
+    setLoadingNotifications(true);
 
-      const [notificationsRes, unreadRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/users/${userId}/notifications`),
-        axios.get(`${API_BASE}/api/users/${userId}/notifications/unread-count`),
-      ]);
+    const notificationsRes = await axios.get(
+      `${API_BASE}/api/users/${userId}/notifications`
+    );
 
-      setNotifications(notificationsRes.data);
-      setUnreadCount(unreadRes.data.total || 0);
-    } catch (error) {
-      console.error('Error al obtener notificaciones:', error);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
+    setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
+  } catch (error) {
+    console.error('Error al obtener notificaciones:', error);
+    setNotifications([]);
+  }
 
-  useEffect(() => {
+  try {
+    const unreadRes = await axios.get(
+      `${API_BASE}/api/users/${userId}/notifications/unread-count`
+    );
+
+    setUnreadCount(unreadRes.data?.total || 0);
+  } catch (error) {
+    console.error('Error al obtener contador de no leídas:', error);
+    setUnreadCount(0);
+  } finally {
+    setLoadingNotifications(false);
+  }
+};
+
+ useEffect(() => {
+  if (!userId) return;
+
+  fetchNotifications();
+
+  const interval = setInterval(() => {
     fetchNotifications();
-  }, [userId]);
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [userId]);
 
   const handleMarkAsRead = async (notificationId) => {
     try {

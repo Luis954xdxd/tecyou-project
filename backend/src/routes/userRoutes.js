@@ -711,9 +711,16 @@ router.get('/:id/notifications', async (req, res) => {
                 n.is_read,
                 n.created_at,
                 COALESCE(u.display_name, u.fullname) AS actor_name,
-                u.profile_image_url AS actor_profile_image
+                u.profile_image_url AS actor_profile_image,
+                afd.code AS actor_frame_code
              FROM notifications n
-             LEFT JOIN users u ON n.actor_id = u.id
+             LEFT JOIN users u
+               ON n.actor_id = u.id
+             LEFT JOIN user_avatar_frames uaf
+               ON uaf.user_id = u.id
+              AND uaf.is_equipped = TRUE
+             LEFT JOIN avatar_frame_definitions afd
+               ON afd.id = uaf.frame_id
              WHERE n.user_id = $1
              ORDER BY n.created_at DESC`,
             [id]
@@ -726,7 +733,76 @@ router.get('/:id/notifications', async (req, res) => {
     }
 });
 
-// MARCAR NOTIFICACIONES COMO LEÍDAS
+// CONTAR NOTIFICACIONES NO LEÍDAS
+router.get('/:id/notifications/unread-count', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `SELECT COUNT(*)::int AS total
+             FROM notifications
+             WHERE user_id = $1
+               AND is_read = FALSE`,
+            [id]
+        );
+
+        res.json({
+            total: result.rows[0]?.total || 0,
+        });
+    } catch (err) {
+        console.error('Error en GET /:id/notifications/unread-count:', err.message);
+        res.status(500).send('Error al contar notificaciones no leídas.');
+    }
+});
+
+// MARCAR UNA NOTIFICACIÓN COMO LEÍDA
+router.patch('/notifications/:notificationId/read', async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+
+        const updated = await pool.query(
+            `UPDATE notifications
+             SET is_read = TRUE
+             WHERE id = $1
+             RETURNING *`,
+            [notificationId]
+        );
+
+        if (updated.rows.length === 0) {
+            return res.status(404).json({ error: 'Notificación no encontrada.' });
+        }
+
+        res.json({
+            success: true,
+            notification: updated.rows[0],
+        });
+    } catch (err) {
+        console.error('Error en PATCH /notifications/:notificationId/read:', err.message);
+        res.status(500).send('Error al marcar notificación como leída.');
+    }
+});
+
+// MARCAR TODAS COMO LEÍDAS
+router.patch('/:id/notifications/read-all', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await pool.query(
+            `UPDATE notifications
+             SET is_read = TRUE
+             WHERE user_id = $1
+               AND is_read = FALSE`,
+            [id]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error en PATCH /:id/notifications/read-all:', err.message);
+        res.status(500).send('Error al marcar todas las notificaciones como leídas.');
+    }
+});
+
+// MARCAR NOTIFICACIONES COMO LEÍDAS (legacy)
 router.patch('/:id/notifications/read', async (req, res) => {
     try {
         const { id } = req.params;

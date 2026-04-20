@@ -133,7 +133,7 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
                       imageUrl={user.profile_image_url}
                       name={user.display_name || user.fullname}
                       frameCode={user.equipped_frame_code}
-                      sizeClass="size-directory"
+                      sizeClass="size-activity"
                       />
 
                       <div className="directory-user-meta">
@@ -204,7 +204,7 @@ function UsersDirectory({ currentUserId, onUserSelected, onOpenProfile }) {
                       imageUrl={user.profile_image_url}
                       name={user.display_name || user.fullname}
                       frameCode={user.equipped_frame_code}
-                      sizeClass="size-directory"
+                      sizeClass="size-activity"
                       />
 
                       <div className="directory-user-meta">

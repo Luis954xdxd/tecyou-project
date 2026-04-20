@@ -54,28 +54,46 @@ function NotificationsBell({ userId, onOpenProfile }) {
   };
 
   const fetchNotifications = async () => {
-    if (!userId) return;
+  if (!userId) return;
 
-    try {
-      setLoadingNotifications(true);
+  try {
+    setLoadingNotifications(true);
 
-      const [notificationsRes, unreadRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/users/${userId}/notifications`),
-        axios.get(`${API_BASE}/api/users/${userId}/notifications/unread-count`),
-      ]);
+    const notificationsRes = await axios.get(
+      `${API_BASE}/api/users/${userId}/notifications`
+    );
 
-      setNotifications(notificationsRes.data.slice(0, 6));
-      setUnreadCount(unreadRes.data.total || 0);
-    } catch (error) {
-      console.error('Error al obtener notificaciones para campanita:', error);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
+    setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data.slice(0, 6) : []);
+  } catch (error) {
+    console.error('Error al obtener notificaciones para campanita:', error);
+    setNotifications([]);
+  }
+
+  try {
+    const unreadRes = await axios.get(
+      `${API_BASE}/api/users/${userId}/notifications/unread-count`
+    );
+
+    setUnreadCount(unreadRes.data?.total || 0);
+  } catch (error) {
+    console.error('Error al obtener contador de no leídas para campanita:', error);
+    setUnreadCount(0);
+  } finally {
+    setLoadingNotifications(false);
+  }
+};
 
   useEffect(() => {
+  if (!userId) return;
+
+  fetchNotifications();
+
+  const interval = setInterval(() => {
     fetchNotifications();
-  }, [userId]);
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

@@ -8,24 +8,6 @@ function ActivityPanel({ userId }) {
   const [activities, setActivities] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
 
-  useEffect(() => {
-    const fetchActivity = async () => {
-      if (!userId) return;
-
-      try {
-        setLoadingActivity(true);
-        const response = await axios.get(`${API_BASE}/api/users/${userId}/activity`);
-        setActivities(response.data);
-      } catch (error) {
-        console.error('Error al obtener actividad reciente:', error);
-      } finally {
-        setLoadingActivity(false);
-      }
-    };
-
-    fetchActivity();
-  }, [userId]);
-
   const getActivityText = (item) => {
     if (item.type === 'recognition_received') {
       return `${item.actor_name} te envió un reconocimiento`;
@@ -58,6 +40,33 @@ function ActivityPanel({ userId }) {
       year: 'numeric',
     });
   };
+
+  const fetchActivity = async () => {
+    if (!userId) return;
+
+    try {
+      setLoadingActivity(true);
+      const response = await axios.get(`${API_BASE}/api/users/${userId}/activity`);
+      setActivities(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error al obtener actividad reciente:', error);
+      setActivities([]);
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId) return;
+
+    fetchActivity();
+
+    const interval = setInterval(() => {
+      fetchActivity();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   return (
     <section id="activity-section" className="activity-panel-section">

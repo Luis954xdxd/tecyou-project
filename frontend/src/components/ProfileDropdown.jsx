@@ -49,7 +49,7 @@ function ProfileDropdown({
               imageUrl={profileImage || user?.profile_image_url}
               name={displayName || user?.display_name || user?.fullname}
               frameCode={user?.equipped_frame_code}
-              sizeClass="size-directory"
+              sizeClass="size-activity"
               className="nav-dropdown-framed-avatar"
             />
 

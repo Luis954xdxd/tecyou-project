@@ -11072,73 +11072,78 @@ body.dark .create-story-close-btn {
 
 /* tamaños */
 .framed-avatar.size-nav {
-  width: 46px;
-  height: 46px;
-}
-
-.framed-avatar.size-nav .framed-avatar-circle {
-  width: 38px;
-  height: 38px;
-}
-
-.framed-avatar.size-nav .framed-avatar-frame {
-  width: 66px;
-  height: 66px;
-}
-
-.framed-avatar.size-directory {
-  width: 78px;
-  height: 78px;
-}
-
-.framed-avatar.size-directory .framed-avatar-circle {
-  width: 52px;
-  height: 52px;
-}
-
-.framed-avatar.size-directory .framed-avatar-frame {
-  width: 96px;
-  height: 96px;
-}
-
-.framed-avatar.size-activity {
   width: 70px;
   height: 70px;
 }
 
-.framed-avatar.size-activity .framed-avatar-circle {
-  width: 48px;
-  height: 48px;
+.framed-avatar.size-nav .framed-avatar-circle {
+  width: 40px;
+  height: 40px;
 }
 
-.framed-avatar.size-activity .framed-avatar-frame {
+.framed-avatar.size-nav .framed-avatar-frame {
+  width: 110px;
+  height: 110px;
+  transform: translate(-50%, -40%) scale(0.98);
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
+}
+
+.framed-avatar.size-directory {
   width: 88px;
   height: 88px;
 }
 
+.framed-avatar.size-directory .framed-avatar-circle {
+  width: 56px;
+  height: 56px;
+}
+
+.framed-avatar.size-directory .framed-avatar-frame {
+  width: 140px;
+  height: 140px;
+  transform: translate(-50%, -40%) scale(1.02);
+}
+
+.framed-avatar.size-activity {
+  width: 76px;
+  height: 76px;
+}
+
+.framed-avatar.size-activity .framed-avatar-circle {
+  width: 49px;
+  height: 49px;
+}
+
+.framed-avatar.size-activity .framed-avatar-frame {
+  width: 140px;
+  height: 140px;
+  transform: translate(-50%, -40%) scale(1);
+}
+
 .framed-avatar.size-public {
-  width: 200px;
-  height: 200px;
+  width: 210px;
+  height: 210px;
 }
 
 .framed-avatar.size-public .framed-avatar-circle {
-  width: 160px;
-  height: 160px;
+  width: 120px;
+  height: 120px;
 }
 
 .framed-avatar.size-public .framed-avatar-frame {
-  width: 230px;
-  height: 230px;
+  width: 280px;
+  height: 280px;
+  transform: translate(-50%, -40%) scale(1.06);
 }
 
 .framed-avatar.size-feed {
-  width: 68px;
-  height: 68px;
+  width: 66px;
+  height: 66px;
 }
 
 .framed-avatar.size-feed .framed-avatar-circle {
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
 }
 
 .framed-avatar.size-feed .framed-avatar-frame {
@@ -11277,6 +11282,374 @@ div[class*="avatar"] img {
   align-items: flex-start;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.profile-sidebar-framed-avatar {
+  transform: translateY(-45px);
+  margin-left: -52px;
+
+}
+
+.profile-avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible !important;
+}
+
+
+/* CONTENEDOR HORIZONTAL */
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  margin-top: -10px;
+  padding-left: 12px;
+}
+
+/* BOTÓN A LA DERECHA */
+.profile-avatar-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  margin-left:-43px;
+  transform: translateY(-30px);
+}
+
+/* BOTÓN MÁS PRO */
+.profile-photo-btn {
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 150px;
+}
+
+.profile-photo-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.05);
+}
+
+.profile-photo-btn {
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+}
+
+/* =========================================================
+   EFECTOS GLOBALES PREMIUM
+========================================================= */
+
+:root {
+  --app-ease: 0.24s ease;
+  --app-ease-slow: 0.4s ease;
+  --app-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.18);
+  --app-shadow-strong: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --app-glow-blue: 0 0 18px rgba(59, 130, 246, 0.18);
+  --app-glow-gold: 0 0 18px rgba(255, 215, 0, 0.18);
+}
+
+/* Entrada general suave */
+.recognition-card,
+.directory-user-card,
+.activity-item,
+.public-profile-rec-card,
+.profile-mini-stat,
+.stat-card,
+.mini-stat,
+.category-summary-card,
+.users-directory-card,
+.activity-panel-card,
+.profile-card,
+.featured-empty,
+.empty-state {
+  animation: fadeUpSoft 0.45s ease both;
+}
+
+/* Hover suave en cards */
+.recognition-card,
+.directory-user-card,
+.activity-item,
+.profile-mini-stat,
+.stat-card,
+.mini-stat,
+.category-summary-card,
+.users-directory-card,
+.activity-panel-card,
+.profile-card {
+  transition:
+    transform var(--app-ease),
+    box-shadow var(--app-ease),
+    border-color var(--app-ease),
+    background var(--app-ease);
+}
+
+.recognition-card:hover,
+.directory-user-card:hover,
+.activity-item:hover,
+.profile-mini-stat:hover,
+.stat-card:hover,
+.mini-stat:hover,
+.category-summary-card:hover,
+.users-directory-card:hover,
+.activity-panel-card:hover,
+.profile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--app-shadow-soft);
+}
+
+/* Botones premium */
+button,
+.filter-chip,
+.follow-btn,
+.recognize-quick-btn,
+.profile-edit-btn,
+.profile-photo-btn,
+.recognition-share-btn,
+.recognition-favorite-btn,
+.nav-dropdown-btn,
+.reaction-main-btn,
+.reaction-option-stable,
+.clear-filters-btn,
+.clear-hashtag-filter-btn {
+  transition:
+    transform var(--app-ease),
+    box-shadow var(--app-ease),
+    background var(--app-ease),
+    border-color var(--app-ease),
+    opacity var(--app-ease);
+}
+
+button:hover,
+.filter-chip:hover,
+.follow-btn:hover,
+.recognize-quick-btn:hover,
+.profile-edit-btn:hover,
+.profile-photo-btn:hover,
+.recognition-share-btn:hover,
+.recognition-favorite-btn:hover,
+.nav-dropdown-btn:hover,
+.reaction-main-btn:hover,
+.reaction-option-stable:hover,
+.clear-filters-btn:hover,
+.clear-hashtag-filter-btn:hover {
+  transform: translateY(-2px);
+}
+
+button:active,
+.filter-chip:active,
+.follow-btn:active,
+.recognize-quick-btn:active,
+.profile-edit-btn:active,
+.profile-photo-btn:active,
+.recognition-share-btn:active,
+.recognition-favorite-btn:active,
+.nav-dropdown-btn:active,
+.reaction-main-btn:active,
+.reaction-option-stable:active {
+  transform: scale(0.98);
+}
+
+/* Inputs con focus glow */
+input,
+textarea,
+select {
+  transition:
+    border-color var(--app-ease),
+    box-shadow var(--app-ease),
+    background var(--app-ease);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+/* Tabs más vivas */
+.profile-twitter-tab,
+.filter-chip {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-twitter-tab::after,
+.filter-chip::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(99,102,241,0), rgba(99,102,241,0.9), rgba(99,102,241,0));
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--app-ease);
+}
+
+.profile-twitter-tab:hover::after,
+.profile-twitter-tab.active::after,
+.filter-chip:hover::after,
+.filter-chip.active::after {
+  transform: scaleX(1);
+}
+
+/* Avatares con vida */
+.framed-avatar,
+.profile-sidebar-framed-avatar,
+.nav-dropdown-framed-avatar {
+  transition: transform var(--app-ease), filter var(--app-ease);
+}
+
+.framed-avatar:hover,
+.profile-sidebar-framed-avatar:hover,
+.nav-dropdown-framed-avatar:hover {
+  transform: scale(1.03);
+  filter: drop-shadow(0 0 14px rgba(255, 215, 0, 0.14));
+}
+
+/* Brillo sutil en cards principales */
+.profile-card,
+.users-directory-card,
+.activity-panel-card,
+.category-summary-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before,
+.users-directory-card::before,
+.activity-panel-card::before,
+.category-summary-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0.02) 0%,
+    rgba(255,255,255,0.05) 18%,
+    rgba(255,255,255,0.01) 36%,
+    rgba(255,255,255,0) 60%
+  );
+  transform: translateX(-110%);
+  transition: transform 1.2s ease;
+  pointer-events: none;
+}
+
+.profile-card:hover::before,
+.users-directory-card:hover::before,
+.activity-panel-card:hover::before,
+.category-summary-card:hover::before {
+  transform: translateX(110%);
+}
+
+/* Scroll top más premium */
+.scroll-top-btn {
+  transition:
+    transform var(--app-ease),
+    box-shadow var(--app-ease),
+    opacity var(--app-ease);
+}
+
+.scroll-top-btn:hover {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: var(--app-shadow-strong), var(--app-glow-blue);
+}
+
+/* Badge / chips */
+.badge-category,
+.profile-tag,
+.active-filter-chip,
+.category-pill,
+.profile-extra-chip {
+  transition:
+    transform var(--app-ease),
+    box-shadow var(--app-ease),
+    background var(--app-ease);
+}
+
+.badge-category:hover,
+.profile-tag:hover,
+.active-filter-chip:hover,
+.category-pill:hover,
+.profile-extra-chip:hover {
+  transform: translateY(-1px);
+}
+
+/* Animaciones base */
+@keyframes fadeUpSoft {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ===== FIX AUTOFILL LOGIN ===== */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  transition: background-color 9999s ease-in-out 0s;
+  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+}
+
+/* si también quieres que funcione en modo claro */
+.login-card input:-webkit-autofill,
+.login-card textarea:-webkit-autofill,
+.login-card select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+}
+.dark-login input:-webkit-autofill,
+.dark-login input:-webkit-autofill:hover,
+.dark-login input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+}
+
+
+.profile-twitter-side-activity-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.profile-twitter-side-activity-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-twitter-side-activity-item strong {
+  font-size: 13px;
+  color: inherit;
+  line-height: 1.35;
+}
+
+.profile-twitter-side-activity-item span {
+  font-size: 12px;
+  color: #94a3b8;
 }
 /* RESPONSIVE */
 @media (max-width: 1100px) {

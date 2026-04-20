@@ -39,6 +39,8 @@ function ProfilePage({
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [savedReactionTotals, setSavedReactionTotals] = useState({});
   const [savedReactionUsersMap, setSavedReactionUsersMap] = useState({});
+  const [profileActivity, setProfileActivity] = useState([]);
+const [loadingProfileActivity, setLoadingProfileActivity] = useState(false);
 
   const [viewedProfile, setViewedProfile] = useState(
     isOwnProfile
@@ -287,6 +289,27 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
 
     fetchViewedProfile();
   }, [isOwnProfile, currentUser, userId, loggedInUserId, navigate]);
+
+  useEffect(() => {
+  const fetchProfileActivity = async () => {
+    if (!viewedProfile?.id) return;
+
+    try {
+      setLoadingProfileActivity(true);
+      const response = await axios.get(
+        `${API_BASE}/api/users/${viewedProfile.id}/activity`
+      );
+      setProfileActivity(Array.isArray(response.data) ? response.data.slice(0, 5) : []);
+    } catch (error) {
+      console.error('Error cargando actividad del perfil:', error);
+      setProfileActivity([]);
+    } finally {
+      setLoadingProfileActivity(false);
+    }
+  };
+
+  fetchProfileActivity();
+}, [viewedProfile?.id]);
 
   const safeRecognitions = Array.isArray(recognitions) ? recognitions : [];
   const profileUserId = viewedProfile?.id;
@@ -937,13 +960,14 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
 
         <aside className="profile-twitter-sidebar">
           <div className="profile-twitter-sidebox">
-            <input
-              type="text"
-              className="profile-twitter-search-input"
-              placeholder="Buscar"
-              value={profileSearch}
-              onChange={(e) => setProfileSearch(e.target.value)}
-            />
+           <input
+            type="text"
+            id="profileSearchInput"
+            className="profile-twitter-search-input"
+            placeholder="Buscar reconocimientos..."
+            value={profileSearch}
+            onChange={(e) => setProfileSearch(e.target.value)}
+          />
           </div>
 
           <div className="profile-twitter-sidebox">
@@ -963,11 +987,34 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
           </div>
 
           <div className="profile-twitter-sidebox">
-            <h3>Actividad</h3>
-            <p className="profile-twitter-side-text">
-              Aquí luego puedes mostrar actividad reciente, seguidores nuevos, comentarios o reacciones.
-            </p>
-          </div>
+  <h3>Actividad</h3>
+
+  {loadingProfileActivity ? (
+    <p className="profile-twitter-side-text">Cargando actividad...</p>
+  ) : profileActivity.length === 0 ? (
+    <p className="profile-twitter-side-text">Aún no hay actividad reciente.</p>
+  ) : (
+    <div className="profile-twitter-side-activity-list">
+      {profileActivity.map((item, index) => (
+        <div
+          key={`${item.type}-${index}-${item.created_at}`}
+          className="profile-twitter-side-activity-item"
+        >
+          <strong>
+            {item.actor_name || 'Usuario'}{' '}
+            {item.type === 'new_follower'
+              ? 'comenzó a seguir este perfil'
+              : item.type === 'reaction_received'
+              ? 'reaccionó a un reconocimiento'
+              : 'envió un reconocimiento'}
+          </strong>
+
+          {item.extra && <span>Categoría: {item.extra}</span>}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
         </aside>
       </div>
     </div>
