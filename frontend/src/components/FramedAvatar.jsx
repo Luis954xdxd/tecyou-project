@@ -70,8 +70,8 @@ function FramedAvatar({
       {frameAsset && (
         <img
           src={frameAsset}
-          alt="Marco de avatar"
-          className="framed-avatar-frame"
+          alt="Marco"
+          className={`framed-avatar-frame frame-${frameCode || 'default'}`}
         />
       )}
     </div>

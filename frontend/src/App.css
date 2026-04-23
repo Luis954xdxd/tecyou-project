@@ -10972,12 +10972,12 @@ body.dark .create-story-close-btn {
   top: 50%;
   left: 50%;
 
-  width: 350px;  /* 🔥 MÁS GRANDE */
-  height: 350px;
+  width: 220px;  /* 🔥 MÁS GRANDE */
+  height: 220px;
 
   object-fit: contain;
 
-  transform: translate(-50%, -40%) scale(1.25); /* 🔥 CLAVE */
+  transform: translate(-50%, -50%) scale(1.25); /* 🔥 CLAVE */
   
   pointer-events: none;
   z-index: 2;
@@ -11023,7 +11023,10 @@ body.dark .create-story-close-btn {
   border-radius: 999px !important;
 }
 
-/* 3. Wrapper reutilizable para avatar con marco */
+/* =========================================================
+   FRAMED AVATAR - BASE
+========================================================= */
+
 .framed-avatar {
   position: relative;
   display: inline-flex;
@@ -11066,91 +11069,118 @@ body.dark .create-story-close-btn {
   pointer-events: none;
   z-index: 2;
   object-fit: contain;
-  transform: translate(-50%, -50%);
-  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.38));
+  transform: translate(-50%, -50%) scale(1);
+  transform-origin: center center;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.32));
 }
 
-/* tamaños */
+/* =========================================================
+   TAMAÑOS POR CONTEXTO
+========================================================= */
+
 .framed-avatar.size-nav {
-  width: 70px;
-  height: 70px;
+  width: 52px;
+  height: 52px;
 }
 
 .framed-avatar.size-nav .framed-avatar-circle {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
 }
 
 .framed-avatar.size-nav .framed-avatar-frame {
-  width: 110px;
-  height: 110px;
-  transform: translate(-50%, -40%) scale(0.98);
-  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.2));
-}
-
-.framed-avatar.size-directory {
-  width: 88px;
-  height: 88px;
-}
-
-.framed-avatar.size-directory .framed-avatar-circle {
-  width: 56px;
-  height: 56px;
-}
-
-.framed-avatar.size-directory .framed-avatar-frame {
-  width: 140px;
-  height: 140px;
-  transform: translate(-50%, -40%) scale(1.02);
-}
-
-.framed-avatar.size-activity {
-  width: 76px;
-  height: 76px;
-}
-
-.framed-avatar.size-activity .framed-avatar-circle {
-  width: 49px;
-  height: 49px;
-}
-
-.framed-avatar.size-activity .framed-avatar-frame {
-  width: 140px;
-  height: 140px;
-  transform: translate(-50%, -40%) scale(1);
-}
-
-.framed-avatar.size-public {
-  width: 210px;
-  height: 210px;
-}
-
-.framed-avatar.size-public .framed-avatar-circle {
-  width: 120px;
-  height: 120px;
-}
-
-.framed-avatar.size-public .framed-avatar-frame {
-  width: 280px;
-  height: 280px;
-  transform: translate(-50%, -40%) scale(1.06);
+  width: 126%;
+  height: 126%;
 }
 
 .framed-avatar.size-feed {
-  width: 66px;
-  height: 66px;
+  width: 62px;
+  height: 62px;
 }
 
 .framed-avatar.size-feed .framed-avatar-circle {
+  width: 42px;
+  height: 42px;
+}
+
+.framed-avatar.size-feed .framed-avatar-frame {
+  width: 128%;
+  height: 128%;
+}
+
+.framed-avatar.size-directory {
+  width: 74px;
+  height: 74px;
+}
+
+.framed-avatar.size-directory .framed-avatar-circle {
   width: 50px;
   height: 50px;
 }
 
-.framed-avatar.size-feed .framed-avatar-frame {
-  width: 140px;
-  height: 140px;
-  transform: translate(-50%, -40%) scale(1.02);
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22));
+.framed-avatar.size-directory .framed-avatar-frame {
+  width: 130%;
+  height: 130%;
+}
+
+.framed-avatar.size-activity {
+  width: 66px;
+  height: 66px;
+}
+
+.framed-avatar.size-activity .framed-avatar-circle {
+  width: 44px;
+  height: 44px;
+}
+
+.framed-avatar.size-activity .framed-avatar-frame {
+  width: 128%;
+  height: 128%;
+}
+
+.framed-avatar.size-public {
+  width: 190px;
+  height: 190px;
+}
+
+.framed-avatar.size-public .framed-avatar-circle {
+  width: 122px;
+  height: 122px;
+}
+
+.framed-avatar.size-public .framed-avatar-frame {
+  width: 132%;
+  height: 132%;
+  transform: translate(-50%, -50%) scale(0.80);
+}
+
+/* =========================================================
+   AJUSTES INDIVIDUALES POR MARCO
+========================================================= */
+
+/* COBRE: ya es el más estable */
+.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.3);
+}
+
+/* PLATA: se ve demasiado grande y baja */
+.frame-silver_frame {
+  transform: translate(-50%, -52%) scale(0.84);
+}
+
+/* ORO: un poco grande, pero menos problemático */
+.frame-gold_frame {
+  transform: translate(-50%, -51%) scale(0.92);
+}
+
+/* RUBÍ: suele venir cargado hacia abajo */
+.frame-crimson_ruby_frame {
+  transform: translate(-50%, -52%) scale(0.88);
+}
+
+/* DIAMANTE: el más exagerado y con pedestal pesado */
+.frame-diamond_frame {
+  transform: translate(-50%, -54%) scale(0.80);
 }
 
 /* fila del autor en feed */
@@ -11314,7 +11344,7 @@ div[class*="avatar"] img {
   flex-direction: column;
   justify-content: center;
   align-items: flex-end;
-  margin-left:-43px;
+  margin-left:-24px;
   transform: translateY(-30px);
 }
 
@@ -11651,6 +11681,28 @@ select:-webkit-autofill {
   font-size: 12px;
   color: #94a3b8;
 }
+
+.public-profile-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible !important;
+  position: relative;
+  min-width: 220px;
+  min-height: 220px;
+}
+
+.public-profile-avatar-wrap .framed-avatar.size-public {
+  width: 210px;
+  height: 210px;
+}
+
+.public-profile-avatar-wrap .framed-avatar.size-public .framed-avatar-circle {
+  width: 122px;
+  height: 122px;
+}
+
+
 /* RESPONSIVE */
 @media (max-width: 1100px) {
   .login-shell {

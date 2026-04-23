@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import FramedAvatar from './FramedAvatar';
- 
+
 const API_BASE = 'http://localhost:5000';
- 
+
 function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowChanged }) {
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [processingFollow, setProcessingFollow] = useState(false);
- 
- 
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('es-MX', {
       day: '2-digit',
@@ -17,14 +16,17 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
       year: 'numeric',
     });
   };
- 
+
   const fetchProfile = async () => {
     if (!userId || !isOpen) return;
+
     try {
       setLoadingProfile(true);
+
       const response = await axios.get(
         `${API_BASE}/api/users/${userId}/public?viewerId=${currentUserId}`
       );
+
       setProfileData(response.data);
     } catch (error) {
       console.error('Error al obtener perfil público:', error);
@@ -32,15 +34,19 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
       setLoadingProfile(false);
     }
   };
- 
+
   useEffect(() => {
     fetchProfile();
   }, [userId, isOpen]);
- 
+
   const handleFollowToggle = async () => {
-    if (!profileData?.user || Number(profileData.user.id) === Number(currentUserId)) return;
+    if (!profileData?.user || Number(profileData.user.id) === Number(currentUserId)) {
+      return;
+    }
+
     try {
       setProcessingFollow(true);
+
       if (profileData.user.is_following) {
         await axios.delete(`${API_BASE}/api/users/${profileData.user.id}/follow`, {
           data: { follower_id: currentUserId },
@@ -50,8 +56,12 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
           follower_id: currentUserId,
         });
       }
+
       await fetchProfile();
-      if (onFollowChanged) onFollowChanged();
+
+      if (onFollowChanged) {
+        onFollowChanged();
+      }
     } catch (error) {
       console.error('Error al seguir/dejar de seguir:', error);
       alert(error.response?.data?.error || 'No se pudo actualizar el seguimiento.');
@@ -59,20 +69,23 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
       setProcessingFollow(false);
     }
   };
- 
+
   if (!isOpen) return null;
- 
+
   return (
     <div className="public-profile-overlay" onClick={onClose}>
       <div className="public-profile-modal" onClick={(e) => e.stopPropagation()}>
- 
         {/* Banner */}
         <div className="public-profile-banner">
-          <button type="button" className="profile-modal-close public-profile-close-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="profile-modal-close public-profile-close-btn"
+            onClick={onClose}
+          >
             ✕
           </button>
         </div>
- 
+
         {loadingProfile ? (
           <div className="public-profile-loading">
             <p>Cargando perfil...</p>
@@ -86,14 +99,14 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
             {/* Avatar + botón seguir */}
             <div className="public-profile-avatar-row">
               <div className="public-profile-avatar-wrap">
-  <FramedAvatar
-    imageUrl={profileData.user.profile_image_url}
-    name={profileData.user.display_name || profileData.user.fullname}
-    frameCode={profileData.user.equipped_frame_code}
-    sizeClass="size-public"
-  />
-</div>
- 
+                <FramedAvatar
+                  imageUrl={profileData.user.profile_image_url}
+                  name={profileData.user.display_name || profileData.user.fullname}
+                  frameCode={profileData.user.equipped_frame_code}
+                  sizeClass="size-public"
+                />
+              </div>
+
               {Number(profileData.user.id) !== Number(currentUserId) && (
                 <button
                   type="button"
@@ -109,7 +122,7 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
                 </button>
               )}
             </div>
- 
+
             {/* Nombre, email, bio */}
             <div className="public-profile-main">
               <h3>{profileData.user.display_name}</h3>
@@ -117,51 +130,69 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
               <p className="public-profile-bio">
                 {profileData.user.bio || 'Este usuario aún no ha agregado una biografía.'}
               </p>
- 
+
               <div className="public-profile-tags">
                 {(profileData.user.tags || []).map((tag) => (
-                  <span key={tag} className="profile-tag">{tag}</span>
+                  <span key={tag} className="profile-tag">
+                    {tag}
+                  </span>
                 ))}
               </div>
             </div>
- 
+
             {/* Stats en línea */}
             <div className="public-profile-stats-row">
-              <span><strong>{profileData.user.following_count}</strong> Siguiendo</span>
-              <span><strong>{profileData.user.followers_count}</strong> Seguidores</span>
-              <span><strong>{profileData.user.recognitions_sent}</strong> Enviados</span>
-              <span><strong>{profileData.user.recognitions_received}</strong> Recibidos</span>
+              <span>
+                <strong>{profileData.user.following_count}</strong> Siguiendo
+              </span>
+              <span>
+                <strong>{profileData.user.followers_count}</strong> Seguidores
+              </span>
+              <span>
+                <strong>{profileData.user.recognitions_sent}</strong> Enviados
+              </span>
+              <span>
+                <strong>{profileData.user.recognitions_received}</strong> Recibidos
+              </span>
             </div>
- 
+
             {/* Reconocimientos */}
             <div className="public-profile-columns">
               <div className="public-profile-column">
                 <h4>Reconocimientos recibidos</h4>
                 <div className="public-profile-rec-list">
                   {profileData.recognitions_received.length === 0 ? (
-                    <p className="public-profile-empty">Aún no hay reconocimientos recibidos.</p>
+                    <p className="public-profile-empty">
+                      Aún no hay reconocimientos recibidos.
+                    </p>
                   ) : (
                     profileData.recognitions_received.map((item) => (
                       <div key={item.id} className="public-profile-rec-card">
                         <strong>{item.sender_name}</strong>
-                        <span>{item.category} · {formatDate(item.created_at)}</span>
+                        <span>
+                          {item.category} · {formatDate(item.created_at)}
+                        </span>
                         <p>"{item.message}"</p>
                       </div>
                     ))
                   )}
                 </div>
               </div>
- 
+
               <div className="public-profile-column">
                 <h4>Reconocimientos enviados</h4>
                 <div className="public-profile-rec-list">
                   {profileData.recognitions_sent.length === 0 ? (
-                    <p className="public-profile-empty">Aún no hay reconocimientos enviados.</p>
+                    <p className="public-profile-empty">
+                      Aún no hay reconocimientos enviados.
+                    </p>
                   ) : (
                     profileData.recognitions_sent.map((item) => (
                       <div key={item.id} className="public-profile-rec-card">
                         <strong>{item.receiver_name}</strong>
-                        <span>{item.category} · {formatDate(item.created_at)}</span>
+                        <span>
+                          {item.category} · {formatDate(item.created_at)}
+                        </span>
                         <p>"{item.message}"</p>
                       </div>
                     ))
@@ -175,5 +206,5 @@ function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowCh
     </div>
   );
 }
- 
+
 export default PublicProfileModal;
