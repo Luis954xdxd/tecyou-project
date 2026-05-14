@@ -1,0 +1,967 @@
+/* =========================================
+   DARK MODE GENERAL
+========================================= */
+
+.App.dark {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.12), transparent 36%),
+    linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  color: #f8fafc;
+  min-height: 100vh;
+}
+
+/* =========================================
+   TEXTOS GENERALES
+========================================= */
+
+.App.dark h1,
+.App.dark h2,
+.App.dark h3,
+.App.dark h4,
+.App.dark strong {
+  color: #f8fafc;
+}
+
+.App.dark p,
+.App.dark span,
+.App.dark small,
+.App.dark label {
+  color: #cbd5e1;
+}
+
+.App.dark .section-label {
+  color: #a5b4fc;
+}
+
+/* =========================================
+   NAVBAR DARK
+========================================= */
+
+.App.dark .main-nav {
+  background: rgba(2, 6, 23, 0.88);
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .nav-profile-dropdown,
+.App.dark .dropdown-menu,
+.App.dark .global-search-results {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
+}
+
+.App.dark .nav-dropdown-userinfo strong,
+.App.dark .global-search-result-item strong {
+  color: #f8fafc;
+}
+
+.App.dark .nav-dropdown-userinfo span,
+.App.dark .global-search-result-item span {
+  color: #94a3b8;
+}
+
+.App.dark .nav-dropdown-btn,
+.App.dark .dropdown-menu button,
+.App.dark .global-search-result-item {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.App.dark .nav-dropdown-btn:hover,
+.App.dark .dropdown-menu button:hover,
+.App.dark .global-search-result-item:hover {
+  background: #1e293b;
+}
+
+.App.dark .nav-dropdown-status {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.22);
+  color: #86efac;
+}
+
+/* =========================================
+   CARDS / CONTENEDORES DARK
+========================================= */
+
+.App.dark .hero-panel,
+.App.dark .featured-card,
+.App.dark .category-summary-card,
+.App.dark .mini-stat,
+.App.dark .sidebar,
+.App.dark .feed-section,
+.App.dark .recognition-card,
+.App.dark .profile-card,
+.App.dark .profile-twitter-card,
+.App.dark .profile-twitter-sidebox,
+.App.dark .profile-twitter-rec-card,
+.App.dark .saved-recognition-feed-card,
+.App.dark .notifications-card,
+.App.dark .notification-item,
+.App.dark .stories-uploader,
+.App.dark .create-story-modal,
+.App.dark .profile-modal,
+.App.dark .premium-profile-modal,
+.App.dark .public-profile-modal {
+  background: linear-gradient(145deg, #0f172a, #111827);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.36);
+}
+
+/* =========================================
+   HERO / DASHBOARD DARK
+========================================= */
+
+.App.dark .hero-subtext,
+.App.dark .featured-subtext,
+.App.dark .feed-subtext,
+.App.dark .category-summary-subtext,
+.App.dark .profile-twitter-side-text {
+  color: #94a3b8;
+}
+
+.App.dark .stat-card,
+.App.dark .empty-state,
+.App.dark .loading-state,
+.App.dark .featured-empty,
+.App.dark .notifications-empty-state,
+.App.dark .public-profile-empty,
+.App.dark .profile-twitter-empty {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.App.dark .stat-card strong,
+.App.dark .mini-stat strong {
+  color: #a5b4fc;
+}
+
+.App.dark .category-bar-track {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+/* =========================================
+   RECONOCIMIENTOS DARK
+========================================= */
+
+.App.dark .message-text,
+.App.dark .featured-message-text,
+.App.dark .profile-twitter-rec-message,
+.App.dark .comment-text,
+.App.dark .notification-content small,
+.App.dark .notifications-bell-content small,
+.App.dark .public-profile-rec-card p,
+.App.dark .public-profile-bio,
+.App.dark .profile-twitter-bio {
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .comment-item,
+.App.dark .public-profile-rec-card,
+.App.dark .ai-classification-box,
+.App.dark .story-users-box,
+.App.dark .profile-twitter-side-activity-item {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.App.dark .reaction-chip,
+.App.dark .reaction-total-chip,
+.App.dark .recognition-save-btn,
+.App.dark .recognition-share-btn,
+.App.dark .filter-chip,
+.App.dark .sort-select,
+.App.dark .story-user-option {
+  background: #111827;
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.App.dark .reaction-chip:hover,
+.App.dark .recognition-save-btn:hover,
+.App.dark .recognition-share-btn:hover,
+.App.dark .filter-chip:hover {
+  background: #1e293b;
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+.App.dark .reaction-chip.active,
+.App.dark .filter-chip.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+}
+
+/* =========================================
+   PERFIL DARK
+========================================= */
+
+.App.dark .profile-twitter-tabs {
+  background: rgba(15, 23, 42, 0.84);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.App.dark .profile-twitter-tab {
+  color: #94a3b8;
+}
+
+.App.dark .profile-twitter-tab:hover,
+.App.dark .profile-twitter-tab.active {
+  color: #c4b5fd;
+}
+
+.App.dark .profile-tag,
+.App.dark .active-filter-chip,
+.App.dark .notifications-badge,
+.App.dark .ai-tag {
+  background: rgba(99, 102, 241, 0.14);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.22);
+}
+
+.App.dark .profile-twitter-email,
+.App.dark .profile-twitter-meta-row,
+.App.dark .profile-twitter-stats span,
+.App.dark .public-profile-email,
+.App.dark .public-profile-stats-row span {
+  color: #94a3b8;
+}
+
+.App.dark .profile-twitter-stats strong,
+.App.dark .public-profile-stats-row strong {
+  color: #f8fafc;
+}
+
+/* =========================================
+   BOTONES DARK
+========================================= */
+
+.App.dark .profile-twitter-edit-btn,
+.App.dark .profile-twitter-photo-btn,
+.App.dark .profile-twitter-cover-btn,
+.App.dark .profile-action-btn,
+.App.dark .profile-modal-cancel-btn,
+.App.dark .premium-profile-cancel-btn,
+.App.dark .create-story-cancel-btn,
+.App.dark .notifications-read-all-btn,
+.App.dark .notification-read-btn,
+.App.dark .notifications-bell-read-all,
+.App.dark .notifications-bell-mark-btn {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.App.dark .profile-twitter-edit-btn:hover,
+.App.dark .profile-twitter-photo-btn:hover,
+.App.dark .profile-twitter-cover-btn:hover,
+.App.dark .profile-action-btn:hover,
+.App.dark .notifications-read-all-btn:hover,
+.App.dark .notification-read-btn:hover,
+.App.dark .notifications-bell-read-all:hover,
+.App.dark .notifications-bell-mark-btn:hover {
+  background: #1e293b;
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.44);
+}
+
+/* =========================================
+   INPUTS DARK
+========================================= */
+
+.App.dark input,
+.App.dark textarea,
+.App.dark select,
+.App.dark .feed-search input,
+.App.dark .profile-twitter-search-input,
+.App.dark .comment-form input,
+.App.dark .stories-text-input,
+.App.dark .create-story-field input,
+.App.dark .create-story-field textarea,
+.App.dark .create-story-field select,
+.App.dark .profile-modal-field input,
+.App.dark .profile-modal-field textarea,
+.App.dark .premium-profile-field input,
+.App.dark .premium-profile-field textarea {
+  background: #020617;
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.App.dark input::placeholder,
+.App.dark textarea::placeholder {
+  color: rgba(203, 213, 225, 0.48);
+}
+
+.App.dark input:focus,
+.App.dark textarea:focus,
+.App.dark select:focus {
+  border-color: rgba(167, 139, 250, 0.78);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.16);
+}
+
+/* =========================================
+   AUTOFILL DARK
+========================================= */
+
+.App.dark input:-webkit-autofill,
+.App.dark input:-webkit-autofill:hover,
+.App.dark input:-webkit-autofill:focus,
+.App.dark textarea:-webkit-autofill,
+.App.dark select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0px 1000px #020617 inset !important;
+  box-shadow: 0 0 0px 1000px #020617 inset !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+}
+
+/* =========================================
+   NOTIFICACIONES DARK
+========================================= */
+
+.App.dark .notifications-bell-dropdown {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
+}
+
+.App.dark .notifications-bell-header,
+.App.dark .notifications-bell-item {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .notification-item.unread,
+.App.dark .notifications-bell-item.unread {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.16), rgba(124, 58, 237, 0.12));
+  border-color: rgba(167, 139, 250, 0.22);
+}
+
+.App.dark .notification-item.read,
+.App.dark .notifications-bell-item.read {
+  opacity: 0.72;
+}
+
+.App.dark .notifications-bell-item:hover {
+  background: #1e293b;
+}
+
+/* =========================================
+   MODALES DARK
+========================================= */
+
+.App.dark .profile-modal-header,
+.App.dark .premium-profile-modal-header,
+.App.dark .create-story-header,
+.App.dark .notifications-bell-header {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.App.dark .profile-modal-close,
+.App.dark .public-profile-close-btn {
+  background: #111827;
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.App.dark .profile-modal-close:hover,
+.App.dark .public-profile-close-btn:hover {
+  background: #1e293b;
+  color: #c4b5fd;
+}
+
+.App.dark .premium-profile-avatar-box,
+.App.dark .create-story-preview {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+/* =========================================
+   STORIES DARK
+========================================= */
+
+.App.dark .story-bubble span,
+.App.dark .own-story-bubble span,
+.App.dark .stories-uploader-meta strong,
+.App.dark .story-user-option span {
+  color: #f8fafc;
+}
+
+.App.dark .stories-uploader-meta span {
+  color: #94a3b8;
+}
+
+.App.dark .story-upload-circle {
+  background: rgba(99, 102, 241, 0.14);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+}
+
+/* =========================================
+   PUBLIC PROFILE DARK
+========================================= */
+
+.App.dark .public-profile-stats-row {
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+/* =========================================
+   SCROLLBAR DARK
+========================================= */
+
+.App.dark ::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+.App.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4f46e5, #7c3aed);
+}
+
+/* =========================================
+   DARK PROFILE PAGE COMPAT
+========================================= */
+
+.dark-profile-page {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.12), transparent 36%),
+    linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  color: #f8fafc;
+}
+
+.dark-profile-page .profile-twitter-card,
+.dark-profile-page .profile-twitter-sidebox,
+.dark-profile-page .profile-twitter-rec-card {
+  background: linear-gradient(145deg, #0f172a, #111827);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.dark-profile-page .profile-twitter-info h2,
+.dark-profile-page .profile-twitter-sidebox h3,
+.dark-profile-page .profile-twitter-rec-header strong {
+  color: #f8fafc;
+}
+
+.dark-profile-page .profile-twitter-bio,
+.dark-profile-page .profile-twitter-rec-message {
+  color: #dbeafe;
+}
+
+.dark-profile-page .profile-twitter-email,
+.dark-profile-page .profile-twitter-side-text,
+.dark-profile-page .profile-twitter-rec-header span {
+  color: #94a3b8;
+}
+
+
+/* =========================================
+   MODO CLARO / OSCURO GLOBAL
+========================================= */
+
+/* MODO CLARO */
+.App {
+  --app-bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-alt: #f8fafc;
+  --text: #0f172a;
+  --text-soft: #475569;
+  --border: rgba(15, 23, 42, 0.12);
+  --card-bg: #ffffff;
+  --input-bg: #ffffff;
+  --input-text: #0f172a;
+}
+
+/* Fondo general claro */
+.App {
+  background: linear-gradient(180deg, #f8fafc, #eef2ff);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Cards en claro */
+.App .recognition-card,
+.App .hero-panel,
+.App .category-summary-card,
+.App .mini-stat,
+.App .stat-card,
+.App .sidebar,
+.App .feed-section,
+.App .users-directory-card,
+.App .notifications-card,
+.App .activity-panel-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Textos claros */
+.App h1,
+.App h2,
+.App h3,
+.App h4,
+.App p,
+.App span,
+.App label,
+.App strong,
+.App small {
+  color: inherit;
+}
+
+.App .hero-panel h1,
+.App .featured-header h2,
+.App .feed-header h2,
+.App .category-summary-header h2,
+.App .main-text,
+.App .featured-main-text {
+  color: #0f172a !important;
+}
+
+.App .hero-subtext,
+.App .featured-subtext,
+.App .feed-subtext,
+.App .category-summary-subtext,
+.App .date,
+.App .field-hint {
+  color: #475569 !important;
+}
+
+/* Mensajes en claro */
+.App .message-text,
+.App .featured-message-text,
+.App .comment-input,
+.App .reply-input,
+.App .form-control,
+.App .feed-search input,
+.App .sort-select {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+/* Placeholders en claro */
+.App input::placeholder,
+.App textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Botones y chips en claro */
+.App .reaction-chip,
+.App .reaction-main-btn,
+.App .filter-chip,
+.App .comments-panel,
+.App .comment-item,
+.App .recognition-header-row,
+.App .recognition-media-premium {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Links */
+.App .inline-user-link {
+  color: #2563eb !important;
+}
+
+/* =========================================
+   MODO OSCURO
+========================================= */
+
+.App.dark {
+  --app-bg: #020617;
+  --surface: #0f172a;
+  --surface-alt: #111827;
+  --text: #f8fafc;
+  --text-soft: #94a3b8;
+  --border: rgba(148, 163, 184, 0.18);
+  --card-bg: #101827;
+  --input-bg: #111827;
+  --input-text: #f8fafc;
+
+  background: linear-gradient(180deg, #020617, #0f172a);
+  color: #f8fafc;
+}
+
+/* Cards oscuras */
+.App.dark .recognition-card,
+.App.dark .hero-panel,
+.App.dark .category-summary-card,
+.App.dark .mini-stat,
+.App.dark .stat-card,
+.App.dark .sidebar,
+.App.dark .feed-section,
+.App.dark .users-directory-card,
+.App.dark .notifications-card,
+.App.dark .activity-panel-card {
+  background: linear-gradient(145deg, #101827, #121b31) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Textos oscuros */
+.App.dark .hero-panel h1,
+.App.dark .featured-header h2,
+.App.dark .feed-header h2,
+.App.dark .category-summary-header h2,
+.App.dark .main-text,
+.App.dark .featured-main-text {
+  color: #f8fafc !important;
+}
+
+.App.dark .hero-subtext,
+.App.dark .featured-subtext,
+.App.dark .feed-subtext,
+.App.dark .category-summary-subtext,
+.App.dark .date,
+.App.dark .field-hint {
+  color: #94a3b8 !important;
+}
+
+/* Mensajes en oscuro */
+.App.dark .message-text,
+.App.dark .featured-message-text,
+.App.dark .comment-input,
+.App.dark .reply-input,
+.App.dark .form-control,
+.App.dark .feed-search input,
+.App.dark .sort-select {
+  background: rgba(30, 41, 59, 0.9) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Placeholders en oscuro */
+.App.dark input::placeholder,
+.App.dark textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Botones y chips en oscuro */
+.App.dark .reaction-chip,
+.App.dark .reaction-main-btn,
+.App.dark .filter-chip,
+.App.dark .comments-panel,
+.App.dark .comment-item,
+.App.dark .recognition-header-row,
+.App.dark .recognition-media-premium {
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Links */
+.App.dark .inline-user-link {
+  color: #93c5fd !important;
+}
+
+/* =========================================================
+   TEMA GLOBAL FINAL - CLARO / OSCURO
+   Pegar al FINAL de darkMode.css
+========================================================= */
+
+/* =========================
+   MODO CLARO GLOBAL
+========================= */
+
+.App:not(.dark) {
+  background: linear-gradient(180deg, #f8fafc, #eef2ff) !important;
+  color: #0f172a !important;
+
+  --surface: #ffffff;
+  --surface-alt: #f8fafc;
+  --text: #0f172a;
+  --text-soft: #475569;
+  --border: rgba(15, 23, 42, 0.14);
+}
+
+/* Fondos principales */
+.App:not(.dark) .main-nav,
+.App:not(.dark) .hero-panel,
+.App:not(.dark) .recognition-card,
+.App:not(.dark) .profile-card,
+.App:not(.dark) .sidebar,
+.App:not(.dark) .feed-section,
+.App:not(.dark) .users-directory-card,
+.App:not(.dark) .users-directory-list-box,
+.App:not(.dark) .activity-panel-card,
+.App:not(.dark) .notifications-card,
+.App:not(.dark) .category-summary-card,
+.App:not(.dark) .mini-stat,
+.App:not(.dark) .stat-card,
+.App:not(.dark) .public-profile-modal,
+.App:not(.dark) .profile-modal,
+.App:not(.dark) .comments-panel,
+.App:not(.dark) .comment-item,
+.App:not(.dark) .recognition-header-row,
+.App:not(.dark) .recognition-media-premium {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Textos en claro */
+.App:not(.dark) h1,
+.App:not(.dark) h2,
+.App:not(.dark) h3,
+.App:not(.dark) h4,
+.App:not(.dark) p,
+.App:not(.dark) span,
+.App:not(.dark) label,
+.App:not(.dark) strong,
+.App:not(.dark) small,
+.App:not(.dark) .main-text,
+.App:not(.dark) .featured-main-text,
+.App:not(.dark) .profile-main-info h3,
+.App:not(.dark) .section-label {
+  color: #0f172a !important;
+}
+
+/* Textos secundarios */
+.App:not(.dark) .hero-subtext,
+.App:not(.dark) .featured-subtext,
+.App:not(.dark) .feed-subtext,
+.App:not(.dark) .category-summary-subtext,
+.App:not(.dark) .field-hint,
+.App:not(.dark) .date,
+.App:not(.dark) .profile-email,
+.App:not(.dark) .profile-bio,
+.App:not(.dark) .users-directory-subtext,
+.App:not(.dark) .activity-panel-subtext {
+  color: #475569 !important;
+}
+
+/* Inputs / textarea / selects */
+.App:not(.dark) input,
+.App:not(.dark) textarea,
+.App:not(.dark) select,
+.App:not(.dark) .form-control,
+.App:not(.dark) .feed-search input,
+.App:not(.dark) .sort-select,
+.App:not(.dark) .comment-input,
+.App:not(.dark) .reply-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+.App:not(.dark) input::placeholder,
+.App:not(.dark) textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Mensajes */
+.App:not(.dark) .message-text,
+.App:not(.dark) .featured-message-text {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+/* Botones/chips */
+.App:not(.dark) .reaction-chip,
+.App:not(.dark) .reaction-main-btn,
+.App:not(.dark) .filter-chip,
+.App:not(.dark) .badge-category,
+.App:not(.dark) .profile-tag,
+.App:not(.dark) .profile-extra-chip,
+.App:not(.dark) .category-pill,
+.App:not(.dark) .story-bubble,
+.App:not(.dark) .own-story-bubble .add-story-avatar {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+/* Links */
+.App:not(.dark) .inline-user-link {
+  color: #2563eb !important;
+}
+
+/* Avatares / marcos en claro */
+.App:not(.dark) .framed-avatar-circle {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+.App:not(.dark) .framed-avatar-frame {
+  filter:
+    drop-shadow(0 10px 20px rgba(15, 23, 42, 0.18))
+    drop-shadow(0 2px 6px rgba(15, 23, 42, 0.12)) !important;
+}
+
+/* =========================
+   MODO OSCURO GLOBAL
+========================= */
+
+.App.dark {
+  background: linear-gradient(180deg, #020617, #0f172a) !important;
+  color: #f8fafc !important;
+
+  --surface: #0f172a;
+  --surface-alt: #111827;
+  --text: #f8fafc;
+  --text-soft: #94a3b8;
+  --border: rgba(148, 163, 184, 0.18);
+}
+
+/* Fondos oscuros */
+.App.dark .main-nav,
+.App.dark .hero-panel,
+.App.dark .recognition-card,
+.App.dark .profile-card,
+.App.dark .sidebar,
+.App.dark .feed-section,
+.App.dark .users-directory-card,
+.App.dark .users-directory-list-box,
+.App.dark .activity-panel-card,
+.App.dark .notifications-card,
+.App.dark .category-summary-card,
+.App.dark .mini-stat,
+.App.dark .stat-card,
+.App.dark .public-profile-modal,
+.App.dark .profile-modal {
+  background: linear-gradient(145deg, #101827, #121b31) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Textos oscuros */
+.App.dark h1,
+.App.dark h2,
+.App.dark h3,
+.App.dark h4,
+.App.dark p,
+.App.dark span,
+.App.dark label,
+.App.dark strong,
+.App.dark small,
+.App.dark .main-text,
+.App.dark .featured-main-text,
+.App.dark .section-label {
+  color: #f8fafc !important;
+}
+
+/* Textos secundarios oscuros */
+.App.dark .hero-subtext,
+.App.dark .featured-subtext,
+.App.dark .feed-subtext,
+.App.dark .category-summary-subtext,
+.App.dark .field-hint,
+.App.dark .date,
+.App.dark .profile-email,
+.App.dark .profile-bio,
+.App.dark .users-directory-subtext,
+.App.dark .activity-panel-subtext {
+  color: #94a3b8 !important;
+}
+
+/* Inputs oscuros */
+.App.dark input,
+.App.dark textarea,
+.App.dark select,
+.App.dark .form-control,
+.App.dark .feed-search input,
+.App.dark .sort-select,
+.App.dark .comment-input,
+.App.dark .reply-input {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+.App.dark input::placeholder,
+.App.dark textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Mensajes oscuros */
+.App.dark .message-text,
+.App.dark .featured-message-text,
+.App.dark .comments-panel,
+.App.dark .comment-item,
+.App.dark .recognition-header-row,
+.App.dark .recognition-media-premium {
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Botones/chips oscuros */
+.App.dark .reaction-chip,
+.App.dark .reaction-main-btn,
+.App.dark .filter-chip,
+.App.dark .badge-category,
+.App.dark .profile-tag,
+.App.dark .profile-extra-chip,
+.App.dark .category-pill,
+.App.dark .own-story-bubble .add-story-avatar {
+  background: rgba(30, 41, 59, 0.88) !important;
+  color: #f8fafc !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Links oscuros */
+.App.dark .inline-user-link {
+  color: #93c5fd !important;
+}
+
+/* Avatares / marcos oscuro */
+.App.dark .framed-avatar-circle {
+  background: linear-gradient(135deg, #111827, #1f2937) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.App.dark .framed-avatar-frame {
+  filter:
+    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.46))
+    drop-shadow(0 2px 10px rgba(0, 0, 0, 0.22)) !important;
+}
+
+/* =========================================
+   FIX MODO CLARO - DIRECTORIO Y COMENTARIOS
+========================================= */
+
+.App:not(.dark) .directory-user-card,
+.App:not(.dark) .activity-item,
+.App:not(.dark) .notification-item,
+.App:not(.dark) .public-profile-rec-card {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.App:not(.dark) .directory-user-meta strong,
+.App:not(.dark) .directory-user-meta span,
+.App:not(.dark) .directory-user-meta small,
+.App:not(.dark) .comments-toggle-btn,
+.App:not(.dark) .comment-body p,
+.App:not(.dark) .comment-meta span {
+  color: #0f172a !important;
+}
+
+.App:not(.dark) .comments-toggle-btn:hover {
+  color: #2563eb !important;
+}
+
+.App:not(.dark) .follow-btn,
+.App:not(.dark) .recognize-quick-btn,
+.App:not(.dark) .comment-submit-btn,
+.App:not(.dark) .reply-submit-btn,
+.App:not(.dark) .comment-reply-toggle-btn {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.14) !important;
+}
+
+.App:not(.dark) .follow-btn.following {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.App:not(.dark) .recognize-quick-btn:hover,
+.App:not(.dark) .follow-btn:hover {
+  background: #cbd5e1 !important;
+}

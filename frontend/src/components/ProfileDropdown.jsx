@@ -12,6 +12,8 @@ function ProfileDropdown({
   onGoToProfile,
   darkMode,
   onToggleDark,
+  hideAvatarFrames,
+  onToggleAvatarFrames,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef(null);
@@ -37,7 +39,7 @@ function ProfileDropdown({
         <FramedAvatar
           imageUrl={profileImage || user?.profile_image_url}
           name={displayName || user?.display_name || user?.fullname}
-          frameCode={user?.equipped_frame_code}
+          frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
           sizeClass="size-nav"
         />
       </button>
@@ -48,7 +50,7 @@ function ProfileDropdown({
             <FramedAvatar
               imageUrl={profileImage || user?.profile_image_url}
               name={displayName || user?.display_name || user?.fullname}
-              frameCode={user?.equipped_frame_code}
+              frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
               sizeClass="size-activity"
               className="nav-dropdown-framed-avatar"
             />
@@ -66,6 +68,7 @@ function ProfileDropdown({
           <div className="nav-dropdown-actions">
             <button
               className="nav-dropdown-btn"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 openEditProfileModal();
@@ -76,6 +79,7 @@ function ProfileDropdown({
 
             <button
               className="nav-dropdown-btn"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 fileInputRef.current?.click();
@@ -86,6 +90,7 @@ function ProfileDropdown({
 
             <button
               className="nav-dropdown-btn"
+              type="button"
               onClick={() => {
                 onToggleDark();
                 setIsOpen(false);
@@ -96,6 +101,18 @@ function ProfileDropdown({
 
             <button
               className="nav-dropdown-btn"
+              type="button"
+              onClick={() => {
+                onToggleAvatarFrames();
+                setIsOpen(false);
+              }}
+            >
+              {hideAvatarFrames ? '🖼️ Mostrar marcos' : '🚫 Ocultar marcos'}
+            </button>
+
+            <button
+              className="nav-dropdown-btn"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 onGoToProfile();
@@ -106,6 +123,7 @@ function ProfileDropdown({
 
             <button
               className="nav-dropdown-btn danger"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 onLogout();

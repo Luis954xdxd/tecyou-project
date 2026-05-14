@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
@@ -7,6 +7,11 @@ function NotificationsPanel({ userId, onOpenProfile }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  // Controla si ya se hizo la primera carga.
+  // En los polls posteriores NO se muestra el spinner para evitar
+  // que el componente se encoja y cause el espasmo visual.
+  const hasLoadedOnce = useRef(false);
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -52,47 +57,58 @@ function NotificationsPanel({ userId, onOpenProfile }) {
     return item.title || 'Nueva notificación';
   };
 
- const fetchNotifications = async () => {
-  if (!userId) return;
+  const fetchNotifications = async () => {
+    if (!userId) return;
 
-  try {
-    setLoadingNotifications(true);
+    try {
+      // Solo muestra el spinner en la PRIMERA carga.
+      // En los polls del intervalo actualiza los datos en silencio,
+      // sin cambiar la altura del componente ni causar parpadeo.
+      if (!hasLoadedOnce.current) {
+        setLoadingNotifications(true);
+      }
 
-    const notificationsRes = await axios.get(
-      `${API_BASE}/api/users/${userId}/notifications`
-    );
+      const notificationsRes = await axios.get(
+        `${API_BASE}/api/users/${userId}/notifications`
+      );
 
-    setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
-  } catch (error) {
-    console.error('Error al obtener notificaciones:', error);
-    setNotifications([]);
-  }
+      setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data : []);
+      hasLoadedOnce.current = true;
+    } catch (error) {
+      console.error('Error al obtener notificaciones:', error);
+      if (!hasLoadedOnce.current) setNotifications([]);
+    }
 
-  try {
-    const unreadRes = await axios.get(
-      `${API_BASE}/api/users/${userId}/notifications/unread-count`
-    );
+    try {
+      const unreadRes = await axios.get(
+        `${API_BASE}/api/users/${userId}/notifications/unread-count`
+      );
 
-    setUnreadCount(unreadRes.data?.total || 0);
-  } catch (error) {
-    console.error('Error al obtener contador de no leídas:', error);
-    setUnreadCount(0);
-  } finally {
-    setLoadingNotifications(false);
-  }
-};
+      setUnreadCount(unreadRes.data?.total || 0);
+    } catch (error) {
+      console.error('Error al obtener contador de no leídas:', error);
+      setUnreadCount(0);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
- useEffect(() => {
-  if (!userId) return;
+  useEffect(() => {
+    if (!userId) return;
 
-  fetchNotifications();
-
-  const interval = setInterval(() => {
     fetchNotifications();
-  }, 10000);
 
-  return () => clearInterval(interval);
-}, [userId]);
+    // Intervalo cambiado de 10s a 30s:
+    // - 10s era demasiado agresivo y los 3 componentes (ActivityPanel,
+    //   NotificationsPanel, NotificationsBell) se disparaban al mismo tiempo
+    //   causando múltiples re-renders y el espasmo visual cada 10 segundos.
+    // - 30s es suficiente para mantener los datos frescos sin afectar la UI.
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   const handleMarkAsRead = async (notificationId) => {
     try {
@@ -179,7 +195,7 @@ function NotificationsPanel({ userId, onOpenProfile }) {
                   </button>
 
                   {(item.type === 'recognition_received' || item.type === 'comment_received') &&
-                    item.content && <small>“{item.content}”</small>}
+                    item.content && <small>"{item.content}"</small>}
 
                   <span>{formatDate(item.created_at)}</span>
                 </div>

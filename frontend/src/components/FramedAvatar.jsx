@@ -49,11 +49,26 @@ function FramedAvatar({
   className = '',
 }) {
   const finalImage = resolveImageUrl(imageUrl);
+
+  // ARREGLO AQUÍ:
+  // Primero obtenemos el marco.
   const frameAsset = getFrameAsset(frameCode);
 
+  // ARREGLO AQUÍ:
+  // Después revisamos si existe marco.
+  const hasFrame = Boolean(frameAsset);
+
   return (
-    <div className={`framed-avatar ${sizeClass} ${className}`.trim()}>
-      <div className="framed-avatar-circle">
+    <div
+      className={`framed-avatar ${sizeClass} ${className} ${
+        !hasFrame ? 'avatar-no-frame' : ''
+      }`.trim()}
+    >
+      <div
+        className={`framed-avatar-circle ${
+          !hasFrame ? 'framed-avatar-circle-no-frame' : ''
+        }`}
+      >
         {finalImage ? (
           <img
             src={finalImage}

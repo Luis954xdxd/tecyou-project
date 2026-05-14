@@ -1,0 +1,416 @@
+/* =========================================
+   REPRODUCTOR PERSONALIZADO DE VIDEO
+========================================= */
+
+.recognition-video-player {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #020617;
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+}
+
+.recognition-video-element {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  max-height: 440px;
+  object-fit: cover;
+  display: block;
+  background: #020617;
+  border-radius: inherit;
+}
+
+.recognition-video-player:hover .recognition-video-element {
+  filter: brightness(0.92);
+}
+
+/* =========================================
+   ZONAS INVISIBLES DOBLE CLICK
+   ARREGLO AQUÍ: quedan debajo de controles
+========================================= */
+
+.recognition-video-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.recognition-video-zone.left {
+  left: 0;
+}
+
+.recognition-video-zone.right {
+  right: 0;
+}
+
+/* =========================================
+   BADGE DURACIÓN
+========================================= */
+
+.recognition-video-duration-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 6;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+/* =========================================
+   OVERLAY GENERAL
+========================================= */
+
+.recognition-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.78),
+    rgba(2, 6, 23, 0.12),
+    transparent
+  );
+}
+
+.recognition-video-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* =========================================
+   TOPBAR
+========================================= */
+
+.recognition-video-topbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 12;
+}
+
+.recognition-video-badge {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.74);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+/* =========================================
+   BOTÓN CENTRAL PLAY/PAUSE
+========================================= */
+
+.recognition-video-center {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.recognition-video-play-toggle {
+  width: 62px;
+  height: 62px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.62);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+/* =========================================
+   CONTROLES
+   ARREGLO AQUÍ: controles por encima de zonas invisibles
+========================================= */
+
+.recognition-video-controls {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 30;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.recognition-video-progress-wrap {
+  position: relative;
+  z-index: 31;
+  width: 100%;
+  margin-bottom: 10px;
+  pointer-events: auto;
+}
+
+.recognition-video-progress {
+  position: relative;
+  z-index: 32;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+  pointer-events: auto;
+  accent-color: #60a5fa;
+}
+
+.recognition-video-progress::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.18);
+}
+
+.recognition-video-progress::-moz-range-thumb {
+  width: 17px;
+  height: 17px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.18);
+}
+
+.recognition-video-control-row {
+  position: relative;
+  z-index: 31;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.recognition-video-left-controls,
+.recognition-video-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.recognition-video-icon-btn {
+  border: none;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 16px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.recognition-video-icon-btn:hover {
+  transform: scale(1.08);
+}
+
+.recognition-video-time {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.recognition-video-volume {
+  width: 110px;
+  max-width: 110px;
+  cursor: pointer;
+  pointer-events: auto;
+  accent-color: #60a5fa;
+}
+
+/* =========================================
+   PULSO CENTRAL Y SALTOS
+========================================= */
+
+.recognition-video-center-pulse,
+.recognition-video-seek-feedback {
+  position: absolute;
+  z-index: 40;
+  color: white;
+  pointer-events: none;
+}
+
+.recognition-video-center-pulse {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recognition-video-center-pulse span {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  backdrop-filter: blur(10px);
+  animation: recognitionSeekPop 0.45s ease;
+}
+
+.recognition-video-seek-feedback {
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 900;
+  font-size: 18px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 10px 14px;
+  animation: recognitionSeekPop 0.5s ease;
+}
+
+.recognition-video-seek-feedback.left {
+  left: 24px;
+}
+
+.recognition-video-seek-feedback.right {
+  right: 24px;
+}
+
+/* =========================================
+   COMPACTO
+========================================= */
+
+.recognition-video-player.compact .recognition-video-element {
+  min-height: 180px;
+  max-height: 280px;
+}
+
+.recognition-card .recognition-video-player {
+  max-height: 420px;
+}
+
+.featured-section .recognition-video-player {
+  max-height: 260px;
+}
+
+/* =========================================================
+   FIX FULLSCREEN VIDEO PLAYER
+   ARREGLO AQUÍ: pantalla completa real
+========================================================= */
+
+.recognition-video-player:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.recognition-video-player:fullscreen .recognition-video-element {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  border-radius: 0 !important;
+}
+
+.recognition-video-player:fullscreen .recognition-video-controls {
+  left: 28px !important;
+  right: 28px !important;
+  bottom: 28px !important;
+  z-index: 99999 !important;
+}
+
+.recognition-video-player:fullscreen .recognition-video-overlay {
+  z-index: 99998 !important;
+}
+
+.recognition-video-player:fullscreen .recognition-video-duration-badge {
+  z-index: 99999 !important;
+}
+
+/* =========================================
+   ANIMACIONES
+========================================= */
+
+@keyframes recognitionSeekPop {
+  0% {
+    transform: translateY(-50%) scale(0.78);
+    opacity: 0;
+  }
+
+  45% {
+    transform: translateY(-50%) scale(1.08);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(-50%) scale(1);
+    opacity: 0;
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 720px) {
+  .recognition-video-element {
+    min-height: 220px;
+    max-height: 360px;
+  }
+
+  .recognition-video-controls {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    padding: 10px;
+  }
+
+  .recognition-video-volume {
+    width: 58px;
+    max-width: 58px;
+  }
+
+  .recognition-video-play-toggle,
+  .recognition-video-center-pulse span {
+    width: 62px;
+    height: 62px;
+    font-size: 24px;
+  }
+
+  .recognition-video-time {
+    font-size: 11px;
+  }
+}

@@ -1,0 +1,594 @@
+/* =========================================
+   FRAMED AVATAR BASE
+========================================= */
+
+.framed-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+/* =========================================
+   CÍRCULO DEL PERFIL
+========================================= */
+
+.framed-avatar-circle {
+  position: relative;
+  z-index: 2;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.25),
+    0 2px 10px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.framed-avatar-image,
+.framed-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  display: block;
+}
+
+.framed-avatar-image {
+  transition:
+    transform 0.26s ease,
+    filter 0.26s ease;
+}
+
+.framed-avatar:hover .framed-avatar-image {
+  transform: scale(1.06);
+  filter: brightness(1.04);
+}
+
+.framed-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: white;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 36%),
+    linear-gradient(135deg, var(--primary), var(--secondary));
+  text-transform: uppercase;
+}
+
+/* =========================================
+   IMAGEN DEL MARCO
+========================================= */
+
+.framed-avatar-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 3;
+  object-fit: contain;
+  transform-origin: center center;
+  filter:
+    drop-shadow(0 10px 24px rgba(15, 23, 42, 0.24))
+    drop-shadow(0 2px 8px rgba(15, 23, 42, 0.12));
+  transition:
+    transform 0.28s ease,
+    filter 0.28s ease;
+}
+
+.framed-avatar:hover .framed-avatar-frame {
+  filter:
+    drop-shadow(0 16px 30px rgba(15, 23, 42, 0.28))
+    drop-shadow(0 3px 12px rgba(15, 23, 42, 0.18));
+}
+
+/* =========================================
+   TAMAÑO: NAVBAR / DROPDOWN
+========================================= */
+
+.framed-avatar.size-nav {
+  width: 76px;
+  height: 76px;
+}
+
+.framed-avatar.size-nav .framed-avatar-circle {
+  width: 46px;
+  height: 46px;
+}
+
+.framed-avatar.size-nav .framed-avatar-frame {
+  width: 110px;
+  height: 110px;
+}
+
+/* =========================================
+   TAMAÑO: FEED / RECONOCIMIENTOS
+========================================= */
+
+.framed-avatar.size-feed {
+  width: 82px;
+  height: 82px;
+}
+
+.framed-avatar.size-feed .framed-avatar-circle {
+  width: 56px;
+  height: 56px;
+}
+
+.framed-avatar.size-feed .framed-avatar-frame {
+  width: 128px;
+  height: 128px;
+}
+
+/* =========================================
+   TAMAÑO: DIRECTORIO DE USUARIOS
+========================================= */
+
+.framed-avatar.size-directory {
+  width: 96px;
+  height: 96px;
+}
+
+.framed-avatar.size-directory .framed-avatar-circle {
+  width: 62px;
+  height: 62px;
+}
+
+.framed-avatar.size-directory .framed-avatar-frame {
+  width: 148px;
+  height: 148px;
+}
+
+/* =========================================
+   TAMAÑO: ACTIVIDAD RECIENTE
+========================================= */
+
+.framed-avatar.size-activity {
+  width: 82px;
+  height: 82px;
+}
+
+.framed-avatar.size-activity .framed-avatar-circle {
+  width: 52px;
+  height: 52px;
+}
+
+.framed-avatar.size-activity .framed-avatar-frame {
+  width: 132px;
+  height: 132px;
+}
+
+/* =========================================
+   TAMAÑO: PERFIL PÚBLICO / MODAL
+========================================= */
+
+.framed-avatar.size-public {
+  width: 250px;
+  height: 250px;
+}
+
+.framed-avatar.size-public .framed-avatar-circle {
+  width: 140px;
+  height: 140px;
+  border-width: 4px;
+}
+
+.framed-avatar.size-public .framed-avatar-frame {
+  width: 310px;
+  height: 310px;
+}
+
+/* =========================================
+   TAMAÑO: PERFIL PRINCIPAL
+========================================= */
+
+.framed-avatar.size-profile {
+  width: 290px;
+  height: 290px;
+}
+
+.framed-avatar.size-profile .framed-avatar-circle {
+  width: 170px;
+  height: 170px;
+  border-width: 5px;
+}
+
+.framed-avatar.size-profile .framed-avatar-frame {
+  width: 360px;
+  height: 360px;
+}
+
+/* =========================================
+   TAMAÑO: MINI / NOTIFICACIONES
+========================================= */
+
+.framed-avatar.size-mini {
+  width: 58px;
+  height: 58px;
+}
+
+.framed-avatar.size-mini .framed-avatar-circle {
+  width: 38px;
+  height: 38px;
+}
+
+.framed-avatar.size-mini .framed-avatar-frame {
+  width: 88px;
+  height: 88px;
+}
+
+/* =========================================
+   EFECTO PREMIUM BRILLO
+========================================= */
+
+.framed-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(255, 255, 255, 0.18),
+      transparent 42%
+    );
+  pointer-events: none;
+  z-index: 4;
+  mix-blend-mode: screen;
+  opacity: 0.85;
+}
+
+/* =========================================================
+   AJUSTE BASE POR MARCO
+   Se usa cuando no hay un ajuste específico por sección.
+========================================================= */
+
+/* MARCO COBRE */
+.framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -47%) scale(1.13) !important;
+}
+
+/* MARCO PLATEADO */
+.framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(0.92) !important;
+}
+
+/* MARCO ORO */
+.framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -49%) scale(1.02) !important;
+}
+
+/* MARCO RUBÍ CARMESÍ */
+.framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -49%) scale(1.02) !important;
+}
+
+/* MARCO DIAMANTE */
+.framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(0.94) !important;
+}
+
+/* =========================================================
+   NAVBAR / DROPDOWN SUPERIOR
+========================================================= */
+
+/* NAVBAR - MARCO COBRE */
+.framed-avatar.size-nav .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.06) !important;
+}
+
+/* NAVBAR - MARCO PLATEADO */
+.framed-avatar.size-nav .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(1.02) !important;
+}
+
+/* NAVBAR - MARCO ORO */
+.framed-avatar.size-nav .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -48%) scale(1.1) !important;
+}
+
+/* NAVBAR - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-nav .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -48%) scale(1.1) !important;
+}
+
+/* NAVBAR - MARCO DIAMANTE */
+.framed-avatar.size-nav .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(1.04) !important;
+}
+
+/* =========================================================
+   FEED / TARJETAS DE RECONOCIMIENTOS
+========================================================= */
+
+/* FEED - MARCO COBRE */
+.framed-avatar.size-feed .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.06) !important;
+}
+
+/* FEED - MARCO PLATEADO */
+.framed-avatar.size-feed .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -46%) scale(0.70) !important;
+}
+
+/* FEED - MARCO ORO */
+.framed-avatar.size-feed .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -48%) scale(1.12) !important;
+}
+
+/* FEED - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-feed .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -48%) scale(1.12) !important;
+}
+
+/* FEED - MARCO DIAMANTE */
+.framed-avatar.size-feed .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(1.05) !important;
+}
+
+/* =========================================================
+   DESTACADOS
+========================================================= */
+
+.featured-section .framed-avatar.size-feed {
+  width: 78px !important;
+  height: 78px !important;
+}
+
+.featured-section .framed-avatar.size-feed .framed-avatar-circle {
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.featured-section .framed-avatar.size-feed .framed-avatar-frame {
+  width: 122px !important;
+  height: 122px !important;
+}
+
+/* DESTACADOS - MARCO COBRE */
+.featured-section .framed-avatar.size-feed .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.2) !important;
+}
+
+/* DESTACADOS - MARCO PLATEADO */
+.featured-section .framed-avatar.size-feed .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -48%) scale(0.80) !important;
+}
+
+/* DESTACADOS - MARCO ORO */
+.featured-section .framed-avatar.size-feed .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -48%) scale(1.08) !important;
+}
+
+/* DESTACADOS - MARCO RUBÍ CARMESÍ */
+.featured-section .framed-avatar.size-feed .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -48%) scale(1.08) !important;
+}
+
+/* DESTACADOS - MARCO DIAMANTE */
+.featured-section .framed-avatar.size-feed .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+/* =========================================================
+   PERFIL PRINCIPAL
+========================================================= */
+
+/* PERFIL PRINCIPAL - MARCO COBRE */
+.framed-avatar.size-profile .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.22) !important;
+}
+
+/* PERFIL PRINCIPAL - MARCO PLATEADO */
+.framed-avatar.size-profile .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(0.98) !important;
+}
+
+/* PERFIL PRINCIPAL - MARCO ORO */
+.framed-avatar.size-profile .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -49%) scale(1.08) !important;
+}
+
+/* PERFIL PRINCIPAL - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-profile .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -49%) scale(1.08) !important;
+}
+
+/* PERFIL PRINCIPAL - MARCO DIAMANTE */
+.framed-avatar.size-profile .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+/* =========================================================
+   PERFIL PÚBLICO / MODAL
+========================================================= */
+
+/* PERFIL PÚBLICO - MARCO COBRE */
+.framed-avatar.size-public .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.10) !important;
+}
+
+/* PERFIL PÚBLICO - MARCO PLATEADO */
+.framed-avatar.size-public .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(1.04) !important;
+}
+
+/* PERFIL PÚBLICO - MARCO ORO */
+.framed-avatar.size-public .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -48%) scale(1.14) !important;
+}
+
+/* PERFIL PÚBLICO - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-public .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -48%) scale(1.14) !important;
+}
+
+/* PERFIL PÚBLICO - MARCO DIAMANTE */
+.framed-avatar.size-public .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(1.06) !important;
+}
+
+/* =========================================================
+   DIRECTORIO DE USUARIOS
+========================================================= */
+
+/* DIRECTORIO - MARCO COBRE */
+.framed-avatar.size-directory .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.16) !important;
+}
+
+/* DIRECTORIO - MARCO PLATEADO */
+.framed-avatar.size-directory .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(0.94) !important;
+}
+
+/* DIRECTORIO - MARCO ORO */
+.framed-avatar.size-directory .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -49%) scale(1.04) !important;
+}
+
+/* DIRECTORIO - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-directory .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -49%) scale(1.04) !important;
+}
+
+/* DIRECTORIO - MARCO DIAMANTE */
+.framed-avatar.size-directory .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(0.96) !important;
+}
+
+/* =========================================================
+   ACTIVIDAD RECIENTE
+========================================================= */
+
+/* ACTIVIDAD - MARCO COBRE */
+.framed-avatar.size-activity .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -39%) scale(1.0) !important;
+}
+
+/* ACTIVIDAD - MARCO PLATEADO */
+.framed-avatar.size-activity .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -48%) scale(0.72) !important;
+}
+
+/* ACTIVIDAD - MARCO ORO */
+.framed-avatar.size-activity .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -49%) scale(1.03) !important;
+}
+
+/* ACTIVIDAD - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-activity .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -49%) scale(1.03) !important;
+}
+
+/* ACTIVIDAD - MARCO DIAMANTE */
+.framed-avatar.size-activity .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(0.95) !important;
+}
+
+/* =========================================================
+   NOTIFICACIONES / MINI
+========================================================= */
+
+/* NOTIFICACIONES - MARCO COBRE */
+.framed-avatar.size-mini .framed-avatar-frame.frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.13) !important;
+}
+
+/* NOTIFICACIONES - MARCO PLATEADO */
+.framed-avatar.size-mini .framed-avatar-frame.frame-silver_frame {
+  transform: translate(-50%, -50%) scale(0.91) !important;
+}
+
+/* NOTIFICACIONES - MARCO ORO */
+.framed-avatar.size-mini .framed-avatar-frame.frame-gold_frame {
+  transform: translate(-50%, -49%) scale(1) !important;
+}
+
+/* NOTIFICACIONES - MARCO RUBÍ CARMESÍ */
+.framed-avatar.size-mini .framed-avatar-frame.frame-crimson_ruby_frame {
+  transform: translate(-50%, -49%) scale(1) !important;
+}
+
+/* NOTIFICACIONES - MARCO DIAMANTE */
+.framed-avatar.size-mini .framed-avatar-frame.frame-diamond_frame {
+  transform: translate(-50%, -50%) scale(0.93) !important;
+}
+
+/* =========================================
+   MODO OSCURO
+========================================= */
+
+.App.dark .framed-avatar-circle {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, #111827, #1f2937);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.46),
+    0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+.App.dark .framed-avatar-fallback {
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.12), transparent 34%),
+    linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 720px) {
+  .framed-avatar.size-profile {
+    width: 230px;
+    height: 230px;
+  }
+
+  .framed-avatar.size-profile .framed-avatar-circle {
+    width: 130px;
+    height: 130px;
+  }
+
+  .framed-avatar.size-profile .framed-avatar-frame {
+    width: 290px;
+    height: 290px;
+  }
+
+  .framed-avatar.size-public {
+    width: 210px;
+    height: 210px;
+  }
+
+  .framed-avatar.size-public .framed-avatar-circle {
+    width: 118px;
+    height: 118px;
+  }
+
+  .framed-avatar.size-public .framed-avatar-frame {
+    width: 260px;
+    height: 260px;
+  }
+}
+
+/* =========================================================
+   OCULTAR / MOSTRAR MARCOS DE AVATAR
+   ARREGLO AQUÍ:
+   Cuando App tiene la clase .hide-avatar-frames,
+   todos los marcos se ocultan visualmente.
+========================================================= */
+
+.App.hide-avatar-frames .framed-avatar-frame {
+  display: none !important;
+}
+
+/* Opcional: cuando los marcos están ocultos, el avatar se ve más limpio */
+.App.hide-avatar-frames .framed-avatar-circle {
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.22),
+    0 0 0 4px rgba(99, 102, 241, 0.12) !important;
+}

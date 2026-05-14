@@ -390,3 +390,256 @@
   -webkit-text-fill-color: #94a3b8 !important;
   opacity: 1 !important;
 }
+
+
+
+
+/* =========================================
+   LOGIN
+========================================= */
+
+.login-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(91, 75, 196, 0.22), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(30, 58, 138, 0.20), transparent 35%),
+    linear-gradient(135deg, #eef3ff 0%, #f8fbff 45%, #f4f1ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.login-shell {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.login-brand-panel {
+  padding: 56px;
+  background: linear-gradient(145deg, rgba(30, 58, 138, 0.96), rgba(91, 75, 196, 0.92));
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.brand-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.brand-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.brand-label {
+  font-size: 14px;
+  opacity: 0.88;
+}
+
+.login-brand-panel h1 {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.login-brand-panel h1 span {
+  color: #dcd6ff;
+}
+
+.brand-description {
+  max-width: 520px;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 36px;
+}
+
+.brand-highlights {
+  display: grid;
+  gap: 14px;
+}
+
+.highlight-card {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  padding: 18px 20px;
+}
+
+.highlight-card strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.highlight-card span {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 56px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-header {
+  margin-bottom: 28px;
+}
+
+.tec-logo-placeholder {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.login-header h2 {
+  font-size: 34px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.login-header p {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.login-footer {
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.login-footer p {
+  color: var(--text-soft);
+}
+
+/* =========================================
+   LOGO REAL TSJ
+========================================= */
+
+.tsj-logo {
+  display: block;
+  object-fit: contain;
+}
+
+.login-logo {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 18px;
+  border-radius: 20px;
+  background: white;
+  padding: 10px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+}
+
+/* =========================================
+   LOGIN OSCURO
+========================================= */
+
+.dark-login {
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(91, 75, 196, 0.14), transparent 35%),
+    linear-gradient(135deg, #0b1220 0%, #111827 45%, #0f172a 100%) !important;
+}
+
+.App.dark .login-card {
+  background: rgba(17, 24, 39, 0.92) !important;
+}
+
+.App.dark .login-header h2,
+.App.dark .login-header p,
+.App.dark .login-footer p {
+  color: #f8fafc !important;
+}
+
+/* =========================================
+   FIX AUTOFILL LOGIN
+========================================= */
+
+.login-card input:-webkit-autofill,
+.login-card input:-webkit-autofill:hover,
+.login-card input:-webkit-autofill:focus,
+.login-card textarea:-webkit-autofill,
+.login-card select:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  transition: background-color 9999s ease-in-out 0s;
+  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+}
+
+/* =========================================
+   RESPONSIVE LOGIN
+========================================= */
+
+@media (max-width: 1100px) {
+  .login-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .login-brand-panel {
+    padding: 40px;
+  }
+}
+
+@media (max-width: 720px) {
+  .login-card,
+  .login-brand-panel {
+    padding: 22px;
+  }
+
+  .login-brand-panel h1 {
+    font-size: 42px;
+  }
+
+  .login-logo {
+    width: 76px;
+    height: 76px;
+  }
+}

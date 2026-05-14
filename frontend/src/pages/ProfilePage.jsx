@@ -14,7 +14,7 @@ const API_BASE = 'http://localhost:5000';
 
 
 function ProfilePage({
-    currentUser,
+  currentUser,
   loggedInUserId,
   recognitions,
   onBack,
@@ -25,7 +25,10 @@ function ProfilePage({
   onFavoritesChanged,
   onOpenRecognition,
   onBadgeAssigned,
-}) {
+
+  // Controla si se muestran u ocultan los marcos
+  hideAvatarFrames,
+})  {
   const navigate = useNavigate();
   const { userId } = useParams();
 
@@ -478,13 +481,24 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
     )}
   </div>
 
-  {equippedFrameAsset && (
-    <img
-      src={equippedFrameAsset}
-      alt={equippedFrame?.name || 'Marco de avatar'}
-      className="profile-twitter-avatar-frame-image"
-    />
-  )}
+  {/* ARREGLO AQUÍ: oculta el marco del perfil estilo Twitter */}
+{/* ARREGLO AQUÍ: si el usuario ocultó marcos, este marco del perfil NO se pinta */}
+{/* ARREGLO AQUÍ:
+   Agregamos frame-${equippedFrame?.code} para poder acomodar cada marco por separado.
+   Ejemplo:
+   - cobre: frame-copper_frame
+   - plata: frame-silver_frame
+   - oro: frame-gold_frame
+   - rubí carmesí: frame-crimson_ruby_frame
+   - diamante: frame-diamond_frame
+*/}
+{!hideAvatarFrames && equippedFrameAsset && (
+  <img
+    src={equippedFrameAsset}
+    alt={equippedFrame?.name || 'Marco de avatar'}
+    className={`profile-twitter-avatar-frame-image frame-${equippedFrame?.code}`}
+  />
+)}
 </div>
 
             <div className="profile-twitter-header-actions">
@@ -550,11 +564,16 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
               <span><strong>{recognitionsSent.length}</strong> Enviados</span>
               <span><strong>{recognitionsReceived.length}</strong> Recibidos</span>
             </div>
-            {equippedFrame && (
+            {/* ARREGLO AQUÍ:
+   Si los marcos están ocultos, también ocultamos el texto de marco equipado.
+            */}
+              {!hideAvatarFrames && equippedFrame && (
               <div className="profile-equipped-frame-chip">
-                Marco equipado: {equippedFrame.name}
-              </div>
+               Marco equipado: {equippedFrame.name}
+            </div>
             )}
+
+
           </div>
 
           <div className="profile-twitter-tabs">

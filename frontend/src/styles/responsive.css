@@ -1,0 +1,302 @@
+/* =========================================
+   RESPONSIVE GENERAL
+========================================= */
+
+@media (max-width: 1180px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 960px) {
+  .nav-content {
+    flex-wrap: wrap;
+  }
+
+  .global-search-wrapper {
+    order: 3;
+    width: 100%;
+    max-width: none;
+    flex-basis: 100%;
+  }
+
+  .hero-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-header,
+  .feed-header,
+  .category-summary-header,
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .featured-subtext,
+  .feed-subtext,
+  .category-summary-subtext {
+    text-align: left;
+    max-width: none;
+  }
+
+  .feed-toolbar-row {
+    align-items: stretch;
+  }
+
+  .sort-box {
+    width: 100%;
+  }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 720px) {
+  .dashboard-shell {
+    padding: 18px 14px 32px;
+  }
+
+  .main-nav {
+    position: sticky;
+  }
+
+  .nav-content {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .nav-left {
+    gap: 10px;
+  }
+
+  .image-logo-shell {
+    width: 44px;
+    height: 44px;
+  }
+
+  .logo-text {
+    font-size: 17px;
+  }
+
+  .nav-title-group small {
+    font-size: 11px;
+  }
+
+  .user-info {
+    gap: 8px;
+  }
+
+  .user-chip {
+    padding: 6px 8px;
+  }
+
+  .user-text {
+    display: none;
+  }
+
+  .btn-logout {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+
+  .hero-panel,
+  .feed-section,
+  .sidebar,
+  .category-summary-card,
+  .notifications-card,
+  .stories-uploader {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .hero-panel h1 {
+    font-size: 28px;
+  }
+
+  .hero-subtext {
+    font-size: 14px;
+  }
+
+  .analytics-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-stat,
+  .stat-card {
+    padding: 15px 16px;
+  }
+
+  .feed-header h2,
+  .featured-header h2,
+  .category-summary-header h2,
+  .notifications-header h2 {
+    font-size: 24px;
+  }
+
+  .feed-results-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .category-filters {
+    gap: 8px;
+  }
+
+  .filter-chip {
+    font-size: 12px;
+    padding: 9px 12px;
+  }
+
+  .scroll-top-btn {
+    right: 14px;
+    bottom: 14px;
+    width: 46px;
+    height: 46px;
+  }
+}
+
+/* =========================================
+   MOBILE PEQUEÑO
+========================================= */
+
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+
+  .dashboard-shell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .nav-content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .nav-profile-dropdown {
+    right: -12px;
+    width: min(290px, calc(100vw - 20px));
+  }
+
+  .global-search-results {
+    width: 100%;
+  }
+
+  .hero-panel,
+  .feed-section,
+  .sidebar,
+  .category-summary-card,
+  .notifications-card,
+  .stories-uploader,
+  .profile-twitter-card,
+  .profile-twitter-sidebox {
+    border-radius: 20px;
+  }
+
+  .hero-panel h1 {
+    font-size: 25px;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+
+  .profile-twitter-tabs {
+    scrollbar-width: none;
+  }
+
+  .profile-twitter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .profile-twitter-tab {
+    min-width: 110px;
+    font-size: 13px;
+  }
+}
+
+/* =========================================
+   AJUSTES EXTRA PARA PANTALLAS MUY PEQUEÑAS
+========================================= */
+
+@media (max-width: 480px) {
+  .nav-left {
+    width: 100%;
+  }
+
+  .user-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .notifications-bell-dropdown {
+    right: -120px;
+    width: calc(100vw - 20px);
+  }
+
+  .hero-panel h1 {
+    font-size: 23px;
+  }
+
+  .section-label {
+    font-size: 11px;
+  }
+
+  .feed-header h2,
+  .featured-header h2,
+  .category-summary-header h2,
+  .notifications-header h2 {
+    font-size: 22px;
+  }
+
+  .profile-twitter-cover {
+    height: 190px;
+  }
+
+  .profile-twitter-avatar-wrap {
+    margin-top: -78px;
+  }
+
+  .profile-twitter-header-actions {
+    gap: 8px;
+  }
+
+  .profile-twitter-edit-btn,
+  .profile-twitter-photo-btn,
+  .profile-twitter-cover-btn {
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+}
+
+/* =========================================
+   AJUSTES PARA ANCHOS GRANDES
+========================================= */
+
+@media (min-width: 1400px) {
+  .dashboard-shell {
+    max-width: var(--max-width);
+  }
+
+  .featured-card-large {
+    min-height: 260px;
+  }
+}

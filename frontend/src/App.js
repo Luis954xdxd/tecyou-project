@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { unstable_batchedUpdates } from 'react-dom';
 import axios from 'axios';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
@@ -15,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import logoTSJ from './assets/logo-tsj.png';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import UsersPage from './pages/UsersPage';
 import './styles/auth.css';
 import { clearUserSession, getUserSession, saveUserSession } from './utils/authStorage';
 import RecognitionPage from './pages/RecognitionPage';
@@ -25,6 +27,9 @@ import StoryViewer from './components/StoryViewer';
 import CreateStoryModal from './components/CreateStoryModal';
 import FramedAvatar from './components/FramedAvatar';
 import AchievementUnlockToast from './components/AchievementUnlockToast';
+import ReactionBar from './components/ReactionBar';
+
+import TecAgentChatbot from './components/TecAgentChatbot';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -36,6 +41,11 @@ function App() {
     const saved = localStorage.getItem('tec_you_dark_mode');
     return saved === 'true';
   });
+
+  // Controla si los marcos de avatar se muestran u ocultan visualmente.
+const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
+  return localStorage.getItem('hideAvatarFrames') === 'true';
+});
 
   const [user, setUser] = useState(() => getUserSession());
   const [recognitions, setRecognitions] = useState([]);
@@ -104,6 +114,7 @@ function App() {
     currentIndex: 0,
   });
 
+  const profileLoadedRef = useRef(false);
   const fileInputRef = useRef(null);
   const modalProfileInputRef = useRef(null);
   const coverInputRef = useRef(null);
@@ -254,10 +265,13 @@ function App() {
         myReactionMap[item.recognitionId] =
           item.users.find((u) => Number(u.user_id) === Number(user?.id))?.reaction_type || null;
       });
-
-      setReactionTotals(totalsMap);
-      setReactionUsersMap(usersMap);
-      setUserReactionMap(myReactionMap);
+      // Antes: 3 setState separados = 3 re-renders del componente App
+      // Ahora: los 3 juntos = 1 solo re-render
+      unstable_batchedUpdates(() => {
+        setReactionTotals(totalsMap);
+        setReactionUsersMap(usersMap);
+        setUserReactionMap(myReactionMap);
+      });
     } catch (err) {
       console.error('Error al obtener las reacciones del feed:', err);
     }
@@ -308,6 +322,16 @@ function App() {
       alert(error.response?.data?.error || 'No se pudo comentar la historia.');
     }
   };
+
+  // Cambia entre mostrar y ocultar los marcos.
+// Se guarda en localStorage para que no se pierda al recargar.
+const handleToggleAvatarFrames = () => {
+  setHideAvatarFrames((prev) => {
+    const nextValue = !prev;
+    localStorage.setItem('hideAvatarFrames', String(nextValue));
+    return nextValue;
+  });
+};
 
   const fetchStoryReactions = async (storyId) => {
     try {
@@ -508,7 +532,7 @@ function App() {
     }
   };
 
-  const fetchUserProfile = async (userId) => {
+    const fetchUserProfile = async (userId) => {
     try {
       setLoadingProfile(true);
       const response = await axios.get(`${API_BASE}/api/users/profile/${userId}`);
@@ -534,7 +558,15 @@ function App() {
       setProfileImage(resolveImageUrl(profile.profile_image_url));
       setCoverImage(resolveImageUrl(profile.cover_image_url));
 
-      setUser((prev) => ({ ...prev, ...profile }));
+      setUser((prev) => {
+        if (
+          prev.profile_image_url === profile.profile_image_url &&
+          prev.display_name === profile.display_name
+        ) {
+          return prev;
+        }
+        return { ...prev, ...profile };
+      });
     } catch (err) {
       console.error('Error al obtener el perfil:', err);
     } finally {
@@ -587,29 +619,38 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
   useEffect(() => {
     if (user?.id) {
-      fetchStories();
       fetchAllUsersForStories();
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user?.id) {
+  useEffect(()=> {
+    if (user?.id && !profileLoadedRef.current){
+      profileLoadedRef.current = true;
       handleRefreshAllProfileData();
     }
-  }, [user?.id]);
+  },[user?.id]);
 
   useEffect(() => {
     if (location.pathname === '/perfil' && user?.id) {
-      handleRefreshAllProfileData();
+      fetchUserProfile(user.id);
     }
-  }, [location.pathname, user?.id]);
-
-  useEffect(() => {
-    if (location.pathname !== '/') return;
-    const onScroll = () => setShowScrollTop(window.scrollY > 420);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
   }, [location.pathname]);
+
+ useEffect(() => {
+  if (location.pathname !== '/') return;
+
+  const onScroll = () => {
+    const shouldShow = window.scrollY > 420;
+    // Solo actualiza el estado si el valor realmente cambia.
+    // Así evitas re-renders en cada píxel del scroll.
+    setShowScrollTop((prev) => (prev === shouldShow ? prev : shouldShow));
+  };
+
+  // { passive: true } le dice al navegador que nunca vas a bloquear
+  // el scroll con preventDefault(), lo que optimiza mucho la fluidez.
+  window.addEventListener('scroll', onScroll, { passive: true });
+  return () => window.removeEventListener('scroll', onScroll);
+}, [location.pathname]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -624,20 +665,28 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
   }, [imageViewer.isOpen]);
 
   useEffect(() => {
-    const recognitionId = location.state?.highlightRecognitionId;
+  const recognitionId = location.state?.highlightRecognitionId;
 
-    if (!recognitionId || recognitions.length === 0) return;
-    if (location.pathname !== '/') return;
+  if (!recognitionId || recognitions.length === 0) return;
+  if (location.pathname !== '/') return;
 
-    const target = recognitionRefs.current[recognitionId];
+  const target = recognitionRefs.current[recognitionId];
 
-    if (target) {
-      target.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [location.pathname, location.state, recognitions]);
+  if (target) {
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+
+    // ARREGLO AQUÍ:
+    // Limpiamos el state de navegación para que no vuelva a hacer scroll
+    // cada vez que el feed se actualice.
+    navigate(location.pathname, {
+      replace: true,
+      state: {},
+    });
+  }
+}, [location.pathname, location.state?.highlightRecognitionId, recognitions.length, navigate]);
 
   useEffect(() => {
     const incomingHashtag = location.state?.hashtagFilter;
@@ -913,14 +962,16 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
       const response = await axios.get(`${API_BASE}/api/recognitions/favorites/${user.id}`);
       const favorites = Array.isArray(response.data) ? response.data : [];
-      setFavoriteRecognitions(favorites);
-
       const idsMap = {};
       favorites.forEach((item) => {
         idsMap[item.id] = true;
       });
 
-      setFavoriteIds(idsMap);
+      // Un solo re-render en vez de dos
+      unstable_batchedUpdates(() => {
+        setFavoriteRecognitions(favorites);
+        setFavoriteIds(idsMap);
+      });
     } catch (err) {
       console.error('Error al obtener favoritos:', err);
     }
@@ -1314,6 +1365,15 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
           <GlobalSectionSearch sections={sectionSearchItems} />
 
           <div className="user-info">
+            <button
+            type="button"
+            className="nav-users-icon-btn"
+            onClick={() => navigate('/usuarios')}
+            title="Comunidad"
+            aria-label="Ver usuarios"
+            >
+            👥
+            </button>
             <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
 
             <ProfileDropdown
@@ -1327,6 +1387,8 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               onGoToProfile={() => navigate('/perfil')}
               darkMode={darkMode}
               onToggleDark={() => setDarkMode((prev) => !prev)}
+              hideAvatarFrames={hideAvatarFrames}
+              onToggleAvatarFrames={handleToggleAvatarFrames}
             />
           </div>
         </div>
@@ -1416,7 +1478,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
       <FramedAvatar
         imageUrl={rec.sender_profile_image}
         name={rec.sender_name}
-        frameCode={rec.sender_frame_code}
+        frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
         sizeClass="size-feed"
       />
     </div>
@@ -1529,7 +1591,15 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
       onOpenProfile={openUserProfile}
     />
 
-    {renderReactionBar(rec.id)}
+    <ReactionBar
+      recId={rec.id}
+      userId={user?.id}
+      initialTotals={reactionTotals[rec.id]}
+      initialUserReaction={userReactionMap[rec.id]}
+      initialUsers={reactionUsersMap[rec.id]}
+      resolveImageUrl={resolveImageUrl}
+      openUserProfile={openUserProfile}
+    />
 
     <div className="recognition-favorite-row">
       <button
@@ -1655,14 +1725,13 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
               <div className="profile-card-body">
                 <div className="profile-avatar-row">
-
-  <FramedAvatar
-    imageUrl={profileImage || user?.profile_image_url}
-    name={displayName || user?.display_name || user?.fullname}
-    frameCode={user?.equipped_frame_code}
-    sizeClass="size-public"
-    className="profile-sidebar-framed-avatar"
-  />
+<FramedAvatar
+  imageUrl={profileImage || user?.profile_image_url}
+  name={displayName || user?.display_name || user?.fullname}
+  frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
+  sizeClass="size-public"
+  className="profile-sidebar-framed-avatar"
+/>
 
   <div className="profile-avatar-actions">
     <button
@@ -1870,6 +1939,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                   currentUser={user}
                   onOpenStory={openStoryViewer}
                   onCreateStory={() => setShowCreateStoryModal(true)}
+                  hideAvatarFrames={hideAvatarFrames}
                 />
               )}
             </section>
@@ -1908,7 +1978,6 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                     <div
                       key={rec.id}
                       className={`recognition-card ${categoryMeta.className}`}
-                      style={{ animationDelay: `${index * 0.04}s` }}
                     >
                       <div className="card-top">
                         <span className={`badge-category ${categoryMeta.className}`}>
@@ -1931,11 +2000,11 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
   <div className="recognition-header-row">
     <div className="recognition-author-avatar">
       <FramedAvatar
-        imageUrl={rec.sender_profile_image}
-        name={rec.sender_name}
-        frameCode={rec.sender_frame_code}
-        sizeClass="size-feed"
-      />
+      imageUrl={rec.sender_profile_image}
+       name={rec.sender_name}
+      frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
+     sizeClass="size-feed"
+    />
     </div>
 
     <div className="recognition-header-meta">
@@ -2046,7 +2115,15 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
       onOpenProfile={openUserProfile}
     />
 
-    {renderReactionBar(rec.id)}
+    <ReactionBar
+      recId={rec.id}
+      userId={user?.id}
+      initialTotals={reactionTotals[rec.id]}
+      initialUserReaction={userReactionMap[rec.id]}
+      initialUsers={reactionUsersMap[rec.id]}
+      resolveImageUrl={resolveImageUrl}
+      openUserProfile={openUserProfile}
+    />
 
     <div className="recognition-favorite-row">
       <button
@@ -2080,7 +2157,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
   ) : null;
 
   return (
-    <div className={`App ${darkMode ? 'dark' : ''}`}>
+   <div className={`App ${darkMode ? 'dark' : ''} ${hideAvatarFrames ? 'hide-avatar-frames' : ''}`}>
       <Routes>
         <Route
           path="/login"
@@ -2096,6 +2173,17 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
           }
         />
 
+        <Route
+         path="/usuarios"
+          element={
+        <UsersPage
+         currentUserId={user?.id}
+          onOpenProfile={openUserProfile}
+         onUserSelected={setRecognitionPrefillUser}
+         />
+        }
+        />
+
         <Route path="/" element={user ? dashboardView : <Navigate to="/login" replace />} />
 
         <Route
@@ -2109,6 +2197,8 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                 currentUserId={user?.id}
                 onOpenProfile={openUserProfile}
                 renderReactionBar={renderReactionBar}
+                onFavoritesChanged={refreshGlobalFavorites}
+                hideAvatarFrames={hideAvatarFrames}
                 renderFavoriteButton={(recognitionId) => (
                   <div className="recognition-favorite-row">
                     <button
@@ -2153,6 +2243,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                 onOpenEditProfile={openEditProfileModal}
                 isOwnProfile={true}
                 onFavoritesChanged={refreshGlobalFavorites}
+                hideAvatarFrames={hideAvatarFrames}
                 onOpenRecognition={(recognitionId) => {
                   navigate('/', {
                     state: { highlightRecognitionId: recognitionId },
@@ -2169,36 +2260,37 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
         />
 
         <Route
-          path="/perfil/:userId"
-          element={
-            user ? (
-              <ProfilePage
-                currentUser={user}
-                loggedInUserId={user?.id}
-                recognitions={recognitions}
-                onBack={() => navigate('/')}
-                onOpenImageViewer={openImageViewer}
-                darkMode={darkMode}
-                onOpenEditProfile={openEditProfileModal}
-                isOwnProfile={false}
-                onFavoritesChanged={refreshGlobalFavorites}
-                onOpenRecognition={(recognitionId) => {
-                  navigate('/', {
-                    state: { highlightRecognitionId: recognitionId },
-                  });
-                }}
-                onBadgeAssigned={(badgeItem) => {
-                  enqueueUnlockItems([badgeItem]);
-                }}
-              />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+  path="/perfil/:userId"
+  element={
+    user ? (
+      <ProfilePage
+        currentUser={user}
+        loggedInUserId={user?.id}
+        recognitions={recognitions}
+        onBack={() => navigate('/')}
+        onOpenImageViewer={openImageViewer}
+        darkMode={darkMode}
+        onOpenEditProfile={openEditProfileModal}
+        isOwnProfile={false}
+        onFavoritesChanged={refreshGlobalFavorites}
+        hideAvatarFrames={hideAvatarFrames}
+        onOpenRecognition={(recognitionId) => {
+          navigate('/', {
+            state: { highlightRecognitionId: recognitionId },
+          });
+        }}
+        onBadgeAssigned={(badgeItem) => {
+          enqueueUnlockItems([badgeItem]);
+        }}
+      />
+    ) : (
+      <Navigate to="/login" replace />
+    )
+    }
+  />
 
         <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
-      </Routes>
+      </Routes>{user && <TecAgentChatbot/>}
 
       {showEditProfileModal && (
         <div className="profile-modal-overlay" onClick={() => setShowEditProfileModal(false)}>

@@ -1,0 +1,164 @@
+.tec-agent-floating-btn {
+  position: fixed;
+  right: 22px;
+  bottom: 88px;
+  width: 58px;
+  height: 58px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  font-size: 25px;
+  cursor: pointer;
+  z-index: 999;
+  box-shadow: 0 18px 36px rgba(79, 70, 229, 0.35);
+}
+
+.tec-agent-chatbot {
+  position: fixed;
+  right: 22px;
+  bottom: 158px;
+  width: min(390px, calc(100vw - 36px));
+  height: 520px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+  z-index: 998;
+}
+
+.tec-agent-header {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #111827, #1e1b4b);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.tec-agent-header strong {
+  display: block;
+  color: #f8fafc;
+  font-size: 16px;
+}
+
+.tec-agent-header span {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.tec-agent-close-btn {
+  border: none;
+  background: rgba(30, 41, 59, 0.9);
+  color: #f8fafc;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.tec-agent-messages {
+  flex: 1;
+  padding: 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tec-agent-message {
+  max-width: 86%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.tec-agent-message.assistant {
+  align-self: flex-start;
+  background: rgba(30, 41, 59, 0.92);
+  color: #f8fafc;
+  border-bottom-left-radius: 6px;
+}
+
+.tec-agent-message.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  border-bottom-right-radius: 6px;
+}
+
+.tec-agent-form {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+.tec-agent-form input {
+  flex: 1;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 12px 14px;
+  background: #020617;
+  color: #f8fafc;
+  outline: none;
+}
+
+.tec-agent-form input::placeholder {
+  color: #94a3b8;
+}
+
+.tec-agent-form button {
+  border: none;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tec-agent-form button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.App:not(.dark) .tec-agent-chatbot {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.App:not(.dark) .tec-agent-header {
+  background: linear-gradient(135deg, #eef2ff, #ffffff);
+}
+
+.App:not(.dark) .tec-agent-header strong {
+  color: #0f172a;
+}
+
+.App:not(.dark) .tec-agent-header span {
+  color: #475569;
+}
+
+.App:not(.dark) .tec-agent-message.assistant {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.App:not(.dark) .tec-agent-form {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.App:not(.dark) .tec-agent-form input {
+  background: #f8fafc;
+  color: #0f172a;
+}

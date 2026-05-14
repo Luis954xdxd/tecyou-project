@@ -8,7 +8,13 @@ function NotificationsBell({ userId, onOpenProfile }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [openDropdown, setOpenDropdown] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
   const dropdownRef = useRef(null);
+
+  // Controla si ya se hizo la primera carga.
+  // En los polls posteriores NO se muestra el spinner para evitar
+  // que el dropdown cambie de altura y cause el espasmo visual.
+  const hasLoadedOnce = useRef(false);
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -54,46 +60,59 @@ function NotificationsBell({ userId, onOpenProfile }) {
   };
 
   const fetchNotifications = async () => {
-  if (!userId) return;
+    if (!userId) return;
 
-  try {
-    setLoadingNotifications(true);
+    try {
+      // Solo muestra el spinner en la PRIMERA carga.
+      // En los polls del intervalo actualiza los datos en silencio,
+      // sin cambiar la altura del componente ni causar parpadeo.
+      if (!hasLoadedOnce.current) {
+        setLoadingNotifications(true);
+      }
 
-    const notificationsRes = await axios.get(
-      `${API_BASE}/api/users/${userId}/notifications`
-    );
+      const notificationsRes = await axios.get(
+        `${API_BASE}/api/users/${userId}/notifications`
+      );
 
-    setNotifications(Array.isArray(notificationsRes.data) ? notificationsRes.data.slice(0, 6) : []);
-  } catch (error) {
-    console.error('Error al obtener notificaciones para campanita:', error);
-    setNotifications([]);
-  }
+      setNotifications(
+        Array.isArray(notificationsRes.data) ? notificationsRes.data.slice(0, 6) : []
+      );
+      hasLoadedOnce.current = true;
+    } catch (error) {
+      console.error('Error al obtener notificaciones para campanita:', error);
+      if (!hasLoadedOnce.current) setNotifications([]);
+    }
 
-  try {
-    const unreadRes = await axios.get(
-      `${API_BASE}/api/users/${userId}/notifications/unread-count`
-    );
+    try {
+      const unreadRes = await axios.get(
+        `${API_BASE}/api/users/${userId}/notifications/unread-count`
+      );
 
-    setUnreadCount(unreadRes.data?.total || 0);
-  } catch (error) {
-    console.error('Error al obtener contador de no leídas para campanita:', error);
-    setUnreadCount(0);
-  } finally {
-    setLoadingNotifications(false);
-  }
-};
+      setUnreadCount(unreadRes.data?.total || 0);
+    } catch (error) {
+      console.error('Error al obtener contador de no leídas para campanita:', error);
+      setUnreadCount(0);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
 
   useEffect(() => {
-  if (!userId) return;
+    if (!userId) return;
 
-  fetchNotifications();
-
-  const interval = setInterval(() => {
     fetchNotifications();
-  }, 10000);
 
-  return () => clearInterval(interval);
-}, [userId]);
+    // Intervalo cambiado de 10s a 30s:
+    // - 10s era demasiado agresivo y los 3 componentes (ActivityPanel,
+    //   NotificationsPanel, NotificationsBell) se disparaban al mismo tiempo
+    //   causando múltiples re-renders y el espasmo visual cada 10 segundos.
+    // - 30s es suficiente para mantener los datos frescos sin afectar la UI.
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -216,8 +235,9 @@ function NotificationsBell({ userId, onOpenProfile }) {
                     </button>
 
                     {item.content &&
-                      (item.type === 'recognition_received' || item.type === 'comment_received') && (
-                        <small>“{item.content}”</small>
+                      (item.type === 'recognition_received' ||
+                        item.type === 'comment_received') && (
+                        <small>"{item.content}"</small>
                       )}
 
                     <span>{formatDate(item.created_at)}</span>

@@ -7,6 +7,7 @@ function StoriesBar({
   currentUser,
   onOpenStory,
   onCreateStory,
+  hideAvatarFrames,
 }) {
   // Controla la diferencia entre click simple y doble click
   const clickTimeout = useRef(null);

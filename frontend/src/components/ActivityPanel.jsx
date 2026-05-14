@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import FramedAvatar from './FramedAvatar';
 
@@ -7,6 +7,11 @@ const API_BASE = 'http://localhost:5000';
 function ActivityPanel({ userId }) {
   const [activities, setActivities] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+
+  // Controla si ya se hizo la primera carga.
+  // En los polls posteriores NO se muestra el spinner para evitar
+  // que el componente se encoja y cause el espasmo visual.
+  const hasLoadedOnce = useRef(false);
 
   const getActivityText = (item) => {
     if (item.type === 'recognition_received') {
@@ -45,12 +50,19 @@ function ActivityPanel({ userId }) {
     if (!userId) return;
 
     try {
-      setLoadingActivity(true);
+      // Solo muestra el spinner en la PRIMERA carga.
+      // En los polls del intervalo actualiza los datos en silencio,
+      // sin cambiar la altura del componente ni causar parpadeo.
+      if (!hasLoadedOnce.current) {
+        setLoadingActivity(true);
+      }
+
       const response = await axios.get(`${API_BASE}/api/users/${userId}/activity`);
       setActivities(Array.isArray(response.data) ? response.data : []);
+      hasLoadedOnce.current = true;
     } catch (error) {
       console.error('Error al obtener actividad reciente:', error);
-      setActivities([]);
+      if (!hasLoadedOnce.current) setActivities([]);
     } finally {
       setLoadingActivity(false);
     }
@@ -61,9 +73,14 @@ function ActivityPanel({ userId }) {
 
     fetchActivity();
 
+    // Intervalo cambiado de 10s a 30s:
+    // - 10s era demasiado agresivo y los 3 componentes (ActivityPanel,
+    //   NotificationsPanel, NotificationsBell) se disparaban al mismo tiempo
+    //   causando múltiples re-renders y el espasmo visual cada 10 segundos.
+    // - 30s es suficiente para mantener los datos frescos sin afectar la UI.
     const interval = setInterval(() => {
       fetchActivity();
-    }, 10000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [userId]);
@@ -106,7 +123,7 @@ function ActivityPanel({ userId }) {
                   <strong>{getActivityText(item)}</strong>
                   {item.extra && <span>Categoría: {item.extra}</span>}
                   {item.type === 'recognition_received' && item.content && (
-                    <small>“{item.content}”</small>
+                    <small>"{item.content}"</small>
                   )}
                 </div>
 

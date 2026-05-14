@@ -59,6 +59,7 @@ function RecognitionVideoPlayer({
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
+      setShowControls(true);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -94,11 +95,21 @@ function RecognitionVideoPlayer({
       setIsInPictureInPicture(true);
 
       try {
+        video.muted = false;
+        setIsMuted(false);
+
+        if (video.volume === 0) {
+          video.volume = 0.7;
+          setVolume(0.7);
+        }
+
         if (video.paused) {
           await video.play();
         }
       } catch (error) {
-        console.error('No se pudo continuar la reproducción al entrar en PiP:', error);
+        if (error.name !== 'AbortError') {
+         console.error('No se pudo reproducir automáticamente el video:', error);
+      }
       }
     };
 
@@ -186,7 +197,7 @@ function RecognitionVideoPlayer({
 
     setShowControls(true);
 
-    if (isPlaying) {
+    if (isPlaying && !isInPictureInPicture) {
       hideControlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 1800);
@@ -295,8 +306,8 @@ function RecognitionVideoPlayer({
     setIsMuted(video.muted);
 
     if (!video.muted && video.volume === 0) {
-      video.volume = 0.5;
-      setVolume(0.5);
+      video.volume = 0.7;
+      setVolume(0.7);
     }
 
     restartHideTimer();
@@ -304,11 +315,14 @@ function RecognitionVideoPlayer({
 
   const toggleFullscreen = async () => {
     const container = containerRef.current;
-    if (!container) return;
+    const video = videoRef.current;
+
+    if (!container || !video) return;
 
     try {
       if (!document.fullscreenElement) {
         await container.requestFullscreen();
+        setShowControls(true);
       } else {
         await document.exitFullscreen();
       }
@@ -330,12 +344,21 @@ function RecognitionVideoPlayer({
         return;
       }
 
+      /*
+        ARREGLO AQUÍ:
+        Si el video estaba en autoplay, normalmente estaba silenciado.
+        Antes de entrar en Picture in Picture lo dejamos con audio activo.
+      */
+      video.muted = false;
+      setIsMuted(false);
+
+      if (video.volume === 0) {
+        video.volume = 0.7;
+        setVolume(0.7);
+      }
+
       if (video.paused) {
-        try {
-          await video.play();
-        } catch (err) {
-          console.error('No se pudo reproducir antes de PiP:', err);
-        }
+        await video.play();
       }
 
       await video.requestPictureInPicture();
@@ -370,6 +393,7 @@ function RecognitionVideoPlayer({
         <>
           <button
             type="button"
+            tabIndex={-1}
             className="recognition-video-zone left"
             onDoubleClick={() => handleDoubleClickZone('left')}
             aria-label="Retroceder 10 segundos"
@@ -377,6 +401,7 @@ function RecognitionVideoPlayer({
 
           <button
             type="button"
+            tabIndex={-1}
             className="recognition-video-zone right"
             onDoubleClick={() => handleDoubleClickZone('right')}
             aria-label="Adelantar 10 segundos"

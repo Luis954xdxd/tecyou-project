@@ -1,0 +1,876 @@
+/* =========================================
+   PERFIL GENERAL
+========================================= */
+
+.profile-card {
+  background: linear-gradient(145deg, #ffffff, #f8fbff);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.profile-cover {
+  height: 180px;
+  background:
+    radial-gradient(circle at top left, rgba(91, 75, 196, 0.32), transparent 32%),
+    linear-gradient(135deg, var(--primary), var(--secondary));
+  position: relative;
+}
+
+.profile-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  margin-top: -64px;
+  margin-left: 28px;
+  width: fit-content;
+  overflow: visible;
+  z-index: 3;
+}
+
+.profile-main-info {
+  padding: 18px 28px 28px;
+}
+
+.profile-main-info h2 {
+  font-size: 28px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.profile-main-info p {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.profile-action-btn {
+  border: 1px solid #dde5f5;
+  background: white;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-action-btn:hover {
+  background: #f8fbff;
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+/* =========================================
+   PERFIL TIPO TWITTER / X
+========================================= */
+
+.profile-twitter-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.profile-twitter-main {
+  min-width: 0;
+}
+
+.profile-twitter-card {
+  background: linear-gradient(145deg, #ffffff, #f8fbff);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow-sm);
+  overflow: visible;
+}
+
+.profile-twitter-cover {
+  height: 260px;
+  background:
+    radial-gradient(circle at top left, rgba(91, 75, 196, 0.34), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(30, 58, 138, 0.28), transparent 36%),
+    linear-gradient(135deg, var(--primary), var(--secondary));
+  position: relative;
+  border-radius: 28px 28px 0 0;
+  overflow: hidden;
+}
+
+.profile-twitter-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-twitter-header {
+  position: relative;
+  padding: 0 28px 24px;
+  overflow: visible;
+}
+
+.profile-twitter-avatar-wrap {
+  position: relative;
+  margin-top: -104px;
+  margin-left: 8px;
+  width: fit-content;
+  overflow: visible !important;
+  z-index: 8;
+}
+
+.profile-twitter-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding-top: 14px;
+}
+
+.profile-twitter-edit-btn,
+.profile-twitter-photo-btn,
+.profile-twitter-cover-btn {
+  border: 1px solid #dde5f5;
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.profile-twitter-edit-btn:hover,
+.profile-twitter-photo-btn:hover,
+.profile-twitter-cover-btn:hover {
+  background: #f8fbff;
+  color: var(--secondary);
+  border-color: var(--secondary);
+  transform: translateY(-2px);
+}
+
+.profile-twitter-info {
+  margin-top: 10px;
+}
+
+.profile-twitter-info h2 {
+  color: var(--text);
+  font-size: 30px;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.profile-twitter-email {
+  color: var(--text-soft);
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.profile-twitter-bio {
+  color: #354154;
+  font-size: 15px;
+  line-height: 1.55;
+  max-width: 760px;
+  margin-bottom: 14px;
+}
+
+.profile-twitter-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-soft);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.profile-twitter-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-twitter-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.profile-twitter-stats span {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.profile-twitter-stats strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.profile-twitter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.profile-tag {
+  background: linear-gradient(135deg, #eef3ff, #f2edff);
+  border: 1px solid #d7e0f5;
+  color: var(--primary-dark);
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* =========================================
+   TABS PERFIL
+========================================= */
+
+.profile-twitter-tabs {
+  display: flex;
+  border-top: 1px solid #edf2fb;
+  border-bottom: 1px solid #edf2fb;
+  background: rgba(248, 251, 255, 0.82);
+  overflow-x: auto;
+}
+
+.profile-twitter-tab {
+  flex: 1;
+  min-width: 120px;
+  border: none;
+  background: transparent;
+  padding: 16px 14px;
+  color: var(--text-soft);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  position: relative;
+}
+
+.profile-twitter-tab:hover {
+  color: var(--secondary);
+  background: rgba(91, 75, 196, 0.05);
+}
+
+.profile-twitter-tab.active {
+  color: var(--primary-dark);
+}
+
+.profile-twitter-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 24%;
+  right: 24%;
+  bottom: 0;
+  height: 4px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+.profile-twitter-content {
+  padding: 22px;
+}
+
+/* =========================================
+   RECONOCIMIENTOS EN PERFIL
+========================================= */
+
+.profile-twitter-rec-list {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-twitter-rec-card {
+  background: #ffffff;
+  border: 1px solid #e5ebf7;
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 22px rgba(20, 35, 90, 0.06);
+}
+
+.profile-twitter-rec-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.profile-twitter-rec-header strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.profile-twitter-rec-header span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.profile-twitter-rec-message {
+  color: #354154;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.profile-twitter-empty {
+  border: 1px dashed #d7e0f5;
+  background: #f8fbff;
+  border-radius: 22px;
+  padding: 34px 20px;
+  text-align: center;
+  color: var(--text-soft);
+}
+
+/* =========================================
+   GALERÍA PERFIL
+========================================= */
+
+.profile-twitter-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-twitter-gallery-item {
+  border: none;
+  background: #0f172a;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+}
+
+.profile-twitter-gallery-item img,
+.profile-twitter-gallery-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* =========================================
+   SIDEBAR PERFIL
+========================================= */
+
+.profile-twitter-sidebar {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 92px;
+}
+
+.profile-twitter-sidebox {
+  background: linear-gradient(145deg, #ffffff, #f8fbff);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-twitter-sidebox h3 {
+  color: var(--text);
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.profile-twitter-side-text {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.profile-twitter-search-input {
+  width: 100%;
+  border: 1px solid #dde5f5;
+  background: white;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.profile-twitter-search-input:focus {
+  outline: none;
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 4px rgba(91, 75, 196, 0.12);
+}
+
+/* =========================================
+   ACTIVIDAD LATERAL PERFIL
+========================================= */
+
+.profile-twitter-side-activity-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.profile-twitter-side-activity-item {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-twitter-side-activity-item strong {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.profile-twitter-side-activity-item span {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+/* =========================================
+   MODAL PREMIUM EDITAR PERFIL
+========================================= */
+
+.premium-profile-modal {
+  background: white;
+  border-radius: 28px;
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.32);
+  border: 1px solid #dde5f5;
+}
+
+.premium-profile-modal-header {
+  padding: 22px 24px;
+  border-bottom: 1px solid #edf2fb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.premium-profile-modal-header h2 {
+  color: var(--text);
+  font-size: 22px;
+}
+
+.premium-profile-modal-body {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.premium-profile-avatar-box {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #f8fbff;
+  border: 1px solid #e5ebf7;
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.premium-profile-avatar-info {
+  display: grid;
+  gap: 6px;
+}
+
+.premium-profile-avatar-info strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.premium-profile-avatar-info span {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.premium-profile-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.premium-profile-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.premium-profile-field input,
+.premium-profile-field textarea {
+  width: 100%;
+  border: 1px solid #dde5f5;
+  border-radius: 16px;
+  padding: 13px 15px;
+  background: white;
+  color: var(--text);
+}
+
+.premium-profile-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.premium-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.premium-profile-cancel-btn,
+.premium-profile-save-btn {
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.premium-profile-cancel-btn {
+  background: white;
+  border: 1px solid #dde5f5;
+  color: var(--text-soft);
+}
+
+.premium-profile-save-btn {
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+/* =========================================
+   MODO CLARO PERFIL - FIX
+========================================= */
+
+.profile-twitter-card,
+.profile-twitter-sidebox,
+.profile-twitter-rec-card {
+  color: var(--text);
+}
+
+.profile-twitter-card button,
+.profile-twitter-sidebox button {
+  font-family: inherit;
+}
+
+/* =========================================
+   RESPONSIVE PERFIL
+========================================= */
+
+@media (max-width: 1100px) {
+  .profile-twitter-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-twitter-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-twitter-cover {
+    height: 210px;
+  }
+
+  .profile-twitter-header {
+    padding: 0 18px 20px;
+  }
+
+  .profile-twitter-avatar-wrap {
+    margin-top: -88px;
+    margin-left: 0;
+  }
+
+  .profile-twitter-header-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .profile-twitter-info h2 {
+    font-size: 24px;
+  }
+
+  .profile-twitter-content {
+    padding: 16px;
+  }
+
+  .profile-twitter-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .premium-profile-avatar-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* =========================================================
+   FIX PERFIL SIDEBAR - ACOMODO LIMPIO
+========================================================= */
+
+.profile-card {
+  overflow: hidden;
+}
+
+.profile-card-body {
+  padding: 28px;
+}
+
+.profile-avatar-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 22px !important;
+  margin-top: -70px !important;
+  margin-bottom: 24px !important;
+}
+
+.profile-avatar-actions {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.profile-photo-btn,
+.profile-edit-btn {
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 12px 18px !important;
+  background: rgba(30, 41, 59, 0.9) !important;
+  color: #f8fafc !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.App:not(.dark) .profile-photo-btn,
+.App:not(.dark) .profile-edit-btn {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.profile-main-info {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.profile-status-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.profile-main-info h3 {
+  font-size: 32px !important;
+  line-height: 1.05 !important;
+  margin: 0 !important;
+}
+
+.profile-email,
+.profile-bio {
+  margin: 0 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.profile-extra-meta,
+.profile-tags {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+
+.profile-extra-chip,
+.profile-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border-radius: 999px !important;
+  padding: 9px 13px !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+.profile-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 24px !important;
+}
+
+.profile-mini-stat {
+  padding: 14px 10px !important;
+  border-radius: 18px !important;
+  text-align: center !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+}
+
+.App:not(.dark) .profile-mini-stat {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.profile-mini-stat span,
+.profile-mini-stat strong {
+  display: block !important;
+}
+
+/* =========================================
+   FIX BOTÓN CAMBIAR FOTO DEBAJO DEL AVATAR
+========================================= */
+
+.profile-avatar-row {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 14px !important;
+  margin-top: -72px !important;
+  margin-bottom: 24px !important;
+}
+
+.profile-avatar-actions {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+.profile-photo-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 150px !important;
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  background: rgba(30, 41, 59, 0.92) !important;
+  color: #f8fafc !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22) !important;
+}
+
+.App:not(.dark) .profile-photo-btn {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+
+
+/* =========================================================
+   FIX PERFIL - STATS BIEN ACOMODADOS
+   ARREGLO AQUÍ: corrige Enviados / Recibidos / Reacciones
+========================================================= */
+
+.profile-stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  margin: 24px 0 28px !important;
+  padding: 14px !important;
+  border-radius: 26px !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-sizing: border-box !important;
+}
+
+/* ARREGLO AQUÍ: cada cajita ahora tiene número arriba y texto abajo */
+.profile-mini-stat {
+  min-width: 0 !important;
+  min-height: 86px !important;
+  padding: 14px 8px !important;
+  border-radius: 22px !important;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 41, 59, 0.86),
+    rgba(15, 23, 42, 0.86)
+  ) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* ARREGLO AQUÍ: número grande */
+.profile-mini-stat strong {
+  display: block !important;
+  order: 1 !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  color: #93c5fd !important;
+  font-weight: 950 !important;
+  margin: 0 !important;
+}
+
+/* ARREGLO AQUÍ: etiqueta debajo del número */
+.profile-mini-stat span {
+  display: block !important;
+  order: 2 !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+  color: #cbd5e1 !important;
+  font-weight: 900 !important;
+  margin: 0 !important;
+  white-space: normal !important;
+}
+
+/* Modo claro */
+.App:not(.dark) .profile-stats-grid {
+  background: #f8fafc !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.App:not(.dark) .profile-mini-stat {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+.App:not(.dark) .profile-mini-stat strong {
+  color: #2563eb !important;
+}
+
+.App:not(.dark) .profile-mini-stat span {
+  color: #475569 !important;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .profile-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  .profile-mini-stat {
+    min-height: 76px !important;
+    padding: 10px 6px !important;
+  }
+
+  .profile-mini-stat strong {
+    font-size: 22px !important;
+  }
+
+  .profile-mini-stat span {
+    font-size: 11px !important;
+  }
+}
+
