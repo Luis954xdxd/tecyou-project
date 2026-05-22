@@ -558,15 +558,11 @@ const handleToggleAvatarFrames = () => {
       setProfileImage(resolveImageUrl(profile.profile_image_url));
       setCoverImage(resolveImageUrl(profile.cover_image_url));
 
-      setUser((prev) => {
-        if (
-          prev.profile_image_url === profile.profile_image_url &&
-          prev.display_name === profile.display_name
-        ) {
-          return prev;
-        }
-        return { ...prev, ...profile };
-      });
+      // Se eliminó la condición de cortocircuito porque bloqueaba
+      // la actualización de equipped_frame_code (y otros campos
+      // como bio, tags, location) cuando la foto y el nombre no
+      // habían cambiado. Ahora siempre se hace el merge completo.
+      setUser((prev) => ({ ...prev, ...profile }));
     } catch (err) {
       console.error('Error al obtener el perfil:', err);
     } finally {
@@ -582,9 +578,46 @@ const handleToggleAvatarFrames = () => {
     await fetchFavorites();
   };
 
-  const handleAuthSuccess = (loggedUser) => {
+ const handleAuthSuccess = async (loggedUser) => {
+    // 1. Guardamos inmediatamente lo que devuelve el login
+    //    para que la UI ya tenga algo mientras carga el perfil completo.
     setUser(loggedUser);
     saveUserSession(loggedUser);
+
+    // 2. Hacemos fetch del perfil completo para obtener
+    //    profile_image_url, equipped_frame_code, display_name, etc.
+    //    actualizados, sin depender de un refresh manual.
+    try {
+      const response = await axios.get(
+        `${API_BASE}/api/users/profile/${loggedUser.id}`
+      );
+      const fullProfile = response.data;
+
+      // Merge: los datos del login + los datos completos del perfil
+      const mergedUser = { ...loggedUser, ...fullProfile };
+      setUser(mergedUser);
+      saveUserSession(mergedUser);
+
+      // Actualizar también los estados del perfil (foto, nombre, bio...)
+      setDisplayName(fullProfile.display_name || fullProfile.fullname || '');
+      setProfileImage(resolveImageUrl(fullProfile.profile_image_url));
+      setCoverImage(resolveImageUrl(fullProfile.cover_image_url));
+      setProfileBio(fullProfile.bio || '');
+      setProfileTags(
+        Array.isArray(fullProfile.tags) && fullProfile.tags.length > 0
+          ? fullProfile.tags
+          : ['Comunidad TSJ', 'Reconocimiento positivo']
+      );
+      setBirthDate(fullProfile.birth_date || '');
+      setLocationText(fullProfile.location || '');
+      setIsVerified(Boolean(fullProfile.is_verified));
+      setFollowersCount(Number(fullProfile.followers_count || 0));
+      setFollowingCount(Number(fullProfile.following_count || 0));
+    } catch (err) {
+      // Si falla el fetch del perfil no bloqueamos el login,
+      // el usuario ya entró con los datos básicos.
+      console.error('Error al cargar perfil completo tras login:', err);
+    }
   };
 
   const handleLogout = () => {

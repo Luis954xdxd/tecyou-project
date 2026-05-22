@@ -13363,7 +13363,8 @@ body,
   padding: 0;
   cursor: pointer;
   border-radius: 50%;
-  border: 3px solid white;
+  /* Sin borde propio — FramedAvatar ya maneja
+     su propio círculo y marco internamente */
   transition: transform 0.18s ease;
 }
 
@@ -13594,6 +13595,89 @@ body,
   .users-page-grid {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* =========================================================
+   TAMAÑO: CARRUSEL DE USUARIOS (UsersDirectory en el feed)
+   Cards de 148px de ancho — avatar mediano centrado
+========================================================= */
+
+.framed-avatar.size-carousel {
+  width: 82px;
+  height: 82px;
+}
+
+.framed-avatar.size-carousel .framed-avatar-circle {
+  width: 56px;
+  height: 56px;
+}
+
+.framed-avatar.size-carousel .framed-avatar-frame {
+  width: 130%;
+  height: 130%;
+}
+
+/* Ajustes individuales por marco — size-carousel */
+.framed-avatar.size-carousel .frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.22);
+}
+
+.framed-avatar.size-carousel .frame-silver_frame {
+  transform: translate(-50%, -52%) scale(0.84);
+}
+
+.framed-avatar.size-carousel .frame-gold_frame {
+  transform: translate(-50%, -51%) scale(0.92);
+}
+
+.framed-avatar.size-carousel .frame-crimson_ruby_frame {
+  transform: translate(-50%, -52%) scale(0.88);
+}
+
+.framed-avatar.size-carousel .frame-diamond_frame {
+  transform: translate(-50%, -54%) scale(0.80);
+}
+
+
+/* =========================================================
+   TAMAÑO: PÁGINA COMPLETA DE USUARIOS (/usuarios)
+   Cards de 220px+ de ancho — avatar grande con portada
+========================================================= */
+
+.framed-avatar.size-users-page {
+  width: 110px;
+  height: 110px;
+}
+
+.framed-avatar.size-users-page .framed-avatar-circle {
+  width: 74px;
+  height: 74px;
+}
+
+.framed-avatar.size-users-page .framed-avatar-frame {
+  width: 132%;
+  height: 132%;
+}
+
+/* Ajustes individuales por marco — size-users-page */
+.framed-avatar.size-users-page .frame-copper_frame {
+  transform: translate(-50%, -40%) scale(1.24);
+}
+
+.framed-avatar.size-users-page .frame-silver_frame {
+  transform: translate(-50%, -52%) scale(0.84);
+}
+
+.framed-avatar.size-users-page .frame-gold_frame {
+  transform: translate(-50%, -51%) scale(0.92);
+}
+
+.framed-avatar.size-users-page .frame-crimson_ruby_frame {
+  transform: translate(-50%, -52%) scale(0.88);
+}
+
+.framed-avatar.size-users-page .frame-diamond_frame {
+  transform: translate(-50%, -54%) scale(0.80);
 }
 
 /*

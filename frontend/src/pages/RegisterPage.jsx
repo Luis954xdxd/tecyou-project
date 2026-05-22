@@ -83,18 +83,13 @@ function RegisterPage({ onRegisterSuccess }) {
         password: form.password,
         confirmPassword: form.confirmPassword,
       });
+      setSuccessMsg(response.data.message || '¡Cuenta creada! Redirigiendo al login...');
 
-      const registeredUser = response.data.user;
-
-      setSuccessMsg(response.data.message || 'Cuenta registrada correctamente.');
-
-      if (onRegisterSuccess) {
-        onRegisterSuccess(registeredUser);
-      }
-
+      // No iniciamos sesión automáticamente tras el registro.
+      // El usuario debe hacer login con su correo y contraseña.
       setTimeout(() => {
-        navigate('/');
-      }, 900);
+        navigate('/login');
+      }, 1400);
     } catch (err) {
       setError(
         err.response?.data?.error ||
