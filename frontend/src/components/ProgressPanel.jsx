@@ -3,6 +3,12 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
 
+const resolveImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${API_BASE}${url}`;
+};
+
 function ProgressPanel({
   profileUserId,
   currentUser,
@@ -326,6 +332,21 @@ function ProgressPanel({
           <div className="badge-grid">
             {badges.map((badge) => (
               <div key={badge.id} className="badge-card">
+                <div className="badge-logo-wrap">
+                  {badge.image_url ? (
+                    <img
+                      src={resolveImageUrl(badge.image_url)}
+                      alt={badge.name}
+                      className="badge-logo-image"
+                    />
+                  ) : (
+                    <div className="badge-logo-fallback">
+                      <span>🏅</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="badge-card-content">
                 <div className="badge-card-top">
                   <span className="badge-rarity-chip">{badge.rarity}</span>
                   <span className="badge-category-chip">{badge.category || 'general'}</span>
@@ -349,6 +370,7 @@ function ProgressPanel({
                     year: 'numeric',
                   })}
                 </small>
+                </div>
               </div>
             ))}
           </div>
