@@ -115,6 +115,12 @@ function NotificationsBell({ userId, onOpenProfile }) {
   }, [userId]);
 
   useEffect(() => {
+    const refresh = () => fetchNotifications();
+    window.addEventListener('tec-notification-refresh', refresh);
+    return () => window.removeEventListener('tec-notification-refresh', refresh);
+  }, [userId]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenDropdown(false);

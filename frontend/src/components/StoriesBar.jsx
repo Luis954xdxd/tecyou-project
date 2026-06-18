@@ -65,25 +65,53 @@ function StoriesBar({
       */}
       <button
         type="button"
-        className="story-bubble own-story-bubble"
+        className="story-bubble story-card own-story-bubble"
         onClick={handleOwnStoryClick}
         onDoubleClick={handleOwnStoryDoubleClick}
         title="1 clic: crear historia | 2 clics: ver historia"
       >
-        <div className="story-avatar add-story-avatar">
-          {myStoriesGroup?.profile_image_url ? (
-            <img
-              src={resolveImageUrl(myStoriesGroup.profile_image_url)}
-              alt="Tu historia"
-              className="story-avatar-image"
-            />
-          ) : (
-            '+'
-          )}
+        <div className="story-card-media own">
+          {myStoriesGroup?.stories?.[0]?.media_url ? (
+            myStoriesGroup.stories[0].media_type === 'video' ? (
+              <video src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} muted />
+            ) : (
+              <img src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} alt="Tu historia" />
+            )
+          ) : currentUser?.profile_image_url ? (
+            <img src={resolveImageUrl(currentUser.profile_image_url)} alt="Tu historia" />
+          ) : null}
         </div>
-
-        <span className="story-name">Tu historia</span>
+        <div className="story-add-plus">+</div>
+        <span className="story-name">Crear historia</span>
       </button>
+
+      {myStoriesGroup?.stories?.length > 0 && (
+        <button
+          type="button"
+          className="story-bubble story-card"
+          onClick={() => onOpenStory(myStoriesGroup.stories, 0)}
+        >
+          <div className="story-card-media">
+            {myStoriesGroup.stories[0].media_type === 'video' ? (
+              <video src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} muted />
+            ) : (
+              <img src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} alt="Tu historia" />
+            )}
+          </div>
+          <div className="story-avatar-ring">
+            {myStoriesGroup.profile_image_url ? (
+              <img
+                src={resolveImageUrl(myStoriesGroup.profile_image_url)}
+                alt="Tu historia"
+                className="story-avatar-image"
+              />
+            ) : (
+              <div className="story-avatar-fallback">T</div>
+            )}
+          </div>
+          <span className="story-name">Tu historia</span>
+        </button>
+      )}
 
       {/* HISTORIAS DE OTROS USUARIOS */}
       {groupedStories
@@ -99,9 +127,16 @@ function StoriesBar({
             <button
               key={group.user_id}
               type="button"
-              className="story-bubble"
+              className="story-bubble story-card"
               onClick={() => onOpenStory(group.stories, 0)}
             >
+              <div className="story-card-media">
+                {group.stories?.[0]?.media_type === 'video' ? (
+                  <video src={resolveImageUrl(group.stories[0].media_url)} muted />
+                ) : group.stories?.[0]?.media_url ? (
+                  <img src={resolveImageUrl(group.stories[0].media_url)} alt={displayName} />
+                ) : null}
+              </div>
               <div className="story-avatar-ring">
                 {avatar ? (
                   <img

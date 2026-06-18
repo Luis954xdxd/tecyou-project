@@ -103,23 +103,26 @@ router.post(
       const finalVisibility = visibility_type || 'public';
 
       if (!['public', 'only_selected', 'exclude_selected'].includes(finalVisibility)) {
-        return res.status(400).json({ error: 'Tipo de visibilidad inválido.' });
+        return res.status(400).json({ error: 'Tipo de visibilidad invÃ¡lido.' });
       }
 
-      const parsedDuration = Number(duration_seconds || 5);
+      const parsedDuration = Number(duration_seconds || (mediaType === 'video' ? 60 : 30));
 
       if (Number.isNaN(parsedDuration)) {
-        return res.status(400).json({ error: 'La duración es inválida.' });
+        return res.status(400).json({ error: 'La duracion es invalida.' });
       }
 
-      if (parsedDuration > 300) {
+      const maxDuration = mediaType === 'video' ? 60 : 30;
+
+      if (parsedDuration > maxDuration) {
         return res.status(400).json({
-          error: 'La historia no puede durar más de 5 minutos.',
+          error: mediaType === 'video'
+            ? 'Los videos de historia no pueden durar mas de 1 minuto.'
+            : 'Las imagenes de historia duran maximo 30 segundos.',
         });
       }
 
-      const finalDuration = Math.min(Math.max(parsedDuration, 1), 300);
-
+      const finalDuration = Math.min(Math.max(parsedDuration, 1), maxDuration);
       const mediaUrl = `/uploads/stories/${storyMediaFile.filename}`;
       const audioUrl = storyAudioFile
         ? `/uploads/stories/${storyAudioFile.filename}`
@@ -285,7 +288,7 @@ router.post('/:id/view', async (req, res) => {
 });
 
 /**
- * Ver quién vio la historia
+ * Ver quiÃ©n vio la historia
  */
 router.get('/:id/views', async (req, res) => {
   try {
@@ -329,7 +332,7 @@ router.post('/:id/react', async (req, res) => {
     const validReactions = ['like', 'love', 'laugh', 'wow', 'sad', 'fire'];
 
     if (!validReactions.includes(reaction_type)) {
-      return res.status(400).json({ error: 'Tipo de reacción inválido.' });
+      return res.status(400).json({ error: 'Tipo de reacciÃ³n invÃ¡lido.' });
     }
 
     const existing = await pool.query(
@@ -353,7 +356,7 @@ router.post('/:id/react', async (req, res) => {
           [id, user_id]
         );
 
-        return res.json({ message: 'Reacción eliminada.' });
+        return res.json({ message: 'ReacciÃ³n eliminada.' });
       }
 
       await pool.query(
@@ -365,7 +368,7 @@ router.post('/:id/react', async (req, res) => {
         [id, user_id, reaction_type]
       );
 
-      return res.json({ message: 'Reacción actualizada.' });
+      return res.json({ message: 'ReacciÃ³n actualizada.' });
     }
 
     await pool.query(
@@ -376,7 +379,7 @@ router.post('/:id/react', async (req, res) => {
       [id, user_id, reaction_type]
     );
 
-    res.json({ message: 'Reacción registrada.' });
+    res.json({ message: 'ReacciÃ³n registrada.' });
   } catch (error) {
     console.error('Error reacting to story:', error);
     res.status(500).json({ error: 'Error al reaccionar.' });
@@ -437,7 +440,7 @@ router.post('/:id/comments', async (req, res) => {
     const { user_id, comment } = req.body;
 
     if (!user_id || !comment || !comment.trim()) {
-      return res.status(400).json({ error: 'Comentario inválido.' });
+      return res.status(400).json({ error: 'Comentario invÃ¡lido.' });
     }
 
     const result = await pool.query(

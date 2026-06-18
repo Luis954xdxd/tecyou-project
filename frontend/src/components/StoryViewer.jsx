@@ -15,7 +15,6 @@ function StoryViewer({
 }) {
   const [commentText, setCommentText] = useState('');
   const audioRef = useRef(null);
-
   const currentStory = storyViewer?.stories?.[storyViewer.currentIndex];
 
   const reactionMeta = useMemo(
@@ -25,30 +24,22 @@ function StoryViewer({
       laugh: { emoji: '😂', label: 'Me divierte' },
       wow: { emoji: '😮', label: 'Wow' },
       sad: { emoji: '😢', label: 'Triste' },
-      fire: { emoji: '🔥', label: 'Top' },
     }),
     []
   );
 
   useEffect(() => {
     if (!currentStory) return;
-
-    const durationMs = Number(currentStory.duration_seconds || 5) * 1000;
-
+    const durationMs = Number(currentStory.duration_seconds || 30) * 1000;
     const timer = setTimeout(() => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
+      audioRef.current?.pause();
       onNext();
     }, durationMs);
-
     return () => clearTimeout(timer);
   }, [currentStory, onNext]);
 
   useEffect(() => {
     if (!currentStory || !audioRef.current || !currentStory.music_url) return;
-
     const audio = audioRef.current;
     const startAt = Number(currentStory.music_start_seconds || 0);
 
@@ -57,12 +48,11 @@ function StoryViewer({
         audio.currentTime = startAt;
         await audio.play();
       } catch (error) {
-        console.log('No se pudo reproducir el audio automáticamente:', error);
+        console.log('No se pudo reproducir el audio automaticamente:', error);
       }
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.pause();
@@ -72,166 +62,138 @@ function StoryViewer({
 
   if (!storyViewer?.isOpen || !currentStory) return null;
 
-  const mediaSrc = currentStory.media_url?.startsWith('http')
-    ? currentStory.media_url
-    : `${API_BASE}${currentStory.media_url}`;
-
-  const audioSrc = currentStory.music_url
-    ? currentStory.music_url.startsWith('http')
-      ? currentStory.music_url
-      : `${API_BASE}${currentStory.music_url}`
-    : null;
-
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-    await onComment(currentStory.id, commentText);
-    setCommentText('');
+  const resolveUrl = (url) => {
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_BASE}${url}`;
   };
 
+  const mediaSrc = resolveUrl(currentStory.media_url);
+  const audioSrc = resolveUrl(currentStory.music_url);
+  const authorName = currentStory.display_name || currentStory.fullname || 'Usuario';
+  const authorAvatar = resolveUrl(currentStory.profile_image_url);
   const storyComments = comments?.[currentStory.id] || [];
   const storyReactionUsers = reactions?.[currentStory.id]?.users || [];
   const storyViews = views?.[currentStory.id] || [];
 
   const formatTimeAgo = (dateString) => {
-    const now = new Date();
-    const created = new Date(dateString);
-    const diffMs = now - created;
-
+    const diffMs = Date.now() - new Date(dateString).getTime();
     const minutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(diffMs / 3600000);
-    const days = Math.floor(diffMs / 86400000);
-
-    if (minutes < 1) return 'hace unos segundos';
-    if (minutes < 60) return `hace ${minutes} min`;
-    if (hours < 24) return `hace ${hours} h`;
-    return `hace ${days} día${days > 1 ? 's' : ''}`;
+    if (minutes < 1) return 'ahora';
+    if (minutes < 60) return `${minutes} min`;
+    if (hours < 24) return `${hours} h`;
+    return 'ayer';
   };
 
-  const formatRemainingTime = (expiresAt) => {
-    if (!expiresAt) return 'sin dato';
-
-    const now = new Date();
-    const expires = new Date(expiresAt);
-    const diffMs = expires - now;
-
-    if (diffMs <= 0) return 'expirada';
-
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours <= 0) return `${minutes} min`;
-    return `${hours}h ${minutes}m`;
+  const handleCommentSubmit = async (event) => {
+    event.preventDefault();
+    if (!commentText.trim()) return;
+    await onComment(currentStory.id, commentText);
+    setCommentText('');
   };
 
-  const uploadedText = formatTimeAgo(currentStory.created_at);
-  const remainingText = formatRemainingTime(currentStory.expires_at);
+  const close = () => {
+    audioRef.current?.pause();
+    onClose();
+  };
 
   return (
-    <div className="story-viewer-overlay">
-      <div className="story-viewer">
-        <div className="story-progress-bar">
+    <div className="story-viewer-overlay fb-story-viewer-overlay">
+      <aside className="fb-story-sidebar">
+        <button type="button" className="fb-story-close" onClick={close}>
+          {'\u00d7'}
+        </button>
+        <h2>Historias</h2>
+        <p>Archivo · Configuracion</p>
+        <div className="fb-story-sidebar-author">
+          {authorAvatar ? <img src={authorAvatar} alt={authorName} /> : <span>{authorName[0]}</span>}
+          <div>
+            <strong>{authorName}</strong>
+            <small>{formatTimeAgo(currentStory.created_at)}</small>
+          </div>
+        </div>
+
+        <section className="fb-story-side-section">
+          <h3>Quien vio</h3>
+          {storyViews.slice(0, 12).map((viewer) => {
+            const avatar = resolveUrl(viewer.profile_image_url);
+            const name = viewer.display_name || viewer.fullname || 'Usuario';
+            return (
+              <div key={viewer.viewer_id} className="fb-story-person-row">
+                {avatar ? <img src={avatar} alt={name} /> : <span>{name[0]}</span>}
+                <strong>{name}</strong>
+              </div>
+            );
+          })}
+          {storyViews.length === 0 && <small>Sin vistas registradas.</small>}
+        </section>
+
+        <section className="fb-story-side-section">
+          <h3>Reacciones</h3>
+          {storyReactionUsers.slice(0, 12).map((item) => {
+            const meta = reactionMeta[item.reaction_type] || { emoji: '✨', label: item.reaction_type };
+            const name = item.display_name || item.fullname || 'Usuario';
+            return (
+              <div key={`${item.user_id}-${item.reaction_type}`} className="fb-story-person-row">
+                <span>{meta.emoji}</span>
+                <div>
+                  <strong>{name}</strong>
+                  <small>{meta.label}</small>
+                </div>
+              </div>
+            );
+          })}
+          {storyReactionUsers.length === 0 && <small>Sin reacciones.</small>}
+        </section>
+      </aside>
+
+      <main className="fb-story-stage">
+        <div className="story-progress-bar fb-story-progress">
           {storyViewer.stories.map((_, index) => (
             <div key={index} className="story-progress-segment">
               <div
                 className={`story-progress-fill ${
-                  index < storyViewer.currentIndex
-                    ? 'filled'
-                    : index === storyViewer.currentIndex
-                    ? 'active'
-                    : ''
+                  index < storyViewer.currentIndex ? 'filled' : index === storyViewer.currentIndex ? 'active' : ''
                 }`}
               />
             </div>
           ))}
         </div>
 
-        <div className="story-viewer-top">
-          <button
-            type="button"
-            className="story-close-btn"
-            onClick={() => {
-              if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-              }
-              onClose();
-            }}
-          >
-            ✕
-          </button>
-
-          <div className="story-user-meta">
-            <div className="story-time-info">
-              <span className="story-upload-time">Subida: {uploadedText}</span>
-              <span
-                className={`story-expire-time ${
-                  remainingText.includes('min') ? 'story-expire-warning' : ''
-                }`}
-              >
-                Expira en: {remainingText}
-              </span>
-            </div>
-          </div>
+        <div className="fb-story-top-meta">
+          {authorAvatar ? <img src={authorAvatar} alt={authorName} /> : <span>{authorName[0]}</span>}
+          <strong>{authorName}</strong>
+          <small>{formatTimeAgo(currentStory.created_at)}</small>
+          {currentStory.music_name && <em>♫ {currentStory.music_name}</em>}
         </div>
 
-        <div className="story-viewer-main-content">
-          <div className="story-viewer-media">
-            <div
-              className="story-click-left"
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                }
-                onPrev();
-              }}
-              aria-label="Historia anterior"
-              title="Historia anterior"
+        <button type="button" className="fb-story-nav prev" onClick={onPrev}>
+          {'\u2039'}
+        </button>
+        <button type="button" className="fb-story-nav next" onClick={onNext}>
+          {'\u203A'}
+        </button>
+
+        <div className="fb-story-card">
+          {currentStory.media_type === 'video' ? (
+            <video src={mediaSrc} autoPlay controls className="story-viewer-video" />
+          ) : (
+            <img src={mediaSrc} alt="Historia" className="story-viewer-image" />
+          )}
+          {currentStory.caption && <p className="fb-story-caption">{currentStory.caption}</p>}
+        </div>
+
+        {audioSrc && <audio ref={audioRef} src={audioSrc} preload="auto" />}
+
+        <div className="fb-story-bottom-actions">
+          <form onSubmit={handleCommentSubmit} className="story-comment-form">
+            <input
+              type="text"
+              placeholder="Enviar mensaje..."
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
             />
-
-            <div
-              className="story-click-right"
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                }
-                onNext();
-              }}
-              aria-label="Siguiente historia"
-              title="Siguiente historia"
-            />
-
-            {currentStory.media_type === 'video' ? (
-              <video
-                src={mediaSrc}
-                controls
-                autoPlay
-                className="story-viewer-video"
-              />
-            ) : (
-              <img
-                src={mediaSrc}
-                alt="Historia"
-                className="story-viewer-image"
-              />
-            )}
-          </div>
-
-          {audioSrc ? (
-            <audio ref={audioRef} src={audioSrc} preload="auto" />
-          ) : null}
-
-          {currentStory.caption ? (
-            <div className="story-viewer-caption">{currentStory.caption}</div>
-          ) : null}
-
-          {currentStory.music_name ? (
-            <div className="story-viewer-music">🎵 {currentStory.music_name}</div>
-          ) : null}
-
+          </form>
           <div className="story-viewer-reactions">
             {Object.entries(reactionMeta).map(([type, meta]) => (
               <button
@@ -242,108 +204,17 @@ function StoryViewer({
                 title={meta.label}
               >
                 <span className="story-reaction-emoji">{meta.emoji}</span>
-                <span className="story-reaction-label">{meta.label}</span>
               </button>
             ))}
           </div>
-
-          <div className="story-viewer-bottom">
-            <button
-              type="button"
-              className="story-nav-btn"
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                }
-                onPrev();
-              }}
-            >
-              ←
-            </button>
-
-            <button
-              type="button"
-              className="story-nav-btn"
-              onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current.currentTime = 0;
-                }
-                onNext();
-              }}
-            >
-              →
-            </button>
-          </div>
-
-          <form onSubmit={handleCommentSubmit} className="story-comment-form">
-            <input
-              type="text"
-              placeholder="Comentar historia..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-            />
-            <button type="submit">Enviar</button>
-          </form>
-
-          <div className="story-info-grid">
-            <div className="story-comments-list">
-              <h4>Comentarios</h4>
-              {storyComments.length === 0 ? (
-                <p>Sin comentarios.</p>
-              ) : (
-                storyComments.map((comment) => (
-                  <div key={comment.id} className="story-comment-item">
-                    <strong>{comment.display_name || comment.fullname}</strong>
-                    <p>{comment.comment}</p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="story-reaction-users-list">
-              <h4>Quién reaccionó</h4>
-              {storyReactionUsers.length === 0 ? (
-                <p>Sin reacciones.</p>
-              ) : (
-                storyReactionUsers.map((user) => {
-                  const meta =
-                    reactionMeta[user.reaction_type] || {
-                      emoji: '✨',
-                      label: user.reaction_type,
-                    };
-
-                  return (
-                    <div
-                      key={`${user.user_id}-${user.reaction_type}`}
-                      className="story-reaction-user-item"
-                    >
-                      <strong>{user.display_name || user.fullname}</strong>
-                      <span className="story-reaction-type">
-                        {meta.emoji} {meta.label}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="story-views-list">
-              <h4>Quién vio</h4>
-              {storyViews.length === 0 ? (
-                <p>Sin vistas registradas.</p>
-              ) : (
-                storyViews.map((viewer) => (
-                  <div key={viewer.viewer_id} className="story-view-item">
-                    <strong>{viewer.display_name || viewer.fullname}</strong>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         </div>
-      </div>
+
+        {storyComments.length > 0 && (
+          <div className="fb-story-comments-pill">
+            {storyComments.length} comentario(s)
+          </div>
+        )}
+      </main>
     </div>
   );
 }

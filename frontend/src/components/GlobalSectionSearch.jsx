@@ -30,11 +30,11 @@ function GlobalSectionSearch({ sections }) {
   return (
     <div className="global-search-wrapper">
       <div className="global-search-box">
-        <span className="global-search-icon">⌕</span>
+        <span className="global-search-icon">{'\u2315'}</span>
         <input
           type="text"
           className="global-search-input"
-          placeholder="Buscar sección, actividad, perfil, notificaciones..."
+          placeholder={'Buscar secci\u00f3n, actividad, perfil, notificaciones...'}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

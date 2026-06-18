@@ -21,7 +21,6 @@ import './styles/auth.css';
 import { clearUserSession, getUserSession, saveUserSession } from './utils/authStorage';
 import RecognitionPage from './pages/RecognitionPage';
 import { renderTextWithHashtags } from './textFormatters';
-import StoriesUploader from './components/StoriesUploader';
 import StoriesBar from './components/StoriesBar';
 import StoryViewer from './components/StoryViewer';
 import CreateStoryModal from './components/CreateStoryModal';
@@ -86,9 +85,26 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [openReactionPickerId, setOpenReactionPickerId] = useState(null);
 
   const [recognitionPrefillUser, setRecognitionPrefillUser] = useState(null);
+  const [showRecognitionComposer, setShowRecognitionComposer] = useState(false);
+  const [deletingRecognitionIds, setDeletingRecognitionIds] = useState({});
+  const [deleteCandidateId, setDeleteCandidateId] = useState(null);
+  const [showSocialMenu, setShowSocialMenu] = useState(false);
+  const [showMessengerPanel, setShowMessengerPanel] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState({});
+  const [chatConversations, setChatConversations] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatFiles, setChatFiles] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [sendingChat, setSendingChat] = useState(false);
+  const [chatError, setChatError] = useState('');
+  const [isMessengerExpanded, setIsMessengerExpanded] = useState(false);
+  const [chatImageViewer, setChatImageViewer] = useState(null);
+  const [showChatExtras, setShowChatExtras] = useState(false);
+  const [recordingAudio, setRecordingAudio] = useState(false);
 
   const [favoriteIds, setFavoriteIds] = useState({});
-  const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
   const [favoritingIds, setFavoritingIds] = useState({});
 
   const [stories, setStories] = useState([]);
@@ -118,12 +134,16 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const fileInputRef = useRef(null);
   const modalProfileInputRef = useRef(null);
   const coverInputRef = useRef(null);
+  const activeChatRef = useRef(null);
+  const chatFileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const reactionOptions = [
-    { key: 'like', label: 'Me gusta', emoji: '👍' },
-    { key: 'celebrate', label: 'Excelente', emoji: '🎉' },
-    { key: 'inspire', label: 'Inspirador', emoji: '💡' },
-    { key: 'love', label: 'Agradezco', emoji: '❤️' },
+    { key: 'like', label: 'Me gusta', emoji: '\uD83D\uDC4D' },
+    { key: 'celebrate', label: 'Excelente', emoji: '\uD83C\uDF89' },
+    { key: 'inspire', label: 'Inspirador', emoji: '\uD83D\uDCA1' },
+    { key: 'love', label: 'Agradezco', emoji: '\u2764\uFE0F' },
   ];
 
   useEffect(() => {
@@ -195,7 +215,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const sectionSearchItems = [
     { id: 'hero-section', title: 'Inicio / Resumen', description: 'Vista general', keywords: ['inicio', 'resumen', 'principal'] },
     { id: 'featured-section', title: 'Destacados', description: 'Reconocimientos destacados', keywords: ['destacados', 'top'] },
-    { id: 'analytics-section', title: 'Distribución', description: 'Métricas por categoría', keywords: ['estadisticas', 'analiticas', 'categorias'] },
+    { id: 'analytics-section', title: 'Distribuci\u00f3n', description: 'M\u00e9tricas por categor\u00eda', keywords: ['estadisticas', 'analiticas', 'categorias'] },
     { id: 'users-directory-section', title: 'Usuarios / Comunidad', description: 'Directorio y seguidores', keywords: ['usuarios', 'seguir', 'directorio'] },
     { id: 'notifications-section', title: 'Notificaciones', description: 'Centro de notificaciones', keywords: ['notificaciones', 'avisos'] },
     { id: 'activity-section', title: 'Actividad reciente', description: 'Actividad comunitaria', keywords: ['actividad', 'reciente'] },
@@ -541,7 +561,7 @@ const handleToggleAvatarFrames = () => {
       setDisplayName(profile.display_name || profile.fullname || '');
       setProfileBio(
         profile.bio ||
-          'Usuario participante en la comunidad ¡Tec! ¡you!, enfocado en reconocer logros, fortalecer vínculos y visibilizar el impacto positivo dentro del TSJ.'
+          'Usuario participante en la comunidad \u00a1Tec! \u00a1you!, enfocado en reconocer logros, fortalecer v\u00ednculos y visibilizar el impacto positivo dentro del TSJ.'
       );
       setProfileTags(
         Array.isArray(profile.tags) && profile.tags.length > 0
@@ -558,10 +578,10 @@ const handleToggleAvatarFrames = () => {
       setProfileImage(resolveImageUrl(profile.profile_image_url));
       setCoverImage(resolveImageUrl(profile.cover_image_url));
 
-      // Se eliminó la condición de cortocircuito porque bloqueaba
-      // la actualización de equipped_frame_code (y otros campos
+      // Se elimino la condicion de cortocircuito porque bloqueaba
+      // la actualizacion de equipped_frame_code (y otros campos
       // como bio, tags, location) cuando la foto y el nombre no
-      // habían cambiado. Ahora siempre se hace el merge completo.
+      // habian cambiado. Ahora siempre se hace el merge completo.
       setUser((prev) => ({ ...prev, ...profile }));
     } catch (err) {
       console.error('Error al obtener el perfil:', err);
@@ -598,7 +618,7 @@ const handleToggleAvatarFrames = () => {
       setUser(mergedUser);
       saveUserSession(mergedUser);
 
-      // Actualizar también los estados del perfil (foto, nombre, bio...)
+      // Actualizar tambien los estados del perfil (foto, nombre, bio...)
       setDisplayName(fullProfile.display_name || fullProfile.fullname || '');
       setProfileImage(resolveImageUrl(fullProfile.profile_image_url));
       setCoverImage(resolveImageUrl(fullProfile.cover_image_url));
@@ -615,7 +635,7 @@ const handleToggleAvatarFrames = () => {
       setFollowingCount(Number(fullProfile.following_count || 0));
     } catch (err) {
       // Si falla el fetch del perfil no bloqueamos el login,
-      // el usuario ya entró con los datos básicos.
+      // el usuario ya entro con los datos basicos.
       console.error('Error al cargar perfil completo tras login:', err);
     }
   };
@@ -630,13 +650,13 @@ const handleToggleAvatarFrames = () => {
     try {
       const shareUrl = `${window.location.origin}/reconocimiento/${recognition.id}`;
 
-      const shareText = `Mira este reconocimiento en ¡Tec! ¡you!
-${recognition.sender_name} reconoció a ${recognition.receiver_name}
+      const shareText = `Mira este reconocimiento en \u00a1Tec! \u00a1you!
+${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 "${recognition.message}"`;
 
       if (navigator.share) {
         await navigator.share({
-          title: '¡Tec! ¡you! - Reconocimiento',
+          title: '\u00a1Tec! \u00a1you! - Reconocimiento',
           text: shareText,
           url: shareUrl,
         });
@@ -650,10 +670,200 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     }
   };
 
+  const fetchChatConversations = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await axios.get(`${API_BASE}/api/chat/conversations/${user.id}`);
+      setChatConversations(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error al cargar conversaciones:', error);
+    }
+  };
+
+  const fetchChatMessages = async (conversationId) => {
+    if (!user?.id || !conversationId) return;
+    try {
+      setChatLoading(true);
+      const response = await axios.get(
+        `${API_BASE}/api/chat/conversations/${conversationId}/messages?userId=${user.id}`
+      );
+      setChatMessages(Array.isArray(response.data) ? response.data : []);
+      await axios.patch(`${API_BASE}/api/chat/conversations/${conversationId}/read`, {
+        user_id: user.id,
+      });
+      fetchChatConversations();
+    } catch (error) {
+      console.error('Error al cargar mensajes:', error);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const openChatWithUser = (targetUser) => {
+    if (!targetUser) return;
+    setShowMessengerPanel(true);
+    setShowSocialMenu(false);
+    setActiveChat({
+      id: null,
+      other_user_id: targetUser.id,
+      display_name: targetUser.display_name || targetUser.fullname,
+      other_profile_image: targetUser.profile_image_url,
+      other_frame_code: targetUser.equipped_frame_code,
+      isPendingDirect: true,
+    });
+    setChatMessages([]);
+  };
+
+  const openConversation = async (conversation) => {
+    setActiveChat(conversation);
+    await fetchChatMessages(conversation.id);
+  };
+
+  const handleChatFilesChange = (event) => {
+    setChatFiles(Array.from(event.target.files || []));
+  };
+
+  const appendChatText = (text) => {
+    setChatDraft((prev) => `${prev}${text}`);
+  };
+
+  const getChatFilePreview = (file) => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
+  };
+
+  const startAudioRecording = async () => {
+    if (recordingAudio) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], `nota_voz_${Date.now()}.webm`, { type: 'audio/webm' });
+        setChatFiles((prev) => [...prev, file]);
+        stream.getTracks().forEach((track) => track.stop());
+        setRecordingAudio(false);
+      };
+
+      recorder.start();
+      setRecordingAudio(true);
+    } catch (error) {
+      console.error('Error al grabar audio:', error);
+      setChatError('No se pudo acceder al microfono. Revisa permisos del navegador.');
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const sendChatMessage = async () => {
+    if (!user?.id || !activeChat || sendingChat) return;
+    if (!chatDraft.trim() && chatFiles.length === 0) return;
+
+    try {
+      setSendingChat(true);
+      setChatError('');
+      const payload = new FormData();
+      payload.append('sender_id', user.id);
+      payload.append('content', chatDraft.trim());
+      chatFiles.forEach((file) => payload.append('attachments', file));
+
+      const url = activeChat.isPendingDirect
+        ? `${API_BASE}/api/chat/direct/${activeChat.other_user_id}/messages`
+        : `${API_BASE}/api/chat/conversations/${activeChat.id}/messages`;
+
+      const response = await axios.post(url, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const nextConversationId = response.data?.conversation_id;
+      setChatDraft('');
+      setChatFiles([]);
+      if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+
+      if (nextConversationId) {
+        const updatedChat = {
+          ...activeChat,
+          id: nextConversationId,
+          isPendingDirect: false,
+        };
+        setActiveChat(updatedChat);
+        await fetchChatMessages(nextConversationId);
+      }
+      fetchChatConversations();
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      setChatError(error.response?.data?.error || 'No se pudo enviar el mensaje.');
+    } finally {
+      setSendingChat(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
       fetchAllUsersForStories();
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    fetchChatConversations();
+
+    const events = new EventSource(`${API_BASE}/api/chat/events/${user.id}`);
+
+    events.addEventListener('presence_snapshot', (event) => {
+      const snapshot = JSON.parse(event.data || '[]');
+      setOnlineUsers(() =>
+        snapshot.reduce((acc, item) => {
+          acc[item.userId] = item;
+          return acc;
+        }, {})
+      );
+    });
+
+    events.addEventListener('presence', (event) => {
+      const item = JSON.parse(event.data || '{}');
+      if (!item.userId) return;
+      setOnlineUsers((prev) => ({ ...prev, [item.userId]: item }));
+    });
+
+    events.addEventListener('message', (event) => {
+      const message = JSON.parse(event.data || '{}');
+      if (!message.id) return;
+      setChatMessages((prev) => {
+        const currentChatId = activeChatRef.current?.id;
+        if (Number(message.conversation_id) !== Number(currentChatId)) return prev;
+        if (prev.some((item) => Number(item.id) === Number(message.id))) return prev;
+        return [...prev, message];
+      });
+      fetchChatConversations();
+    });
+
+    events.addEventListener('notification', () => {
+      window.dispatchEvent(new CustomEvent('tec-notification-refresh'));
+      fetchChatConversations();
+    });
+
+    events.onerror = () => {
+      console.warn('Conexi\u00f3n en tiempo real intentando reconectar...');
+    };
+
+    return () => events.close();
   }, [user?.id]);
 
   useEffect(()=> {
@@ -675,7 +885,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
   const onScroll = () => {
     const shouldShow = window.scrollY > 420;
     // Solo actualiza el estado si el valor realmente cambia.
-    // Así evitas re-renders en cada píxel del scroll.
+    // Asi evitas re-renders en cada pixel del scroll.
     setShowScrollTop((prev) => (prev === shouldShow ? prev : shouldShow));
   };
 
@@ -711,8 +921,8 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
       block: 'center',
     });
 
-    // ARREGLO AQUÍ:
-    // Limpiamos el state de navegación para que no vuelva a hacer scroll
+    // ARREGLO AQUI:
+    // Limpiamos el state de navegacion para que no vuelva a hacer scroll
     // cada vez que el feed se actualice.
     navigate(location.pathname, {
       replace: true,
@@ -770,18 +980,18 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
   const getCategoryMeta = (category) => {
     const categories = {
-      Colaboración: { icon: '🤝', className: 'category-colaboracion' },
-      Académico: { icon: '📚', className: 'category-academico' },
-      Liderazgo: { icon: '⭐', className: 'category-liderazgo' },
-      Creatividad: { icon: '💡', className: 'category-creatividad' },
+      'Colaboraci\u00f3n': { icon: '\uD83E\uDD1D', className: 'category-colaboracion' },
+      'Acad\u00e9mico': { icon: '\uD83D\uDCDA', className: 'category-academico' },
+      Liderazgo: { icon: '\u2B50', className: 'category-liderazgo' },
+      Creatividad: { icon: '\uD83D\uDCA1', className: 'category-creatividad' },
     };
-    return categories[category] || { icon: '✨', className: 'category-default' };
+    return categories[category] || { icon: '\u2728', className: 'category-default' };
   };
 
   const categoryCounts = useMemo(() => {
     const counts = {
-      Colaboración: 0,
-      Académico: 0,
+      'Colaboraci\u00f3n': 0,
+      'Acad\u00e9mico': 0,
       Liderazgo: 0,
       Creatividad: 0,
     };
@@ -800,8 +1010,6 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     return top[1] === 0 ? 'Sin datos' : top[0];
   }, [categoryCounts]);
 
-  const featuredRecognitions = useMemo(() => [...recognitions].slice(0, 3), [recognitions]);
-
   const maxCategoryCount = useMemo(() => {
     const values = Object.values(categoryCounts);
     return Math.max(...values, 1);
@@ -809,10 +1017,10 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
   const categorySummary = useMemo(
     () => [
-      { name: 'Colaboración', value: categoryCounts.Colaboración, icon: '🤝', className: 'category-colaboracion' },
-      { name: 'Académico', value: categoryCounts.Académico, icon: '📚', className: 'category-academico' },
-      { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '⭐', className: 'category-liderazgo' },
-      { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '💡', className: 'category-creatividad' },
+      { name: 'Colaboraci\u00f3n', value: categoryCounts['Colaboraci\u00f3n'], icon: '\uD83E\uDD1D', className: 'category-colaboracion' },
+      { name: 'Acad\u00e9mico', value: categoryCounts['Acad\u00e9mico'], icon: '\uD83D\uDCDA', className: 'category-academico' },
+      { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '\u2B50', className: 'category-liderazgo' },
+      { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '\uD83D\uDCA1', className: 'category-creatividad' },
     ],
     [categoryCounts]
   );
@@ -861,15 +1069,15 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
   const activeFilterLabels = useMemo(() => {
     const labels = [];
 
-    if (selectedCategory !== 'Todas') labels.push(`Categoría: ${selectedCategory}`);
-    if (searchTerm.trim() !== '') labels.push(`Búsqueda: "${searchTerm.trim()}"`);
+    if (selectedCategory !== 'Todas') labels.push(`Categor\u00eda: ${selectedCategory}`);
+    if (searchTerm.trim() !== '') labels.push(`B\u00fasqueda: "${searchTerm.trim()}"`);
     if (hashtagFilter.trim() !== '') labels.push(`Hashtag: ${hashtagFilter}`);
 
     if (sortBy !== 'recent') {
       const map = {
-        oldest: 'Orden: más antiguas',
+        oldest: 'Orden: m\u00e1s antiguas',
         az: 'Orden: A-Z',
-        category: 'Orden: categoría',
+        category: 'Orden: categor\u00eda',
       };
       labels.push(map[sortBy]);
     }
@@ -877,7 +1085,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     return labels;
   }, [selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
-  const categoryOptions = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
+  const categoryOptions = ['Todas', 'Colaboraci\u00f3n', 'Acad\u00e9mico', 'Liderazgo', 'Creatividad'];
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
@@ -978,8 +1186,8 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
       await fetchRecognitionReactions(recId);
     } catch (err) {
-      console.error('Error al guardar reacción:', err);
-      alert(err.response?.data?.error || 'No se pudo guardar la reacción.');
+      console.error('Error al guardar reacci\u00f3n:', err);
+      alert(err.response?.data?.error || 'No se pudo guardar la reacci\u00f3n.');
     } finally {
       setReactingIds((prev) => ({ ...prev, [recId]: false }));
     }
@@ -989,7 +1197,6 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     try {
       if (!user?.id) {
         setFavoriteIds({});
-        setFavoriteRecognitions([]);
         return;
       }
 
@@ -1000,11 +1207,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
         idsMap[item.id] = true;
       });
 
-      // Un solo re-render en vez de dos
-      unstable_batchedUpdates(() => {
-        setFavoriteRecognitions(favorites);
-        setFavoriteIds(idsMap);
-      });
+      setFavoriteIds(idsMap);
     } catch (err) {
       console.error('Error al obtener favoritos:', err);
     }
@@ -1028,9 +1231,6 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
           [recognitionId]: false,
         }));
 
-        setFavoriteRecognitions((prev) =>
-          prev.filter((item) => Number(item.id) !== Number(recognitionId))
-        );
       } else {
         await axios.post(`${API_BASE}/api/recognitions/${recognitionId}/favorite`, {
           user_id: user.id,
@@ -1188,7 +1388,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     if (usersList.length === 0) {
       return (
         <div className="reaction-users-panel">
-          <p className="reaction-users-empty">Aún no hay reacciones.</p>
+          <p className="reaction-users-empty">A{'\u00fa'}n no hay reacciones.</p>
         </div>
       );
     }
@@ -1250,20 +1450,20 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
             disabled={isReacting}
             onClick={() => setOpenReactionPickerId((prev) => (prev === recId ? null : recId))}
           >
-            <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '✨'}</span>
+            <span className="reaction-main-icon">{selectedMeta ? selectedMeta.emoji : '\u2728'}</span>
             <span>{isReacting ? 'Guardando...' : selectedMeta ? selectedMeta.label : 'Reaccionar'}</span>
           </button>
 
           {isPickerOpen && !isReacting && (
             <div className="reaction-picker-panel">
               <div className="reaction-picker-panel-header">
-                <strong>Selecciona una reacción</strong>
+                <strong>Selecciona una reacci{'\u00f3'}n</strong>
                 <button
                   type="button"
                   className="reaction-picker-close"
                   onClick={() => setOpenReactionPickerId(null)}
                 >
-                  ✕
+                  {'\u00d7'}
                 </button>
               </div>
 
@@ -1289,7 +1489,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               </div>
 
               <small className="reaction-picker-hint">
-                Toca la misma reacción otra vez para quitarla.
+                Toca la misma reacci{'\u00f3'}n otra vez para quitarla.
               </small>
             </div>
           )}
@@ -1313,7 +1513,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
             className="reaction-details-btn"
             onClick={() => setOpenReactionPanelId((prev) => (prev === recId ? null : recId))}
           >
-            {openReactionPanelId === recId ? 'Ocultar reacciones' : 'Ver quién reaccionó'}
+            {openReactionPanelId === recId ? 'Ocultar reacciones' : 'Ver qui\u00e9n reaccion\u00f3'}
           </button>
         </div>
 
@@ -1322,6 +1522,57 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     );
   };
 
+  const handleRecognitionSent = async (responsePayload) => {
+    await fetchFeed();
+    const unlockItems = buildUnlockItemsFromProgress(responsePayload?.progress);
+    enqueueUnlockItems(unlockItems);
+    setShowRecognitionComposer(false);
+    setRecognitionPrefillUser(null);
+  };
+
+  const handleDeleteRecognition = async (recognitionId) => {
+    if (!user?.id || !recognitionId) return;
+
+    try {
+      setDeletingRecognitionIds((prev) => ({ ...prev, [recognitionId]: true }));
+
+      await axios.delete(`${API_BASE}/api/recognitions/${recognitionId}`, {
+        data: { user_id: user.id },
+      });
+
+      setRecognitions((prev) => prev.filter((item) => Number(item.id) !== Number(recognitionId)));
+      setFavoriteIds((prev) => {
+        const next = { ...prev };
+        delete next[recognitionId];
+        return next;
+      });
+      setReactionTotals((prev) => {
+        const next = { ...prev };
+        delete next[recognitionId];
+        return next;
+      });
+      setReactionUsersMap((prev) => {
+        const next = { ...prev };
+        delete next[recognitionId];
+        return next;
+      });
+      setUserReactionMap((prev) => {
+        const next = { ...prev };
+        delete next[recognitionId];
+        return next;
+      });
+      setDeleteCandidateId(null);
+    } catch (error) {
+      console.error('Error al eliminar reconocimiento:', error);
+      alert(error.response?.data?.error || 'No se pudo eliminar el reconocimiento.');
+    } finally {
+      setDeletingRecognitionIds((prev) => {
+        const next = { ...prev };
+        delete next[recognitionId];
+        return next;
+      });
+    }
+  };
   const getComposedRecognitionMedia = (mediaItems = []) => {
     if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
       return {
@@ -1378,6 +1629,209 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
     };
   };
 
+  const renderRecognitionCard = (rec) => {
+    const categoryMeta = getCategoryMeta(rec.category);
+    const recMedia = Array.isArray(rec.media)
+      ? rec.media.map((item) => ({
+          ...item,
+          fullUrl: resolveImageUrl(item.media_url),
+        }))
+      : [];
+
+    const {
+      primaryMedia,
+      imageOnlyMedia,
+      layoutType,
+      remainingCount,
+      visibleSecondaryMedia,
+    } = getComposedRecognitionMedia(recMedia);
+
+    const canDelete = Number(rec.sender_id) === Number(user?.id);
+    const isDeleting = Boolean(deletingRecognitionIds[rec.id]);
+
+    return (
+      <article
+        key={rec.id}
+        ref={(el) => {
+          recognitionRefs.current[rec.id] = el;
+        }}
+        className={`recognition-card social-post-card ${categoryMeta.className}`}
+      >
+        <div className="social-post-header">
+          <div className="recognition-author-avatar">
+            <FramedAvatar
+              imageUrl={rec.sender_profile_image}
+              name={rec.sender_name}
+              frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
+              sizeClass="size-feed"
+            />
+          </div>
+
+          <div className="recognition-header-meta social-post-meta">
+            <p className="main-text">
+              <button
+                type="button"
+                className="inline-user-link"
+                onClick={() => openUserProfile(rec.sender_id)}
+              >
+                {rec.sender_name}
+              </button>{' '}
+              reconoci{'\u00f3'} a{' '}
+              <button
+                type="button"
+                className="inline-user-link"
+                onClick={() => openUserProfile(rec.receiver_id)}
+              >
+                {rec.receiver_name}
+              </button>
+            </p>
+            <div className="social-post-submeta">
+              <span>{formatDate(rec.created_at)}</span>
+              <span>{'\u2022'}</span>
+              <span className={`badge-category ${categoryMeta.className}`}>
+                <span className="badge-icon">{categoryMeta.icon}</span>
+                {rec.category}
+              </span>
+            </div>
+          </div>
+
+          {canDelete && (
+            <button
+              type="button"
+              className="social-post-delete-btn"
+              onClick={() => setDeleteCandidateId(rec.id)}
+              disabled={isDeleting}
+              title={'Eliminar publicaci\u00f3n'}
+              aria-label={'Eliminar publicaci\u00f3n'}
+            >
+              {isDeleting ? '...' : '\u00d7'}
+            </button>
+          )}
+        </div>
+
+        <div className="recognition-body social-post-body">
+          <p className="message-text social-post-message">
+            {renderTextWithHashtags(rec.message, (tag) => {
+              setHashtagFilter(`#${tag}`);
+            })}
+          </p>
+
+          {recMedia.length > 0 && (
+            <div className={`recognition-media-premium ${layoutType}`}>
+              {primaryMedia && (
+                <div className="recognition-media-premium-main">
+                  {primaryMedia.media_type === 'video' ? (
+                    <RecognitionVideoPlayer
+                      src={primaryMedia.fullUrl}
+                      className="recognition-media-premium-main-video"
+                      autoPlayWhenVisible={true}
+                      showDurationBadge={true}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="recognition-media-premium-main-button"
+                      onClick={() => {
+                        const imageIndex = imageOnlyMedia.findIndex(
+                          (item) => item.id === primaryMedia.id
+                        );
+                        if (imageIndex >= 0) {
+                          openImageViewer(imageOnlyMedia, imageIndex);
+                        }
+                      }}
+                    >
+                      <img
+                        src={primaryMedia.fullUrl}
+                        alt="Media principal del reconocimiento"
+                        className="recognition-media-premium-main-image"
+                      />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {visibleSecondaryMedia.length > 0 && (
+                <div className="recognition-media-premium-secondary">
+                  {visibleSecondaryMedia.map((item, mediaIndex) => {
+                    const isLastVisible =
+                      mediaIndex === visibleSecondaryMedia.length - 1 &&
+                      remainingCount > 0;
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="recognition-media-premium-secondary-item"
+                        onClick={() => {
+                          const imageIndex = imageOnlyMedia.findIndex(
+                            (mediaItem) => mediaItem.id === item.id
+                          );
+                          if (imageIndex >= 0) {
+                            openImageViewer(imageOnlyMedia, imageIndex);
+                          }
+                        }}
+                      >
+                        <img
+                          src={item.fullUrl}
+                          alt={`Media secundaria ${mediaIndex + 1}`}
+                          className="recognition-media-premium-secondary-image"
+                        />
+
+                        {isLastVisible && (
+                          <div className="recognition-media-premium-overlay">
+                            +{remainingCount}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="social-post-actions-row">
+            <button
+              type="button"
+              className={`recognition-favorite-btn ${favoriteIds[rec.id] ? 'is-favorite' : ''}`}
+              onClick={() => handleFavoriteToggle(rec.id)}
+              disabled={Boolean(favoritingIds[rec.id])}
+            >
+              {favoritingIds[rec.id]
+                ? 'Guardando...'
+                : favoriteIds[rec.id]
+                ? '\u2605 Guardado'
+                : '\u2606 Guardar'}
+            </button>
+
+            <button
+              type="button"
+              className="recognition-share-btn"
+              onClick={() => handleShareRecognition(rec)}
+            >
+              Compartir
+            </button>
+          </div>
+
+          <ReactionBar
+            recId={rec.id}
+            userId={user?.id}
+            initialTotals={reactionTotals[rec.id]}
+            initialUserReaction={userReactionMap[rec.id]}
+            initialUsers={reactionUsersMap[rec.id]}
+            resolveImageUrl={resolveImageUrl}
+            openUserProfile={openUserProfile}
+          />
+
+          <RecognitionComments
+            recognitionId={rec.id}
+            currentUserId={user?.id}
+            onOpenProfile={openUserProfile}
+          />
+        </div>
+      </article>
+    );
+  };
   const dashboardView = user ? (
     <>
       <header className="main-nav">
@@ -1389,7 +1843,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
             <div className="nav-title-group">
               <span className="logo-text">
-                ¡Tec! <strong>¡you!</strong>
+                {'\u00a1'}Tec! <strong>{'\u00a1'}you!</strong>
               </span>
               <small>Reconocimiento universitario</small>
             </div>
@@ -1399,13 +1853,38 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
           <div className="user-info">
             <button
+              type="button"
+              className={`nav-social-action-btn ${showSocialMenu ? 'active' : ''}`}
+              onClick={() => {
+                setShowSocialMenu((prev) => !prev);
+                setShowMessengerPanel(false);
+              }}
+              title="Menu"
+              aria-label="Abrir menu"
+            >
+              <span className="nav-social-action-icon">{'\u25A6'}</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-social-action-btn ${showMessengerPanel ? 'active' : ''}`}
+              onClick={() => {
+                setShowMessengerPanel((prev) => !prev);
+                setShowSocialMenu(false);
+              }}
+              title="Mensajes"
+              aria-label="Abrir mensajes"
+            >
+              <span className="nav-social-action-icon">{'\u2709'}</span>
+              <span className="nav-social-badge">1</span>
+            </button>
+            <button
             type="button"
             className="nav-users-icon-btn"
             onClick={() => navigate('/usuarios')}
             title="Comunidad"
             aria-label="Ver usuarios"
             >
-            👥
+            {'\uD83D\uDC65'}
             </button>
             <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
 
@@ -1427,294 +1906,64 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
         </div>
       </header>
 
-      <main className="dashboard-shell">
-        <section id="hero-section" className="hero-panel">
-          <div>
-            <p className="hero-kicker">Comunidad TSJ</p>
-            <h1>Impulsa una cultura de gratitud y reconocimiento</h1>
-            <p className="hero-subtext">
-              Publica reconocimientos, celebra logros y fortalece la identidad de tu comunidad académica con una experiencia más clara, humana y moderna.
-            </p>
-          </div>
+      <main className="dashboard-shell social-dashboard-shell">
+        <section className="social-layout" id="dashboard-section">
+          <aside className="social-left-rail" aria-label="Navegacion de Tec you">
+            <button type="button" className="social-profile-pill" onClick={() => navigate('/perfil')}>
+              <FramedAvatar
+                imageUrl={profileImage || user?.profile_image_url}
+                name={displayName || user?.display_name || user?.fullname}
+                frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
+                sizeClass="size-nav"
+              />
+              <span>{displayName || user?.fullname || 'Mi perfil'}</span>
+            </button>
 
-          <div className="hero-stats">
-            <div className="stat-card">
+            <button type="button" className="social-rail-item" onClick={() => setShowRecognitionComposer(true)}>
+              <span className="social-rail-icon">{'\u2728'}</span>
+              Crear reconocimiento
+            </button>
+            <button type="button" className="social-rail-item" onClick={() => navigate('/usuarios')}>
+              <span className="social-rail-icon">{'\uD83D\uDC65'}</span>
+              Comunidad
+            </button>
+            <button type="button" className="social-rail-item" onClick={() => setShowCreateStoryModal(true)}>
+              <span className="social-rail-icon">{'\u25A3'}</span>
+              Crear historia
+            </button>
+            <button type="button" className="social-rail-item" onClick={() => setHashtagFilter('')}>
+              <span className="social-rail-icon">#</span>
+              Explorar muro
+            </button>
+
+            <div className="social-rail-card">
               <span>Total de reconocimientos</span>
               <strong>{recognitions.length}</strong>
             </div>
-            <div className="stat-card">
-              <span>Categoría destacada</span>
+            <div className="social-rail-card">
+              <span>Categor{'\u00ed'}a destacada</span>
               <strong>{featuredCategory}</strong>
             </div>
-            <div className="stat-card">
-              <span>Usuario activo</span>
-              <strong>{(displayName || user?.fullname || '').split(' ')[0]}</strong>
+            <div className="social-rail-card social-profile-summary">
+              <span>{loadingProfile ? 'Perfil actualiz\u00e1ndose' : 'Tu actividad'}</span>
+              <strong>{recognitionsSentByUser} enviados</strong>
+              <small>{recognitionsReceivedByUser} recibidos</small>
             </div>
-          </div>
-        </section>
-
-        <section id="featured-section" className="featured-section">
-          <div className="featured-header">
-            <div>
-              <p className="section-label">Destacados</p>
-              <h2>Reconocimientos recientes con mayor visibilidad</h2>
-            </div>
-            <p className="featured-subtext">
-              Una selección visual de mensajes que fortalecen la cultura de gratitud dentro del TSJ.
-            </p>
-          </div>
-
-          <div className="featured-grid">
-            {featuredRecognitions.length === 0 ? (
-              <div className="featured-empty">
-                <div className="empty-icon">✦</div>
-                <h3>Aún no hay destacados</h3>
-                <p>Cuando existan reconocimientos, aparecerán aquí de forma destacada.</p>
-              </div>
-            ) : (
-              featuredRecognitions.map((rec, index) => {
-                const categoryMeta = getCategoryMeta(rec.category);
-                const recMedia = Array.isArray(rec.media)
-                  ? rec.media.map((item) => ({
-                      ...item,
-                      fullUrl: resolveImageUrl(item.media_url),
-                    }))
-                  : [];
-
-                const {
-                  primaryMedia,
-                  imageOnlyMedia,
-                  layoutType,
-                  visibleSecondaryMedia,
-                  remainingCount,
-                } = getComposedRecognitionMedia(recMedia);
-
-                return (
-                  <article
-                    key={rec.id}
-                    ref={(el) => {
-                      recognitionRefs.current[rec.id] = el;
-                    }}
-                    className="recognition-card"
-                  >
-                    <div className="featured-card-top">
-                      <span className={`badge-category ${categoryMeta.className}`}>
-                        <span className="badge-icon">{categoryMeta.icon}</span>
-                        {rec.category}
-                      </span>
-                      <span className="date">{formatDate(rec.created_at)}</span>
-                    </div>
-
-                    <div className="featured-card-body">
-  <div className="recognition-header-row">
-    <div className="recognition-author-avatar">
-      <FramedAvatar
-        imageUrl={rec.sender_profile_image}
-        name={rec.sender_name}
-        frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
-        sizeClass="size-feed"
-      />
-    </div>
-
-    <div className="recognition-header-meta">
-      <p className="featured-main-text">
-        <button
-          type="button"
-          className="inline-user-link"
-          onClick={() => openUserProfile(rec.sender_id)}
-        >
-          {rec.sender_name}
-        </button>{' '}
-        reconoció a{' '}
-        <button
-          type="button"
-          className="inline-user-link"
-          onClick={() => openUserProfile(rec.receiver_id)}
-        >
-          {rec.receiver_name}
-        </button>
-      </p>
-    </div>
-  </div>
-
-  <div className="recognition-body">
-    <p className="featured-message-text">
-      {renderTextWithHashtags(rec.message, (tag) => {
-        setHashtagFilter(`#${tag}`);
-      })}
-    </p>
-
-    {recMedia.length > 0 && (
-      <div className={`recognition-media-premium ${layoutType}`}>
-        {primaryMedia && (
-          <div className="recognition-media-premium-main">
-            {primaryMedia.media_type === 'video' ? (
-              <RecognitionVideoPlayer
-                src={primaryMedia.fullUrl}
-                className="recognition-media-premium-main-video"
-                autoPlayWhenVisible={true}
-                showDurationBadge={true}
-              />
-            ) : (
-              <button
-                type="button"
-                className="recognition-media-premium-main-button"
-                onClick={() => {
-                  const imageIndex = imageOnlyMedia.findIndex(
-                    (item) => item.id === primaryMedia.id
-                  );
-                  if (imageIndex >= 0) {
-                    openImageViewer(imageOnlyMedia, imageIndex);
-                  }
-                }}
-              >
-                <img
-                  src={primaryMedia.fullUrl}
-                  alt="Media principal del reconocimiento"
-                  className="recognition-media-premium-main-image"
-                />
-              </button>
-            )}
-          </div>
-        )}
-
-        {visibleSecondaryMedia.length > 0 && (
-          <div className="recognition-media-premium-secondary">
-            {visibleSecondaryMedia.map((item, mediaIndex) => {
-              const isLastVisible =
-                mediaIndex === visibleSecondaryMedia.length - 1 &&
-                remainingCount > 0;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="recognition-media-premium-secondary-item"
-                  onClick={() => {
-                    const imageIndex = imageOnlyMedia.findIndex(
-                      (mediaItem) => mediaItem.id === item.id
-                    );
-                    if (imageIndex >= 0) {
-                      openImageViewer(imageOnlyMedia, imageIndex);
-                    }
-                  }}
-                >
-                  <img
-                    src={item.fullUrl}
-                    alt={`Media secundaria ${mediaIndex + 1}`}
-                    className="recognition-media-premium-secondary-image"
-                  />
-
-                  {isLastVisible && (
-                    <div className="recognition-media-premium-overlay">
-                      +{remainingCount}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    )}
-
-    <RecognitionComments
-      recognitionId={rec.id}
-      currentUserId={user?.id}
-      onOpenProfile={openUserProfile}
-    />
-
-    <ReactionBar
-      recId={rec.id}
-      userId={user?.id}
-      initialTotals={reactionTotals[rec.id]}
-      initialUserReaction={userReactionMap[rec.id]}
-      initialUsers={reactionUsersMap[rec.id]}
-      resolveImageUrl={resolveImageUrl}
-      openUserProfile={openUserProfile}
-    />
-
-    <div className="recognition-favorite-row">
-      <button
-        type="button"
-        className={`recognition-favorite-btn ${
-          favoriteIds[rec.id] ? 'is-favorite' : ''
-        }`}
-        onClick={() => handleFavoriteToggle(rec.id)}
-        disabled={Boolean(favoritingIds[rec.id])}
-      >
-        {favoritingIds[rec.id]
-          ? 'Guardando...'
-          : favoriteIds[rec.id]
-          ? '★ Guardado'
-          : '☆ Guardar'}
-      </button>
-
-      <button
-        type="button"
-        className="recognition-share-btn"
-        onClick={() => handleShareRecognition(rec)}
-      >
-        ⤴ Compartir
-      </button>
-    </div>
-  </div>
-</div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </section>
-
-        <section id="analytics-section" className="analytics-strip">
-          <div className="mini-stat">
-            <span>🤝 Colaboración</span>
-            <strong>{categoryCounts.Colaboración}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>📚 Académico</span>
-            <strong>{categoryCounts.Académico}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>⭐ Liderazgo</span>
-            <strong>{categoryCounts.Liderazgo}</strong>
-          </div>
-          <div className="mini-stat">
-            <span>💡 Creatividad</span>
-            <strong>{categoryCounts.Creatividad}</strong>
-          </div>
-        </section>
-
-        <section className="category-summary-section" id="category-summary-section">
-          <div className="category-summary-card">
-            <div className="category-summary-header">
-              <div>
-                <p className="section-label">Top categorías</p>
-                <h2>Distribución actual de reconocimientos</h2>
-              </div>
-              <p className="category-summary-subtext">
-                Visualiza rápidamente qué tipo de reconocimiento tiene mayor presencia en la comunidad.
-              </p>
-            </div>
-
-            <div className="category-bars">
+            <div className="social-rail-card social-category-summary">
+              <span>Top categor{'\u00ed'}as</span>
               {categorySummary.map((item) => {
                 const widthPercentage =
                   maxCategoryCount > 0 ? (item.value / maxCategoryCount) * 100 : 0;
 
                 return (
-                  <div key={item.name} className="category-bar-row">
-                    <div className="category-bar-label">
-                      <span className={`category-pill ${item.className}`}>
-                        {item.icon} {item.name}
-                      </span>
+                  <div key={item.name} className="social-category-mini">
+                    <div>
+                      <span>{item.icon} {item.name}</span>
                       <strong>{item.value}</strong>
                     </div>
-
-                    <div className="category-bar-track">
+                    <div className="social-category-mini-track">
                       <div
-                        className={`category-bar-fill ${item.className}`}
+                        className={`social-category-mini-fill ${item.className}`}
                         style={{ width: `${widthPercentage}%` }}
                       ></div>
                     </div>
@@ -1722,165 +1971,63 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                 );
               })}
             </div>
-          </div>
-        </section>
-
-        <UsersDirectory
-          currentUserId={user?.id}
-          onUserSelected={(selectedUser) => {
-            setRecognitionPrefillUser(selectedUser);
-
-            setTimeout(() => {
-              const formSection = document.getElementById('recognition-form-section');
-              if (formSection) {
-                formSection.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start',
-                });
-              }
-            }, 120);
-          }}
-          onOpenProfile={openUserProfile}
-        />
-
-        <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
-
-        <ActivityPanel userId={user?.id} />
-
-        <section className="dashboard" id="dashboard-section">
-          <aside id="profile-section" className="sidebar">
-            <div className="profile-card">
-              <div className="profile-cover">
-                {coverImage ? (
-                  <img src={coverImage} alt="Portada" className="profile-cover-image" />
-                ) : null}
-              </div>
-
-              <div className="profile-card-body">
-                <div className="profile-avatar-row">
-<FramedAvatar
-  imageUrl={profileImage || user?.profile_image_url}
-  name={displayName || user?.display_name || user?.fullname}
-  frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
-  sizeClass="size-public"
-  className="profile-sidebar-framed-avatar"
-/>
-
-  <div className="profile-avatar-actions">
-    <button
-      type="button"
-      className="profile-photo-btn"
-      onClick={() => fileInputRef.current?.click()}
-    >
-      Cambiar foto
-    </button>
-
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/png,image/jpeg,image/jpg,image/webp"
-      onChange={handleProfileImageChange}
-      className="hidden-file-input"
-    />
-  </div>
-
-</div>
-
-                <div className="profile-main-info">
-                  <div className="profile-status-row">
-                    <span className="profile-status-dot"></span>
-                    <span className="profile-status-text">
-                      {loadingProfile ? 'Cargando perfil...' : 'Activo en la plataforma'}
-                    </span>
-                  </div>
-
-                  <h3>{displayName || user?.fullname || ''}</h3>
-                  <p className="profile-email">{user?.email || ''}</p>
-
-                  <div className="profile-extra-meta">
-                    {locationText && <span className="profile-extra-chip">📍 {locationText}</span>}
-                    {birthDate && (
-                      <span className="profile-extra-chip">
-                        🎂{' '}
-                        {new Date(birthDate).toLocaleDateString('es-MX', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="profile-tags">
-                    {profileTags.map((tag) => (
-                      <span key={tag} className="profile-tag">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="profile-bio">{profileBio}</p>
-
-                  <button
-                    type="button"
-                    className="profile-edit-btn"
-                    onClick={openEditProfileModal}
-                  >
-                    Editar perfil
-                  </button>
-                </div>
-
-                <div className="profile-stats-grid">
-                  <div className="profile-mini-stat">
-                    <span>Enviados</span>
-                    <strong>{recognitionsSentByUser}</strong>
-                  </div>
-                  <div className="profile-mini-stat">
-                    <span>Recibidos</span>
-                    <strong>{recognitionsReceivedByUser}</strong>
-                  </div>
-                  <div className="profile-mini-stat">
-                    <span>Reacciones</span>
-                    <strong>{Object.values(userReactionMap).filter(Boolean).length}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="panel-header">
-              <p className="section-label">Nuevo reconocimiento</p>
-              <h3>Haz visible una acción positiva</h3>
-            </div>
-
-            <div id="recognition-form-section">
-              <RecognitionForm
-                onRecognitionSent={async (responsePayload) => {
-                  await fetchFeed();
-                  const unlockItems = buildUnlockItemsFromProgress(responsePayload?.progress);
-                  enqueueUnlockItems(unlockItems);
-                }}
-                senderId={user?.id}
-                preselectedUser={recognitionPrefillUser}
-              />
-            </div>
           </aside>
 
-          <section id="feed-section" className="feed-section">
-            <div className="feed-header">
+          <section id="feed-section" className="feed-section social-feed-column">
+            <div className="social-composer-card">
+              <FramedAvatar
+                imageUrl={profileImage || user?.profile_image_url}
+                name={displayName || user?.display_name || user?.fullname}
+                frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
+                sizeClass="size-nav"
+              />
+              <button
+                type="button"
+                className="social-composer-trigger"
+                onClick={() => {
+                  setRecognitionPrefillUser(null);
+                  setShowRecognitionComposer(true);
+                }}
+              >
+                {'\u00bf'}A qui{'\u00e9'}n quieres reconocer hoy, {(displayName || user?.fullname || 'compa').split(' ')[0]}?
+              </button>
+              <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
+                {'\uD83D\uDCF7'}
+              </button>
+              <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
+                {'\u2728'}
+              </button>
+            </div>
+
+            <section className="stories-section social-stories-section">
+              {storiesLoading ? (
+                <p>Cargando historias...</p>
+              ) : (
+                <StoriesBar
+                  groupedStories={groupedStories}
+                  currentUser={user}
+                  onOpenStory={openStoryViewer}
+                  onCreateStory={() => setShowCreateStoryModal(true)}
+                  hideAvatarFrames={hideAvatarFrames}
+                />
+              )}
+            </section>
+
+            <div className="feed-header social-feed-header">
               <div>
-                <p className="section-label">Muro de la comunidad</p>
+                <p className="section-label">Muro Tec you</p>
                 <h2>Reconocimientos recientes</h2>
               </div>
               <p className="feed-subtext">
-                Explora mensajes positivos, filtra por categoría y encuentra aportes de la comunidad.
+                Celebra logros, agradece apoyo y mant{'\u00e9'}n viva la comunidad TSJ.
               </p>
             </div>
 
-            <div className="feed-toolbar">
+            <div className="feed-toolbar social-feed-toolbar">
               <div className="feed-search">
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, mensaje o categoría..."
+                  placeholder={'Buscar por nombre, mensaje o categor\u00eda...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -1908,10 +2055,10 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                     onChange={(e) => setSortBy(e.target.value)}
                     className="sort-select"
                   >
-                    <option value="recent">Más recientes</option>
-                    <option value="oldest">Más antiguas</option>
+                    <option value="recent">M{'\u00e1'}s recientes</option>
+                    <option value="oldest">M{'\u00e1'}s antiguas</option>
                     <option value="az">Nombre A-Z</option>
-                    <option value="category">Categoría</option>
+                    <option value="category">Categor{'\u00ed'}a</option>
                   </select>
                 </div>
               </div>
@@ -1963,21 +2110,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               </div>
             )}
 
-            <section className="stories-section">
-              {storiesLoading ? (
-                <p>Cargando historias...</p>
-              ) : (
-                <StoriesBar
-                  groupedStories={groupedStories}
-                  currentUser={user}
-                  onOpenStory={openStoryViewer}
-                  onCreateStory={() => setShowCreateStoryModal(true)}
-                  hideAvatarFrames={hideAvatarFrames}
-                />
-              )}
-            </section>
-
-            <div className="feed-container">
+            <div className="feed-container social-feed-list">
               {loadingFeed ? (
                 <div className="loading-state">
                   <div className="loading-spinner"></div>
@@ -1985,207 +2118,411 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                 </div>
               ) : filteredRecognitions.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">✦</div>
+                  <div className="empty-icon">{'\u2728'}</div>
                   <h3>No se encontraron resultados</h3>
-                  <p>Prueba con otra categoría o cambia el texto de búsqueda.</p>
+                  <p>Prueba con otra categor{'\u00ed'}a o cambia el texto de b{'\u00fa'}squeda.</p>
                 </div>
               ) : (
-                filteredRecognitions.map((rec, index) => {
-                  const categoryMeta = getCategoryMeta(rec.category);
-                  const recMedia = Array.isArray(rec.media)
-                    ? rec.media.map((item) => ({
-                        ...item,
-                        fullUrl: resolveImageUrl(item.media_url),
-                      }))
-                    : [];
-
-                  const {
-                    primaryMedia,
-                    imageOnlyMedia,
-                    layoutType,
-                    remainingCount,
-                    visibleSecondaryMedia,
-                  } = getComposedRecognitionMedia(recMedia);
-
-                  return (
-                    <div
-                      key={rec.id}
-                      className={`recognition-card ${categoryMeta.className}`}
-                    >
-                      <div className="card-top">
-                        <span className={`badge-category ${categoryMeta.className}`}>
-                          <span className="badge-icon">{categoryMeta.icon}</span>
-                          {rec.category}
-                        </span>
-                        <span className="date">{formatDate(rec.created_at)}</span>
-                      </div>
-
-                      <div className="recognition-extra-actions">
-                        <button
-                          type="button"
-                          className="recognition-share-btn"
-                          onClick={() => handleShareRecognition(rec)}
-                        >
-                          ⤴ Compartir
-                        </button>
-                      </div>
-                      <div className="recognition-main-row">
-  <div className="recognition-header-row">
-    <div className="recognition-author-avatar">
-      <FramedAvatar
-      imageUrl={rec.sender_profile_image}
-       name={rec.sender_name}
-      frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
-     sizeClass="size-feed"
-    />
-    </div>
-
-    <div className="recognition-header-meta">
-      <p className="main-text">
-        <button
-          type="button"
-          className="inline-user-link"
-          onClick={() => openUserProfile(rec.sender_id)}
-        >
-          {rec.sender_name}
-        </button>{' '}
-        reconoció a{' '}
-        <button
-          type="button"
-          className="inline-user-link"
-          onClick={() => openUserProfile(rec.receiver_id)}
-        >
-          {rec.receiver_name}
-        </button>
-      </p>
-    </div>
-  </div>
-
-  <div className="recognition-body">
-    <p className="message-text">
-      {renderTextWithHashtags(rec.message, (tag) => {
-        setHashtagFilter(`#${tag}`);
-      })}
-    </p>
-
-    {recMedia.length > 0 && (
-      <div className={`recognition-media-premium ${layoutType}`}>
-        {primaryMedia && (
-          <div className="recognition-media-premium-main">
-            {primaryMedia.media_type === 'video' ? (
-              <RecognitionVideoPlayer
-                src={primaryMedia.fullUrl}
-                className="recognition-media-premium-main-video"
-                autoPlayWhenVisible={true}
-                showDurationBadge={true}
-              />
-            ) : (
-              <button
-                type="button"
-                className="recognition-media-premium-main-button"
-                onClick={() => {
-                  const imageIndex = imageOnlyMedia.findIndex(
-                    (item) => item.id === primaryMedia.id
-                  );
-                  if (imageIndex >= 0) {
-                    openImageViewer(imageOnlyMedia, imageIndex);
-                  }
-                }}
-              >
-                <img
-                  src={primaryMedia.fullUrl}
-                  alt="Media principal del reconocimiento"
-                  className="recognition-media-premium-main-image"
-                />
-              </button>
-            )}
-          </div>
-        )}
-
-        {visibleSecondaryMedia.length > 0 && (
-          <div className="recognition-media-premium-secondary">
-            {visibleSecondaryMedia.map((item, mediaIndex) => {
-              const isLastVisible =
-                mediaIndex === visibleSecondaryMedia.length - 1 &&
-                remainingCount > 0;
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className="recognition-media-premium-secondary-item"
-                  onClick={() => {
-                    const imageIndex = imageOnlyMedia.findIndex(
-                      (mediaItem) => mediaItem.id === item.id
-                    );
-                    if (imageIndex >= 0) {
-                      openImageViewer(imageOnlyMedia, imageIndex);
-                    }
-                  }}
-                >
-                  <img
-                    src={item.fullUrl}
-                    alt={`Media secundaria ${mediaIndex + 1}`}
-                    className="recognition-media-premium-secondary-image"
-                  />
-
-                  {isLastVisible && (
-                    <div className="recognition-media-premium-overlay">
-                      +{remainingCount}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    )}
-
-    <RecognitionComments
-      recognitionId={rec.id}
-      currentUserId={user?.id}
-      onOpenProfile={openUserProfile}
-    />
-
-    <ReactionBar
-      recId={rec.id}
-      userId={user?.id}
-      initialTotals={reactionTotals[rec.id]}
-      initialUserReaction={userReactionMap[rec.id]}
-      initialUsers={reactionUsersMap[rec.id]}
-      resolveImageUrl={resolveImageUrl}
-      openUserProfile={openUserProfile}
-    />
-
-    <div className="recognition-favorite-row">
-      <button
-        type="button"
-        className={`recognition-favorite-btn ${
-          favoriteIds[rec.id] ? 'is-favorite' : ''
-        }`}
-        onClick={() => handleFavoriteToggle(rec.id)}
-        disabled={Boolean(favoritingIds[rec.id])}
-      >
-        {favoritingIds[rec.id]
-          ? 'Guardando...'
-          : favoriteIds[rec.id]
-          ? '★ Guardado'
-          : '☆ Guardar'}
-      </button>
-    </div>
-  </div>
-</div>
-
-
-                    </div>
-                  );
-                })
+                filteredRecognitions.map((rec) => renderRecognitionCard(rec))
               )}
             </div>
           </section>
+
+          <aside className="social-right-rail" aria-label="Actividad de comunidad">
+            <UsersDirectory
+              currentUserId={user?.id}
+              onUserSelected={(selectedUser) => {
+                setRecognitionPrefillUser(selectedUser);
+                setShowRecognitionComposer(true);
+              }}
+              onOpenProfile={openUserProfile}
+              onOpenChat={openChatWithUser}
+              onlineUsers={onlineUsers}
+            />
+
+            <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
+            <ActivityPanel userId={user?.id} />
+          </aside>
         </section>
       </main>
+
+      {showRecognitionComposer && (
+        <div className="recognition-composer-overlay" role="dialog" aria-modal="true">
+          <div className="recognition-composer-modal">
+            <div className="recognition-composer-modal-header">
+              <h2>Crear reconocimiento</h2>
+              <button
+                type="button"
+                className="profile-modal-close"
+                onClick={() => {
+                  setShowRecognitionComposer(false);
+                  setRecognitionPrefillUser(null);
+                }}
+                aria-label="Cerrar compositor"
+              >
+                {'\u00d7'}
+              </button>
+            </div>
+
+            <RecognitionForm
+              onRecognitionSent={handleRecognitionSent}
+              senderId={user?.id}
+              preselectedUser={recognitionPrefillUser}
+            />
+          </div>
+        </div>
+      )}
+
+      {deleteCandidateId && (
+        <div className="tec-confirm-overlay" role="dialog" aria-modal="true">
+          <div className="tec-confirm-modal">
+            <div className="tec-confirm-icon">{'\u26A0'}</div>
+            <h2>Eliminar publicaci{'\u00f3'}n</h2>
+            <p>
+              Esta acci{'\u00f3'}n eliminar{'\u00e1'} el reconocimiento del muro de Tec You.
+              No se puede deshacer.
+            </p>
+            <div className="tec-confirm-actions">
+              <button
+                type="button"
+                className="tec-confirm-secondary"
+                onClick={() => setDeleteCandidateId(null)}
+                disabled={Boolean(deletingRecognitionIds[deleteCandidateId])}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="tec-confirm-danger"
+                onClick={() => handleDeleteRecognition(deleteCandidateId)}
+                disabled={Boolean(deletingRecognitionIds[deleteCandidateId])}
+              >
+                {deletingRecognitionIds[deleteCandidateId] ? 'Eliminando...' : 'Si, eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSocialMenu && (
+        <div className="tec-popover-overlay" onClick={() => setShowSocialMenu(false)}>
+          <section className="tec-social-menu-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="tec-panel-header">
+              <h2>Men{'\u00fa'}</h2>
+              <button type="button" onClick={() => setShowSocialMenu(false)}>{'\u00d7'}</button>
+            </div>
+            <div className="tec-menu-search">Busca en el men{'\u00fa'}</div>
+            <div className="tec-menu-grid">
+              {[
+                ['Reconocimientos', 'Publica y celebra logros de tu comunidad.'],
+                ['Historias', 'Comparte momentos rapidos del Tec.'],
+                ['Comunidad', 'Encuentra estudiantes, maestros y equipos.'],
+                ['Grupos', 'Crea espacios por materias, proyectos o clubes.'],
+                ['Eventos', 'Organiza actividades academicas y sociales.'],
+                ['Guardados', 'Vuelve a reconocimientos importantes.'],
+              ].map(([title, description]) => (
+                <button key={title} type="button" className="tec-menu-item">
+                  <span>{'\u2728'}</span>
+                  <div>
+                    <strong>{title}</strong>
+                    <small>{description}</small>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {showMessengerPanel && (
+        <div className="tec-popover-overlay" onClick={() => setShowMessengerPanel(false)}>
+          <section
+            className={`tec-messenger-panel ${isMessengerExpanded ? 'expanded' : ''}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="tec-panel-header">
+              <div>
+                <h2>Chats</h2>
+                <small>Messenger Tec You</small>
+              </div>
+              <div className="tec-panel-header-actions">
+                <button
+                  type="button"
+                  onClick={() => setIsMessengerExpanded((prev) => !prev)}
+                  title={isMessengerExpanded ? 'Reducir' : 'Ampliar'}
+                >
+                  {isMessengerExpanded ? '\u21F2' : '\u26F6'}
+                </button>
+                <button type="button" onClick={() => setShowMessengerPanel(false)}>{'\u00d7'}</button>
+              </div>
+            </div>
+            <div className="tec-messenger-toolbar">
+              <button type="button" onClick={fetchChatConversations}>Actualizar</button>
+              <button type="button">Crear grupo</button>
+              <button type="button" onClick={() => setShowChatExtras((prev) => !prev)}>
+                Emojis/GIFs
+              </button>
+            </div>
+
+            <div className="tec-messenger-layout">
+              <div className="tec-chat-preview-list">
+                {chatConversations.length === 0 ? (
+                  <div className="tec-chat-empty">
+                    <strong>Sin conversaciones todav{'\u00ed'}a</strong>
+                    <small>Abre un chat desde la lista de contactos.</small>
+                  </div>
+                ) : (
+                  chatConversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      className={`tec-chat-preview ${
+                        Number(activeChat?.id) === Number(conversation.id) ? 'active' : ''
+                      }`}
+                      onClick={() => openConversation(conversation)}
+                    >
+                      <span className="tec-chat-avatar">
+                        {conversation.other_profile_image ? (
+                          <img
+                            src={resolveImageUrl(conversation.other_profile_image)}
+                            alt={conversation.display_name || 'Chat'}
+                          />
+                        ) : (
+                          (conversation.display_name || 'T')[0]
+                        )}
+                      </span>
+                      <div>
+                        <strong>{conversation.display_name || 'Chat Tec You'}</strong>
+                        <small>
+                          {conversation.last_message_content ||
+                            (conversation.last_message_type === 'image'
+                              ? 'Imagen'
+                              : conversation.last_message_type === 'audio'
+                              ? 'Audio'
+                              : 'Sin mensajes')}
+                        </small>
+                      </div>
+                      {conversation.unread_count > 0 && (
+                        <em>{conversation.unread_count}</em>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="tec-chat-window">
+                {activeChat ? (
+                  <>
+                    <div className="tec-chat-window-header">
+                      <div className="tec-chat-title-user">
+                        <span className="tec-chat-avatar header">
+                          {activeChat.other_profile_image ? (
+                            <img
+                              src={resolveImageUrl(activeChat.other_profile_image)}
+                              alt={activeChat.display_name || 'Chat'}
+                            />
+                          ) : (
+                            (activeChat.display_name || 'T')[0]
+                          )}
+                        </span>
+                        <div>
+                          <strong>{activeChat.display_name || 'Chat Tec You'}</strong>
+                          <small>
+                            {onlineUsers[activeChat.other_user_id]?.online
+                              ? 'Activo ahora'
+                              : 'Disponible para mensajes'}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="tec-chat-call-actions">
+                        <button type="button" title="Llamada de voz">{'\u260E'}</button>
+                        <button type="button" title="Videollamada">{'\u25B6'}</button>
+                        <button type="button" title="Info">{'\u2139'}</button>
+                      </div>
+                    </div>
+
+                    <div className="tec-chat-messages">
+                      {chatLoading ? (
+                        <p className="tec-chat-state">Cargando mensajes...</p>
+                      ) : chatMessages.length === 0 ? (
+                        <p className="tec-chat-state">Inicia la conversaci{'\u00f3'}n.</p>
+                      ) : (
+                        chatMessages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`tec-chat-bubble ${
+                              Number(message.sender_id) === Number(user?.id) ? 'mine' : 'theirs'
+                            }`}
+                          >
+                            {message.content && <p>{message.content}</p>}
+                            {message.media_url && message.message_type === 'image' && (
+                              <button
+                                type="button"
+                                className="tec-chat-image-btn"
+                                onClick={() =>
+                                  setChatImageViewer({
+                                    src: resolveImageUrl(message.media_url),
+                                    alt: 'Imagen del chat',
+                                  })
+                                }
+                              >
+                                <img src={resolveImageUrl(message.media_url)} alt="Adjunto del chat" />
+                              </button>
+                            )}
+                            {message.media_url && message.message_type === 'audio' && (
+                              <audio controls src={resolveImageUrl(message.media_url)} />
+                            )}
+                            {message.media_url && message.message_type === 'file' && (
+                              <a href={resolveImageUrl(message.media_url)} target="_blank" rel="noreferrer">
+                                Ver archivo
+                              </a>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {chatFiles.length > 0 && (
+                      <div className="tec-chat-attachments">
+                        {chatFiles.map((file) => {
+                          const preview = getChatFilePreview(file);
+                          return (
+                            <span key={`${file.name}-${file.size}`} className="tec-chat-file-preview">
+                              {file.type.startsWith('image/') ? (
+                                <img src={preview} alt={file.name} />
+                              ) : file.type.startsWith('audio/') ? (
+                                <audio controls src={preview} />
+                              ) : (
+                                file.name
+                              )}
+                            </span>
+                          );
+                        })}
+                        <button type="button" onClick={() => setChatFiles([])}>Quitar</button>
+                      </div>
+                    )}
+
+                    {chatError && (
+                      <div className="tec-chat-error">
+                        {chatError}
+                      </div>
+                    )}
+
+                    {showChatExtras && (
+                      <div className="tec-chat-extras">
+                        <div>
+                          <strong>Emojis</strong>
+                          {['😀', '😂', '😍', '🥳', '😮', '😢', '🔥', '💙', '👍'].map((emoji) => (
+                            <button key={emoji} type="button" onClick={() => appendChatText(emoji)}>
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                        <div>
+                          <strong>Stickers</strong>
+                          {['Tec You ✨', 'Orgullo TSJ 💙', 'Crack 👑'].map((sticker) => (
+                            <button key={sticker} type="button" onClick={() => appendChatText(` ${sticker} `)}>
+                              {sticker}
+                            </button>
+                          ))}
+                        </div>
+                        <div>
+                          <strong>GIFs</strong>
+                          {['Celebrando', 'Aplausos', 'Gracias'].map((gif) => (
+                            <button key={gif} type="button" onClick={() => appendChatText(` [GIF: ${gif}] `)}>
+                              {gif}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="tec-message-composer">
+                      <label>
+                        {'\uD83D\uDCF7'}
+                        <input
+                          ref={chatFileInputRef}
+                          type="file"
+                          accept="image/*,audio/*,video/mp4,video/webm,video/quicktime"
+                          multiple
+                          onChange={handleChatFilesChange}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        title={recordingAudio ? 'Detener grabacion' : 'Grabar audio'}
+                        className={recordingAudio ? 'recording' : ''}
+                        onClick={recordingAudio ? stopAudioRecording : startAudioRecording}
+                      >
+                        {'\uD83C\uDFA4'}
+                      </button>
+                      <button type="button" onClick={() => setShowChatExtras((prev) => !prev)}>
+                        {'\uD83D\uDE00'}
+                      </button>
+                      <input
+                        placeholder="Escribe un mensaje..."
+                        value={chatDraft}
+                        onChange={(e) => setChatDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendChatMessage();
+                          }
+                        }}
+                      />
+                      <button type="button" onClick={sendChatMessage} disabled={sendingChat}>
+                        {sendingChat ? '...' : '\u27A4'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="tec-chat-empty-window">
+                    <strong>Elige una conversaci{'\u00f3'}n</strong>
+                    <small>Tambien puedes abrir un chat desde Contactos.</small>
+                  </div>
+                )}
+              </div>
+
+              {isMessengerExpanded && (
+                <aside className="tec-chat-info-panel">
+                  <span className="tec-chat-avatar profile">
+                    {activeChat?.other_profile_image ? (
+                      <img
+                        src={resolveImageUrl(activeChat.other_profile_image)}
+                        alt={activeChat.display_name || 'Chat'}
+                      />
+                    ) : (
+                      (activeChat?.display_name || 'T')[0]
+                    )}
+                  </span>
+                  <h3>{activeChat?.display_name || 'Selecciona un chat'}</h3>
+                  <p>{activeChat ? 'Activo en Tec You Messenger' : 'El perfil aparecera aqui.'}</p>
+                  <div className="tec-chat-info-actions">
+                    <button type="button">Perfil</button>
+                    <button type="button">Silenciar</button>
+                    <button type="button">Buscar</button>
+                  </div>
+                  <details open>
+                    <summary>Multimedia y archivos</summary>
+                    <small>Las imagenes del chat se pueden ampliar al tocarlas.</small>
+                  </details>
+                  <details>
+                    <summary>Privacidad y ayuda</summary>
+                    <small>Reportes y controles se pueden conectar despues.</small>
+                  </details>
+                </aside>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {chatImageViewer && (
+        <div className="tec-chat-image-viewer" onClick={() => setChatImageViewer(null)}>
+          <button type="button" onClick={() => setChatImageViewer(null)}>{'\u00d7'}</button>
+          <img src={chatImageViewer.src} alt={chatImageViewer.alt} />
+        </div>
+      )}
     </>
   ) : null;
 
@@ -2245,8 +2582,8 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                       {favoritingIds[recognitionId]
                         ? 'Guardando...'
                         : favoriteIds[recognitionId]
-                        ? '★ Guardado'
-                        : '☆ Guardar'}
+                        ? '\u2605 Guardado'
+                        : '\u2606 Guardar'}
                     </button>
                   </div>
                 )}
@@ -2353,7 +2690,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                 className="premium-profile-modal-close"
                 onClick={() => setShowEditProfileModal(false)}
               >
-                ✕
+                {'\u00d7'}
               </button>
             </div>
 
@@ -2382,7 +2719,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
               <div className="premium-profile-verified-box">
                 <span className={`premium-verified-chip ${isVerified ? 'verified' : ''}`}>
-                  {isVerified ? '✔ Verificado' : '◇ Get verified'}
+                  {isVerified ? '\u2714 Verificado' : '\u25C7 Get verified'}
                 </span>
               </div>
             </div>
@@ -2400,7 +2737,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               </div>
 
               <div className="input-group-custom">
-                <label>Biografía</label>
+                <label>Biograf{'\u00ed'}a</label>
                 <textarea
                   className="form-control form-textarea"
                   value={draftProfileBio}
@@ -2411,7 +2748,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
 
               <div className="profile-modal-two-columns">
                 <div className="input-group-custom">
-                  <label>Ubicación</label>
+                  <label>Ubicaci{'\u00f3'}n</label>
                   <input
                     type="text"
                     className="form-control"
@@ -2439,7 +2776,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                   className="form-control"
                   value={draftProfileTags}
                   onChange={(e) => setDraftProfileTags(e.target.value)}
-                  placeholder="Ej. Comunidad TSJ, Liderazgo, Innovación"
+                  placeholder={'Ej. Comunidad TSJ, Liderazgo, Innovaci\u00f3n'}
                 />
                 <small className="field-hint">Separa cada tag con coma.</small>
               </div>
@@ -2492,7 +2829,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
               className="recognition-image-modal-close"
               onClick={closeImageViewer}
             >
-              ✕
+              {'\u00d7'}
             </button>
 
             {imageViewer.images.length > 1 && (
@@ -2502,7 +2839,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                   className="recognition-image-nav-btn prev"
                   onClick={goToPrevImage}
                 >
-                  ‹
+                  {'\u2039'}
                 </button>
 
                 <button
@@ -2510,7 +2847,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
                   className="recognition-image-nav-btn next"
                   onClick={goToNextImage}
                 >
-                  ›
+                  {'\u203A'}
                 </button>
               </>
             )}
@@ -2586,7 +2923,7 @@ ${recognition.sender_name} reconoció a ${recognition.receiver_name}
           aria-label="Volver arriba"
           title="Volver arriba"
         >
-          ↑
+          {'\u2191'}
         </button>
       )}
     </div>

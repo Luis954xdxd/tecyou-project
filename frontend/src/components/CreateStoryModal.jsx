@@ -1,30 +1,43 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+
+const MUSIC_SUGGESTIONS = [
+  { title: 'Desde Que Te Tengo', artist: 'Carin Leon' },
+  { title: 'Las Mañanitas', artist: 'Ariel Camacho' },
+  { title: 'Life Goes On', artist: 'Oliver Tree' },
+  { title: 'Oye Mi Amor', artist: 'Mana' },
+  { title: 'Polvo Rosita', artist: 'Lenin Ramirez' },
+  { title: 'Niña De Mi Corazón', artist: 'La Arrolladora' },
+];
 
 function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
-  const [formData, setFormData] = useState({
-    caption: '',
-    duration_seconds: 5,
-    visibility_type: 'public',
-  });
-
+  const [caption, setCaption] = useState('');
   const [mediaFile, setMediaFile] = useState(null);
   const [audioFile, setAudioFile] = useState(null);
   const [musicName, setMusicName] = useState('');
-  const [musicStartSeconds, setMusicStartSeconds] = useState(0);
+  const [musicSearch, setMusicSearch] = useState('');
+  const [durationSeconds, setDurationSeconds] = useState(30);
   const [visibilityType, setVisibilityType] = useState('public');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [excludedUsers, setExcludedUsers] = useState([]);
 
-  /* AGREGADO:
-     Esto bloquea el scroll de la página principal mientras el modal está abierto.
-     Así, cuando el modal esté visible, se moverá el modal y no la página de atrás.
-  */
+  const mediaPreview = useMemo(
+    () => (mediaFile ? URL.createObjectURL(mediaFile) : null),
+    [mediaFile]
+  );
+
+  const audioPreview = useMemo(
+    () => (audioFile ? URL.createObjectURL(audioFile) : null),
+    [audioFile]
+  );
+
+  const filteredSongs = MUSIC_SUGGESTIONS.filter((song) =>
+    `${song.title} ${song.artist}`.toLowerCase().includes(musicSearch.toLowerCase())
+  );
+
   useEffect(() => {
     if (!isOpen) return;
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-
     return () => {
       document.body.style.overflow = previousOverflow;
     };
@@ -32,55 +45,13 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
 
   if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === 'duration_seconds'
-          ? Math.min(Math.max(Number(value || 1), 1), 300)
-          : value,
-    }));
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    setMediaFile(file);
-  };
-
-  const handleAudioChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    setAudioFile(file);
-  };
-
-  const handleUserToggle = (userId, mode = 'selected') => {
-    if (mode === 'selected') {
-      setSelectedUsers((prev) =>
-        prev.includes(userId)
-          ? prev.filter((id) => id !== userId)
-          : [...prev, userId]
-      );
-      return;
-    }
-
-    setExcludedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
   const resetForm = () => {
-    setFormData({
-      caption: '',
-      duration_seconds: 5,
-      visibility_type: 'public',
-    });
+    setCaption('');
     setMediaFile(null);
     setAudioFile(null);
     setMusicName('');
-    setMusicStartSeconds(0);
+    setMusicSearch('');
+    setDurationSeconds(30);
     setVisibilityType('public');
     setSelectedUsers([]);
     setExcludedUsers([]);
@@ -91,27 +62,44 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     onClose();
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleMediaChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setMediaFile(file);
+    if (!file) return;
+    if (file.type.startsWith('image/')) setDurationSeconds(30);
+    if (file.type.startsWith('video/')) setDurationSeconds(60);
+  };
 
+  const toggleUser = (userId, mode) => {
+    const setter = mode === 'allow' ? setSelectedUsers : setExcludedUsers;
+    setter((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     if (!mediaFile) {
       alert('Debes seleccionar una imagen o video.');
       return;
     }
 
+    const isVideo = mediaFile.type.startsWith('video/');
+    const finalDuration = isVideo
+      ? Math.min(Number(durationSeconds || 60), 60)
+      : Math.min(Number(durationSeconds || 30), 30);
+
     const data = new FormData();
     data.append('storyMedia', mediaFile);
-    data.append('caption', formData.caption);
+    data.append('caption', caption);
     data.append('music_name', musicName);
-    data.append('music_start_seconds', musicStartSeconds);
-    data.append('duration_seconds', formData.duration_seconds);
+    data.append('music_start_seconds', 0);
+    data.append('duration_seconds', finalDuration);
     data.append('visibility_type', visibilityType);
     data.append('selected_users', JSON.stringify(selectedUsers));
     data.append('excluded_users', JSON.stringify(excludedUsers));
 
-    if (audioFile) {
-      data.append('storyAudio', audioFile);
-    }
+    if (audioFile) data.append('storyAudio', audioFile);
 
     try {
       await onSubmit(data);
@@ -122,166 +110,137 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   };
 
   return (
-    <div className="create-story-modal-overlay" onClick={handleClose}>
-      <div
-        className="create-story-modal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="create-story-close-btn"
-          onClick={handleClose}
-        >
-          ✕
-        </button>
-
-        <h2>Crear historia</h2>
-
-        <form onSubmit={handleSubmit} className="create-story-form">
-          <input
-            type="file"
-            accept="image/*,video/*"
-            onChange={handleFileChange}
-            required
-          />
-
-          <textarea
-            name="caption"
-            placeholder="Escribe algo para tu historia..."
-            value={formData.caption}
-            onChange={handleChange}
-            rows={3}
-          />
-
-          <input
-            type="text"
-            placeholder="Nombre de la canción"
-            value={musicName}
-            onChange={(e) => setMusicName(e.target.value)}
-          />
-
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={handleAudioChange}
-          />
-
-          {/* AGREGADO:
-              Texto de ayuda para explicarle al usuario que aquí puede subir
-              un audio opcional para la historia.
-          */}
-          <div className="story-field-help">
-            Sube un audio opcional para acompañar tu historia.
+    <div className="create-story-modal-overlay story-studio-overlay" onClick={handleClose}>
+      <form className="story-studio" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
+        <aside className="story-studio-sidebar">
+          <div className="story-studio-top">
+            <button type="button" className="story-studio-close" onClick={handleClose}>
+              {'\u00d7'}
+            </button>
+            <div>
+              <h2>Tu historia</h2>
+              <p>Editor estilo Tec You</p>
+            </div>
           </div>
 
-          <input
-            type="number"
-            min="0"
-            placeholder="Inicio del audio (segundos)"
-            value={musicStartSeconds}
-            onChange={(e) => setMusicStartSeconds(Number(e.target.value || 0))}
-          />
+          <label className="story-studio-action">
+            <span>{'\uD83D\uDDBC'}</span>
+            <strong>Foto o video</strong>
+            <small>Imagen 30s, video maximo 60s</small>
+            <input type="file" accept="image/*,video/*" onChange={handleMediaChange} />
+          </label>
 
-          {/* AGREGADO:
-              Explica desde qué segundo empezará a sonar el audio.
-          */}
-          <div className="story-field-help">
-            Aquí indicas desde qué segundo debe empezar a sonar el audio.
+          <label className="story-studio-field">
+            <span>Texto</span>
+            <textarea
+              value={caption}
+              onChange={(event) => setCaption(event.target.value)}
+              placeholder="Agrega texto a tu historia..."
+            />
+          </label>
+
+          <div className="story-studio-field">
+            <span>Musica</span>
+            <input
+              value={musicSearch}
+              onChange={(event) => setMusicSearch(event.target.value)}
+              placeholder="Buscar musica"
+            />
+            <div className="story-music-results">
+              {filteredSongs.map((song) => (
+                <button
+                  type="button"
+                  key={`${song.title}-${song.artist}`}
+                  onClick={() => {
+                    setMusicName(`${song.title} - ${song.artist}`);
+                    setMusicSearch(song.title);
+                  }}
+                >
+                  <strong>{song.title}</strong>
+                  <small>{song.artist}</small>
+                </button>
+              ))}
+            </div>
+            <label className="story-local-audio">
+              Subir audio local
+              <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
+            </label>
           </div>
 
-          <input
-            type="number"
-            name="duration_seconds"
-            min="1"
-            max="300"
-            value={formData.duration_seconds}
-            onChange={handleChange}
-            placeholder="Duración de la historia (segundos)"
-          />
-
-          {/* AGREGADO:
-              Explica cuánto durará la historia antes de pasar a la siguiente.
-          */}
-          <div className="story-field-help">
-            Tiempo total que dura la historia antes de pasar a la siguiente.
-            Máximo 300 segundos (5 minutos).
+          <div className="story-studio-field">
+            <span>Privacidad</span>
+            <div className="story-privacy-options">
+              {[
+                ['public', 'Publico', 'Cualquier usuario de la comunidad'],
+                ['only_selected', 'Personalizado', 'Solo personas elegidas'],
+                ['exclude_selected', 'Ocultar historia a', 'Todos excepto algunos'],
+              ].map(([value, title, description]) => (
+                <button
+                  type="button"
+                  key={value}
+                  className={visibilityType === value ? 'active' : ''}
+                  onClick={() => setVisibilityType(value)}
+                >
+                  <strong>{title}</strong>
+                  <small>{description}</small>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <select
-            value={visibilityType}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setVisibilityType(newValue);
-              setFormData((prev) => ({
-                ...prev,
-                visibility_type: newValue,
-              }));
-            }}
-          >
-            <option value="public">Visible para todos</option>
-            <option value="only_selected">Solo usuarios seleccionados</option>
-            <option value="exclude_selected">Todos excepto algunos</option>
-          </select>
-
-          {visibilityType === 'only_selected' && (
-            <div className="story-users-box">
-              <strong>Selecciona quién sí puede verla</strong>
-
-              {/* AGREGADO:
-                  Esta lista puede crecer mucho, por eso en CSS se le pondrá
-                  scroll propio también.
-              */}
+          {visibilityType !== 'public' && (
+            <div className="story-users-box studio-users">
+              <strong>
+                {visibilityType === 'only_selected'
+                  ? 'Quien puede verla'
+                  : 'Ocultar historia a'}
+              </strong>
               <div className="story-users-list">
-                {users?.length > 0 ? (
-                  users.map((user) => (
+                {users?.map((user) => {
+                  const list = visibilityType === 'only_selected' ? selectedUsers : excludedUsers;
+                  return (
                     <label key={user.id} className="story-user-option">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => handleUserToggle(user.id, 'selected')}
+                        checked={list.includes(user.id)}
+                        onChange={() =>
+                          toggleUser(user.id, visibilityType === 'only_selected' ? 'allow' : 'exclude')
+                        }
                       />
                       <span>{user.display_name || user.fullname}</span>
                     </label>
-                  ))
-                ) : (
-                  <p>No hay usuarios disponibles.</p>
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {visibilityType === 'exclude_selected' && (
-            <div className="story-users-box">
-              <strong>Selecciona quién NO puede verla</strong>
-
-              {/* AGREGADO:
-                  Igual que arriba, esta lista también tendrá scroll propio
-                  si hay muchos usuarios.
-              */}
-              <div className="story-users-list">
-                {users?.length > 0 ? (
-                  users.map((user) => (
-                    <label key={user.id} className="story-user-option">
-                      <input
-                        type="checkbox"
-                        checked={excludedUsers.includes(user.id)}
-                        onChange={() => handleUserToggle(user.id, 'excluded')}
-                      />
-                      <span>{user.display_name || user.fullname}</span>
-                    </label>
-                  ))
-                ) : (
-                  <p>No hay usuarios disponibles.</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <button type="submit" className="create-story-submit-btn">
-            Publicar historia
+          <button type="submit" className="create-story-submit-btn story-studio-submit">
+            Compartir en historia
           </button>
-        </form>
-      </div>
+        </aside>
+
+        <section className="story-studio-preview">
+          <h3>Vista previa</h3>
+          <div className="story-phone-preview">
+            {mediaPreview ? (
+              mediaFile?.type.startsWith('video/') ? (
+                <video src={mediaPreview} controls />
+              ) : (
+                <img src={mediaPreview} alt="Vista previa de historia" />
+              )
+            ) : (
+              <div className="story-preview-empty">
+                <span>{'\u2728'}</span>
+                <p>Selecciona una foto o video</p>
+              </div>
+            )}
+            {caption && <p className="story-preview-caption">{caption}</p>}
+            {musicName && <span className="story-preview-music">{'\u266B'} {musicName}</span>}
+          </div>
+          {audioPreview && <audio controls src={audioPreview} />}
+        </section>
+      </form>
     </div>
   );
 }

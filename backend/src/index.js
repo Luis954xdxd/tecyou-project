@@ -10,6 +10,7 @@ const storyRoutes = require('./routes/storyRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const tecAgentRoutes = require('./routes/tecAgentRoutes');
 const progressRoutes = require('./routes/progressRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +30,7 @@ app.use('/api/stories', storyRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/tec-agent', tecAgentRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {

@@ -15,7 +15,7 @@ const {
 } = require('../services/achievementService');
 
 // ===============================
-// CONFIGURACIÓN DE UPLOADS
+// CONFIGURACIÃ“N DE UPLOADS
 // ===============================
 const uploadDir = path.join(__dirname, '..', 'uploads', 'recognitions');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -41,7 +41,7 @@ const fileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error(
-        'Formato no permitido. Usa imágenes PNG/JPG/WEBP o videos MP4/WEBM/MOV.'
+        'Formato no permitido. Usa imÃ¡genes PNG/JPG/WEBP o videos MP4/WEBM/MOV.'
       )
     );
   }
@@ -116,7 +116,7 @@ const createMentionNotifications = async ({
         ]
       );
     } catch (error) {
-      console.error('Error creando mención/notificación:', error.message);
+      console.error('Error creando menciÃ³n/notificaciÃ³n:', error.message);
     }
   }
 };
@@ -157,7 +157,7 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
       if (userLookup.rows.length === 0) {
         return res.status(404).json({
           error:
-            'No se encontró al compañero. Debe haber iniciado sesión al menos una vez en ¡Tec! ¡you!.',
+            'No se encontrÃ³ al compaÃ±ero. Debe haber iniciado sesiÃ³n al menos una vez en Â¡Tec! Â¡you!.',
         });
       }
 
@@ -166,13 +166,13 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 
     if (!finalReceiverId) {
       return res.status(400).json({
-        error: 'Debes seleccionar un usuario válido para enviar el reconocimiento.',
+        error: 'Debes seleccionar un usuario vÃ¡lido para enviar el reconocimiento.',
       });
     }
 
     // ===============================
-    // IA: CLASIFICACIÓN + METADATOS DE INSIGNIA
-    // NOTA: si falla la IA, NO bloqueamos el envío
+    // IA: CLASIFICACIÃ“N + METADATOS DE INSIGNIA
+    // NOTA: si falla la IA, NO bloqueamos el envÃ­o
     // ===============================
     let aiCategory = null;
     let aiSentiment = null;
@@ -311,7 +311,7 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 
     res.json({
       success: true,
-      message: '¡Reconocimiento enviado con éxito!',
+      message: 'Â¡Reconocimiento enviado con Ã©xito!',
       data: newRecognition.rows[0],
       progress : {
         sender : senderProgress,
@@ -386,6 +386,98 @@ router.get('/feed', async (req, res) => {
 });
 
 // ===============================
+// ELIMINAR RECONOCIMIENTO
+// ===============================
+router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    await client.query('BEGIN');
+
+    const recognition = await client.query(
+      `SELECT id, sender_id FROM recognitions WHERE id = $1`,
+      [id]
+    );
+
+    if (recognition.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Reconocimiento no encontrado.' });
+    }
+
+    if (Number(recognition.rows[0].sender_id) !== Number(user_id)) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({
+        error: 'Solo quien publicÃ³ el reconocimiento puede eliminarlo.',
+      });
+    }
+
+    const mediaResult = await client.query(
+      `SELECT media_url FROM recognition_media WHERE recognition_id = $1`,
+      [id]
+    );
+
+    const commentIdsResult = await client.query(
+      `SELECT id FROM recognition_comments WHERE recognition_id = $1`,
+      [id]
+    );
+
+    const commentIds = commentIdsResult.rows.map((row) => row.id);
+
+    if (commentIds.length > 0) {
+      await client.query(
+        `DELETE FROM comment_mentions WHERE comment_id = ANY($1::int[])`,
+        [commentIds]
+      );
+    }
+
+    await client.query(`DELETE FROM recognition_comments WHERE recognition_id = $1`, [id]);
+    await client.query(`DELETE FROM recognition_reactions WHERE recognition_id = $1`, [id]);
+    await client.query(`DELETE FROM recognition_favorites WHERE recognition_id = $1`, [id]);
+    await client.query(`DELETE FROM recognition_media WHERE recognition_id = $1`, [id]);
+    await client.query(`DELETE FROM badges WHERE recognition_id = $1`, [id]);
+    await client.query(`DELETE FROM notifications WHERE reference_id = $1`, [id]);
+
+    const deleted = await client.query(
+      `DELETE FROM recognitions WHERE id = $1 RETURNING id`,
+      [id]
+    );
+
+    await client.query('COMMIT');
+
+    for (const media of mediaResult.rows) {
+      if (!media.media_url) continue;
+
+      const filename = path.basename(media.media_url);
+      const filePath = path.join(uploadDir, filename);
+
+      fs.unlink(filePath, (unlinkError) => {
+        if (unlinkError && unlinkError.code !== 'ENOENT') {
+          console.error('Error eliminando archivo de reconocimiento:', unlinkError.message);
+        }
+      });
+    }
+
+    return res.json({
+      deleted: true,
+      recognition_id: deleted.rows[0].id,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error en DELETE /:id:', err.message);
+    return res.status(500).json({ error: 'Error al eliminar el reconocimiento.' });
+  } finally {
+    client.release();
+  }
+});
+
+// ===============================
 // REACCIONAR A RECONOCIMIENTO
 // ===============================
 router.post('/:id/react', async (req, res) => {
@@ -396,7 +488,7 @@ router.post('/:id/react', async (req, res) => {
     const validReactions = ['like', 'celebrate', 'inspire', 'love'];
 
     if (!validReactions.includes(reaction_type)) {
-      return res.status(400).json({ error: 'Tipo de reacción no válido.' });
+      return res.status(400).json({ error: 'Tipo de reacciÃ³n no vÃ¡lido.' });
     }
 
     const existingReaction = await pool.query(
@@ -453,7 +545,7 @@ router.post('/:id/react', async (req, res) => {
           });
         }
       } catch (progressError) {
-        console.error('Error evaluando logro por reacción actualizada:', progressError.message);
+        console.error('Error evaluando logro por reacciÃ³n actualizada:', progressError.message);
       }
 
       return res.json(updated.rows[0]);
@@ -488,13 +580,13 @@ router.post('/:id/react', async (req, res) => {
         });
       }
     } catch (progressError) {
-      console.error('Error evaluando logro por reacción creada:', progressError.message);
+      console.error('Error evaluando logro por reacciÃ³n creada:', progressError.message);
     }
 
     res.json(created.rows[0]);
   } catch (err) {
     console.error('Error en POST /:id/react:', err.message);
-    res.status(500).send('Error al guardar la reacción.');
+    res.status(500).send('Error al guardar la reacciÃ³n.');
   }
 });
 
@@ -583,7 +675,7 @@ router.post('/:id/favorite', async (req, res) => {
           user_id,
           'favorite_received',
           'Guardaron tu reconocimiento',
-          'Un usuario guardó tu reconocimiento en favoritos.',
+          'Un usuario guardÃ³ tu reconocimiento en favoritos.',
           Number(id),
         ]
       );
@@ -630,7 +722,7 @@ router.delete('/:id/favorite', async (req, res) => {
   }
 });
 
-// Ver si un reconocimiento está guardado por un usuario
+// Ver si un reconocimiento estÃ¡ guardado por un usuario
 router.get('/:id/favorite-status/:userId', async (req, res) => {
   try {
     const { id, userId } = req.params;
@@ -722,7 +814,7 @@ router.post('/:id/comments', async (req, res) => {
 
     if (!comment || !comment.trim()) {
       return res.status(400).json({
-        error: 'El comentario no puede estar vacío.',
+        error: 'El comentario no puede estar vacÃ­o.',
       });
     }
 
@@ -844,7 +936,7 @@ router.post('/:id/comments', async (req, res) => {
 });
 
 // ===============================
-// OBTENER COMENTARIOS EN ÁRBOL
+// OBTENER COMENTARIOS EN ÃRBOL
 // ===============================
 router.get('/:id/comments', async (req, res) => {
   try {
