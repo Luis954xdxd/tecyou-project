@@ -14357,6 +14357,7 @@ body,
   gap: 4px;
   max-height: 520px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
 }
 
@@ -14365,6 +14366,8 @@ body,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
   border-radius: 10px;
   padding: 8px;
   transition: background 0.16s ease;
@@ -14440,7 +14443,9 @@ body,
 .contact-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex: 0 0 auto;
+  gap: 4px;
+  min-width: max-content;
 }
 
 .contact-message-btn,
@@ -14451,23 +14456,28 @@ body,
 }
 
 .contact-message-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #eef2ff;
   color: #4f46e5;
 }
 
 .contact-follow-btn {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  width: 86px;
+  white-space: nowrap;
   border-radius: 999px;
-  padding: 8px 10px;
+  padding: 8px 8px;
   background: #eef2ff;
   color: #4f46e5;
 }
 
 .contact-row:hover .contact-follow-btn {
-  display: block;
+  visibility: visible;
 }
 
 .contact-follow-btn.following {
