@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
@@ -23,6 +23,20 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     type: '',
     message: '',
   });
+  const feedbackRef = useRef(null);
+
+  useEffect(() => {
+    if (!formFeedback.message || formFeedback.type !== 'error') return;
+
+    const timer = setTimeout(() => {
+      feedbackRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 80);
+
+    return () => clearTimeout(timer);
+  }, [formFeedback]);
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -440,10 +454,10 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             value={formData.category}
             onChange={handleChange}
           >
-            <option value="Colaboración">🤝 Colaboración</option>
-            <option value="Académico">📚 Académico</option>
-            <option value="Liderazgo">⭐ Liderazgo</option>
-            <option value="Creatividad">💡 Creatividad</option>
+            <option value="Colaboración">Colaboración</option>
+            <option value="Académico">Académico</option>
+            <option value="Liderazgo">Liderazgo</option>
+            <option value="Creatividad">Creatividad</option>
           </select>
         </div>
 
@@ -465,7 +479,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
               onClick={handleGenerateRecognitionWithAI}
               disabled={generatingAI || sending || classifyingAI}
             >
-              <span>{generatingAI ? 'Generando...' : '✨ Mejorar con IA'}</span>
+              <span>{generatingAI ? 'Generando...' : 'Mejorar con IA'}</span>
             </button>
 
             <button
@@ -474,7 +488,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
               onClick={handleClassifyRecognitionWithAI}
               disabled={classifyingAI || sending || generatingAI}
             >
-              <span>{classifyingAI ? 'Clasificando...' : '🧠 Clasificar con IA'}</span>
+              <span>{classifyingAI ? 'Clasificando...' : 'Clasificar con IA'}</span>
             </button>
           </div>
 
@@ -560,7 +574,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
                       className="recognition-upload-remove-btn"
                       onClick={() => handleRemoveMedia(index)}
                     >
-                      ✕
+                      Quitar
                     </button>
                   </div>
                 );
@@ -578,7 +592,11 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         </button>
 
         {formFeedback.message && (
-          <div className={`form-feedback ${formFeedback.type}`}>
+          <div
+            ref={feedbackRef}
+            className={`form-feedback ${formFeedback.type}`}
+            tabIndex="-1"
+          >
             {formFeedback.message}
           </div>
         )}
@@ -588,3 +606,4 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 }
 
 export default RecognitionForm;
+

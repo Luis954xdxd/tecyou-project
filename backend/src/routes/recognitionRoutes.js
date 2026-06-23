@@ -15,7 +15,7 @@ const {
 } = require('../services/achievementService');
 
 // ===============================
-// CONFIGURACIÃ“N DE UPLOADS
+// CONFIGURACIÃƒâ€œN DE UPLOADS
 // ===============================
 const uploadDir = path.join(__dirname, '..', 'uploads', 'recognitions');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -41,7 +41,7 @@ const fileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error(
-        'Formato no permitido. Usa imÃ¡genes PNG/JPG/WEBP o videos MP4/WEBM/MOV.'
+        'Formato no permitido. Usa imÃƒÂ¡genes PNG/JPG/WEBP o videos MP4/WEBM/MOV.'
       )
     );
   }
@@ -88,6 +88,17 @@ ensureRepostTable().catch((err) => {
 ensureCommentLikesTable().catch((err) => {
   console.error('Error creando tabla recognition_comment_likes:', err.message);
 });
+const withTimeout = (promise, timeoutMs, label) => {
+  let timer;
+
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} tardo demasiado.`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};
 
 // ===============================
 // HELPERS DE MENCIONES
@@ -149,7 +160,7 @@ const createMentionNotifications = async ({
         ]
       );
     } catch (error) {
-      console.error('Error creando menciÃ³n/notificaciÃ³n:', error.message);
+      console.error('Error creando menciÃƒÂ³n/notificaciÃƒÂ³n:', error.message);
     }
   }
 };
@@ -190,7 +201,7 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
       if (userLookup.rows.length === 0) {
         return res.status(404).json({
           error:
-            'No se encontrÃ³ al compaÃ±ero. Debe haber iniciado sesiÃ³n al menos una vez en Â¡Tec! Â¡you!.',
+            'No se encontrÃƒÂ³ al compaÃƒÂ±ero. Debe haber iniciado sesiÃƒÂ³n al menos una vez en Ã‚Â¡Tec! Ã‚Â¡you!.',
         });
       }
 
@@ -199,13 +210,13 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 
     if (!finalReceiverId) {
       return res.status(400).json({
-        error: 'Debes seleccionar un usuario vÃ¡lido para enviar el reconocimiento.',
+        error: 'Debes seleccionar un usuario vÃƒÂ¡lido para enviar el reconocimiento.',
       });
     }
 
     // ===============================
-    // IA: CLASIFICACIÃ“N + METADATOS DE INSIGNIA
-    // NOTA: si falla la IA, NO bloqueamos el envÃ­o
+    // IA: CLASIFICACIÃƒâ€œN + METADATOS DE INSIGNIA
+    // NOTA: si falla la IA, NO bloqueamos el envÃƒÂ­o
     // ===============================
     let aiCategory = null;
     let aiSentiment = null;
@@ -215,9 +226,11 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
     let aiBadgePrompt = null;
 
     try {
-      const classification = await classifyRecognitionText({
-        message,
-      });
+      const classification = await withTimeout(
+        classifyRecognitionText({ message }),
+        1800,
+        'La clasificacion con IA'
+      );
 
       aiCategory = classification.category || null;
       aiSentiment = classification.sentiment || null;
@@ -225,13 +238,17 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
       aiTags = Array.isArray(classification.tags) ? classification.tags : [];
 
       try {
-        const badgeMeta = await generateBadgeMetadata({
-          message,
-          category: aiCategory || category,
-          sentiment: aiSentiment || 'positivo',
-          intensity: aiIntensity || 'media',
-          tags: aiTags,
-        });
+        const badgeMeta = await withTimeout(
+          generateBadgeMetadata({
+            message,
+            category: aiCategory || category,
+            sentiment: aiSentiment || 'positivo',
+            intensity: aiIntensity || 'media',
+            tags: aiTags,
+          }),
+          1800,
+          'Los metadatos de insignia con IA'
+        );
 
         aiBadgeTitle = badgeMeta.badgeTitle || null;
         aiBadgePrompt = badgeMeta.badgePrompt || null;
@@ -344,7 +361,7 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Â¡Reconocimiento enviado con Ã©xito!',
+      message: 'Ã‚Â¡Reconocimiento enviado con ÃƒÂ©xito!',
       data: newRecognition.rows[0],
       progress : {
         sender : senderProgress,
@@ -452,7 +469,7 @@ router.delete('/:id', async (req, res) => {
     if (Number(recognition.rows[0].sender_id) !== Number(user_id)) {
       await client.query('ROLLBACK');
       return res.status(403).json({
-        error: 'Solo quien publicÃ³ el reconocimiento puede eliminarlo.',
+        error: 'Solo quien publicÃƒÂ³ el reconocimiento puede eliminarlo.',
       });
     }
 
@@ -526,7 +543,7 @@ router.post('/:id/react', async (req, res) => {
     const validReactions = ['like', 'celebrate', 'inspire', 'love'];
 
     if (!validReactions.includes(reaction_type)) {
-      return res.status(400).json({ error: 'Tipo de reacciÃ³n no vÃ¡lido.' });
+      return res.status(400).json({ error: 'Tipo de reacciÃƒÂ³n no vÃƒÂ¡lido.' });
     }
 
     const existingReaction = await pool.query(
@@ -583,7 +600,7 @@ router.post('/:id/react', async (req, res) => {
           });
         }
       } catch (progressError) {
-        console.error('Error evaluando logro por reacciÃ³n actualizada:', progressError.message);
+        console.error('Error evaluando logro por reacciÃƒÂ³n actualizada:', progressError.message);
       }
 
       return res.json(updated.rows[0]);
@@ -618,13 +635,13 @@ router.post('/:id/react', async (req, res) => {
         });
       }
     } catch (progressError) {
-      console.error('Error evaluando logro por reacciÃ³n creada:', progressError.message);
+      console.error('Error evaluando logro por reacciÃƒÂ³n creada:', progressError.message);
     }
 
     res.json(created.rows[0]);
   } catch (err) {
     console.error('Error en POST /:id/react:', err.message);
-    res.status(500).send('Error al guardar la reacciÃ³n.');
+    res.status(500).send('Error al guardar la reacciÃƒÂ³n.');
   }
 });
 
@@ -713,7 +730,7 @@ router.post('/:id/favorite', async (req, res) => {
           user_id,
           'favorite_received',
           'Guardaron tu reconocimiento',
-          'Un usuario guardÃ³ tu reconocimiento en favoritos.',
+          'Un usuario guardÃƒÂ³ tu reconocimiento en favoritos.',
           Number(id),
         ]
       );
@@ -760,7 +777,7 @@ router.delete('/:id/favorite', async (req, res) => {
   }
 });
 
-// Ver si un reconocimiento estÃ¡ guardado por un usuario
+// Ver si un reconocimiento estÃƒÂ¡ guardado por un usuario
 router.get('/:id/favorite-status/:userId', async (req, res) => {
   try {
     const { id, userId } = req.params;
@@ -852,7 +869,7 @@ router.post('/:id/comments', async (req, res) => {
 
     if (!comment || !comment.trim()) {
       return res.status(400).json({
-        error: 'El comentario no puede estar vacÃ­o.',
+        error: 'El comentario no puede estar vacÃƒÂ­o.',
       });
     }
 
@@ -974,7 +991,7 @@ router.post('/:id/comments', async (req, res) => {
 });
 
 // ===============================
-// OBTENER COMENTARIOS EN ÃRBOL
+// OBTENER COMENTARIOS EN ÃƒÂRBOL
 // ===============================
 router.get('/:id/comments', async (req, res) => {
   try {

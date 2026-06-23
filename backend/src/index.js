@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -11,6 +11,7 @@ const aiRoutes = require('./routes/aiRoutes');
 const tecAgentRoutes = require('./routes/tecAgentRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const { startModerationService } = require('./services/moderationProcess');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Servir archivos estáticos subidos
+// Servir archivos estÃ¡ticos subidos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rutas de la API
@@ -34,7 +35,7 @@ app.use('/api/chat', chatRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {
-  res.send('Servidor de ¡Tec! ¡you! activo y operando 🎓');
+  res.send('Servidor de Â¡Tec! Â¡you! activo y operando ðŸŽ“');
 });
 
 // Manejo de errores global
@@ -42,10 +43,20 @@ app.use((err, req, res, next) => {
   console.error('Error detectado:', err.stack || err.message);
 
   res.status(500).json({
-    error: err.message || 'Algo salió mal en el servidor.',
+    error: err.message || 'Algo saliÃ³ mal en el servidor.',
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor listo en: http://localhost:${PORT}`);
+const startServer = async () => {
+  await startModerationService();
+
+  app.listen(PORT, () => {
+    console.log(`Servidor listo en: http://localhost:${PORT}`);
+  });
+};
+
+startServer().catch((error) => {
+  console.error('No se pudo iniciar el servidor:', error.message);
+  process.exit(1);
 });
+
