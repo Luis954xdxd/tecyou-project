@@ -47,6 +47,8 @@ function FramedAvatar({
   frameCode,
   sizeClass = 'size-directory',
   className = '',
+  hasStory = false,
+  showPreview = false,
 }) {
   const finalImage = resolveImageUrl(imageUrl);
 
@@ -62,7 +64,7 @@ function FramedAvatar({
     <div
       className={`framed-avatar ${sizeClass} ${className} ${
         !hasFrame ? 'avatar-no-frame' : ''
-      }`.trim()}
+      } ${hasStory ? 'has-story-ring' : ''} ${showPreview ? 'has-profile-preview' : ''}`.trim()}
     >
       <div
         className={`framed-avatar-circle ${
@@ -88,6 +90,23 @@ function FramedAvatar({
           alt="Marco"
           className={`framed-avatar-frame frame-${frameCode || 'default'}`}
         />
+      )}
+
+      {showPreview && (
+        <div className="avatar-hover-card">
+          <div className="avatar-hover-card-top">
+            {finalImage ? (
+              <img src={finalImage} alt={name || 'Avatar'} />
+            ) : (
+              <span>{getInitials(name || 'TSJ')}</span>
+            )}
+            <div>
+              <strong>{name || 'Usuario Tec You'}</strong>
+              <small>{hasStory ? 'Historia activa' : 'Ver perfil'}</small>
+            </div>
+          </div>
+          <p>Reconoce, comparte y conecta con la comunidad TSJ.</p>
+        </div>
       )}
     </div>
   );

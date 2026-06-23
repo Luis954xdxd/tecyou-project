@@ -14,6 +14,7 @@ function ProfileDropdown({
   onToggleDark,
   hideAvatarFrames,
   onToggleAvatarFrames,
+  hasStory = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const timeoutRef = useRef(null);
@@ -41,6 +42,7 @@ function ProfileDropdown({
           name={displayName || user?.display_name || user?.fullname}
           frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
           sizeClass="size-nav"
+          hasStory={hasStory}
         />
       </button>
 
@@ -53,6 +55,7 @@ function ProfileDropdown({
               frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
               sizeClass="size-activity"
               className="nav-dropdown-framed-avatar"
+              hasStory={hasStory}
             />
 
             <div className="nav-dropdown-userinfo">

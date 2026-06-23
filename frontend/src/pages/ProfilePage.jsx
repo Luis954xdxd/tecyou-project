@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import { renderTextWithHashtags } from '../textFormatters';
 import ProgressPanel from '../components/ProgressPanel';
@@ -28,22 +28,36 @@ function ProfilePage({
 
   // Controla si se muestran u ocultan los marcos
   hideAvatarFrames,
+  activeStoryUserIds = [],
 })  {
   const navigate = useNavigate();
   const { userId } = useParams();
+  const [searchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState('media');
+  const [repostSlideById, setRepostSlideById] = useState({});
   const [showAllGallery, setShowAllGallery] = useState(false);
   const [profileSearch, setProfileSearch] = useState('');
   const [loadingViewedProfile, setLoadingViewedProfile] = useState(false);
   const [equippedFrame, setEquippedFrame] = useState(null);
   
   const [favoriteRecognitions, setFavoriteRecognitions] = useState([]);
+  const [repostedRecognitions, setRepostedRecognitions] = useState([]);
+  const [loadingReposts, setLoadingReposts] = useState(false);
+  const [removingRepostIds, setRemovingRepostIds] = useState({});
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [savedReactionTotals, setSavedReactionTotals] = useState({});
   const [savedReactionUsersMap, setSavedReactionUsersMap] = useState({});
   const [profileActivity, setProfileActivity] = useState([]);
 const [loadingProfileActivity, setLoadingProfileActivity] = useState(false);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    const allowedTabs = ['media', 'received', 'sent', 'reposts', 'about', 'achievements', 'badges', 'frames', 'saved'];
+    if (requestedTab && allowedTabs.includes(requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
 
   const [viewedProfile, setViewedProfile] = useState(
     isOwnProfile
@@ -64,6 +78,8 @@ const [loadingProfileActivity, setLoadingProfileActivity] = useState(false);
         }
       : null
   );
+  const profileUserId = viewedProfile?.id;
+  const hasActiveStory = activeStoryUserIds.map(Number).includes(Number(profileUserId));
   const fetchSavedRecognitionReactions = async (recognitionId) => {
    try {
     const response = await axios.get(
@@ -115,6 +131,20 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
     );
   } catch (error) {
     console.error('Error cargando reacciones de guardados:', error);
+  }
+};
+
+const fetchRepostedRecognitions = async () => {
+  if (!profileUserId) return;
+  try {
+    setLoadingReposts(true);
+    const response = await axios.get(`${API_BASE}/api/recognitions/reposts/${profileUserId}`);
+    setRepostedRecognitions(Array.isArray(response.data) ? response.data : []);
+  } catch (error) {
+    console.error('Error cargando reposts:', error);
+    setRepostedRecognitions([]);
+  } finally {
+    setLoadingReposts(false);
   }
 };
   const resolveImageUrl = (url) => {
@@ -203,6 +233,25 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
   }
   };
 
+  const handleRemoveRepostFromProfile = async (recognitionId, repostId) => {
+    if (!loggedInUserId) return;
+
+    try {
+      setRemovingRepostIds((prev) => ({ ...prev, [repostId]: true }));
+      await axios.delete(`${API_BASE}/api/recognitions/${recognitionId}/repost`, {
+        data: { user_id: loggedInUserId },
+      });
+
+      setRepostedRecognitions((prev) =>
+        prev.filter((item) => Number(item.repost_id) !== Number(repostId))
+      );
+    } catch (error) {
+      console.error('Error quitando repost del perfil:', error);
+    } finally {
+      setRemovingRepostIds((prev) => ({ ...prev, [repostId]: false }));
+    }
+  };
+
   const fetchEquippedFrame = async (targetUserId) => {
     try {
       if (!targetUserId) return;
@@ -225,11 +274,17 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
   }
     }, [activeTab, isOwnProfile, loggedInUserId]);
 
-    useEffect(() => {
+useEffect(() => {
   if (activeTab === 'saved' && favoriteRecognitions.length > 0) {
     fetchAllSavedReactions(favoriteRecognitions);
   }
 }, [favoriteRecognitions, activeTab]);
+
+useEffect(() => {
+  if (activeTab === 'reposts') {
+    fetchRepostedRecognitions();
+  }
+}, [activeTab, profileUserId]);
 
   useEffect(() => {
     if (isOwnProfile) {
@@ -315,8 +370,6 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
 }, [viewedProfile?.id]);
 
   const safeRecognitions = Array.isArray(recognitions) ? recognitions : [];
-  const profileUserId = viewedProfile?.id;
-
   const recognitionsSent = useMemo(
     () =>
       safeRecognitions.filter(
@@ -472,7 +525,7 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
           </div>
 
           <div className="profile-twitter-header">
-            <div className="profile-twitter-avatar-wrap stylized-frame-wrap">
+            <div className={`profile-twitter-avatar-wrap stylized-frame-wrap ${hasActiveStory ? 'has-story-ring' : ''}`}>
   <div className="profile-twitter-avatar-base">
     {profileImage ? (
       <img src={profileImage} alt="Perfil" className="profile-twitter-avatar" />
@@ -597,6 +650,13 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
               onClick={() => setActiveTab('sent')}
             >
               Enviados
+            </button>
+            <button
+              type="button"
+              className={`profile-twitter-tab ${activeTab === 'reposts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('reposts')}
+            >
+              Reposts
             </button>
             <button
               type="button"
@@ -794,6 +854,128 @@ const fetchAllSavedReactions = async (savedRecognitions) => {
                     ))
                   )}
                 </div>
+              </section>
+            )}
+
+            {activeTab === 'reposts' && (
+              <section className="profile-twitter-section">
+                <h2>Reposts</h2>
+                {loadingReposts ? (
+                  <p className="profile-twitter-empty">Cargando reposts...</p>
+                ) : repostedRecognitions.length === 0 ? (
+                  <p className="profile-twitter-empty">Aun no hay reposts en este perfil.</p>
+                ) : (
+                  <div className="profile-twitter-rec-list">
+                    {repostedRecognitions.map((rec) => {
+                      const repostMedia = Array.isArray(rec.media) ? rec.media : [];
+                      const activeRepostMediaIndex = Math.min(
+                        repostSlideById[rec.repost_id] || 0,
+                        Math.max(repostMedia.length - 1, 0)
+                      );
+                      const activeRepostMedia = repostMedia[activeRepostMediaIndex];
+                      const goToRepostMedia = (nextIndex) => {
+                        if (repostMedia.length <= 1) return;
+                        const normalized = (nextIndex + repostMedia.length) % repostMedia.length;
+                        setRepostSlideById((prev) => ({ ...prev, [rec.repost_id]: normalized }));
+                      };
+
+                      return (
+                      <article key={`${rec.repost_id}-${rec.id}`} className="profile-repost-card profile-repost-social-card">
+                        <div className="profile-repost-byline">
+                          {profileImage ? (
+                            <img src={profileImage} alt={viewedProfile?.display_name || 'Perfil'} />
+                          ) : (
+                            <span>{initials}</span>
+                          )}
+                          <div>
+                            <strong>{viewedProfile?.display_name || viewedProfile?.fullname || 'Usuario'}</strong>
+                            <small>reposteo esto el {new Date(rec.reposted_at).toLocaleDateString('es-MX')}</small>
+                          </div>
+                        </div>
+                        {rec.repost_comment && <p className="profile-repost-comment">{rec.repost_comment}</p>}
+                        <div className="profile-repost-original social-post-card">
+                          <div className="profile-repost-original-header">
+                            {rec.sender_profile_image ? (
+                              <img src={resolveImageUrl(rec.sender_profile_image)} alt={rec.sender_name} />
+                            ) : (
+                              <span>
+                                {(rec.sender_name || 'TSJ')
+                                  .split(' ')
+                                  .slice(0, 2)
+                                  .map((word) => word[0])
+                                  .join('')
+                                  .toUpperCase()}
+                              </span>
+                            )}
+                            <div>
+                              <p>
+                                <strong>{rec.sender_name}</strong>
+                                <span> reconocio a </span>
+                                <strong>{rec.receiver_name}</strong>
+                              </p>
+                              <small>{new Date(rec.created_at).toLocaleDateString('es-MX')}</small>
+                            </div>
+                          </div>
+                          <p className="profile-repost-original-message">{rec.message}</p>
+                          {activeRepostMedia && (
+                            <div className="profile-repost-original-media">
+                              {activeRepostMedia.media_type === 'video' ? (
+                                <video src={resolveImageUrl(activeRepostMedia.media_url)} controls />
+                              ) : (
+                                <img src={resolveImageUrl(activeRepostMedia.media_url)} alt="Repost" />
+                              )}
+                              {repostMedia.length > 1 && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="profile-repost-media-nav prev"
+                                    onClick={() => goToRepostMedia(activeRepostMediaIndex - 1)}
+                                    aria-label="Medio anterior"
+                                  >
+                                    {'\u2039'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="profile-repost-media-nav next"
+                                    onClick={() => goToRepostMedia(activeRepostMediaIndex + 1)}
+                                    aria-label="Siguiente medio"
+                                  >
+                                    {'\u203A'}
+                                  </button>
+                                  <div className="profile-repost-media-dots">
+                                    {repostMedia.map((item, index) => (
+                                      <button
+                                        key={item.id || index}
+                                        type="button"
+                                        className={index === activeRepostMediaIndex ? 'active' : ''}
+                                        onClick={() => goToRepostMedia(index)}
+                                        aria-label={`Ver medio ${index + 1}`}
+                                      />
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <button type="button" className="saved-open-btn" onClick={() => onOpenRecognition?.(rec.id)}>
+                          Ver publicacion
+                        </button>
+                        {isOwnProfile && (
+                          <button
+                            type="button"
+                            className="profile-repost-remove-btn"
+                            onClick={() => handleRemoveRepostFromProfile(rec.id, rec.repost_id)}
+                            disabled={Boolean(removingRepostIds[rec.repost_id])}
+                          >
+                            {removingRepostIds[rec.repost_id] ? 'Quitando...' : 'Quitar repost'}
+                          </button>
+                        )}
+                      </article>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             )}
 
