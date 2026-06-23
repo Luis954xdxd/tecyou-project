@@ -81,6 +81,7 @@ router.post(
         user_id,
         caption,
         music_name,
+        music_external_url,
         music_start_seconds,
         duration_seconds,
         visibility_type,
@@ -126,7 +127,7 @@ router.post(
       const mediaUrl = `/uploads/stories/${storyMediaFile.filename}`;
       const audioUrl = storyAudioFile
         ? `/uploads/stories/${storyAudioFile.filename}`
-        : null;
+        : music_external_url || null;
 
       const storyResult = await pool.query(
         `

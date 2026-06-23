@@ -56,6 +56,39 @@ const upload = multer({
   },
 });
 
+const ensureRepostTable = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recognition_reposts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      recognition_id INTEGER REFERENCES recognitions(id) ON DELETE CASCADE,
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, recognition_id)
+    )
+  `);
+};
+
+const ensureCommentLikesTable = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recognition_comment_likes (
+      id SERIAL PRIMARY KEY,
+      comment_id INTEGER REFERENCES recognition_comments(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(comment_id, user_id)
+    )
+  `);
+};
+
+ensureRepostTable().catch((err) => {
+  console.error('Error creando tabla recognition_reposts:', err.message);
+});
+
+ensureCommentLikesTable().catch((err) => {
+  console.error('Error creando tabla recognition_comment_likes:', err.message);
+});
+
 // ===============================
 // HELPERS DE MENCIONES
 // ===============================
@@ -329,6 +362,7 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 // ===============================
 router.get('/feed', async (req, res) => {
   try {
+    await ensureRepostTable();
     const feed = await pool.query(`
   SELECT
     r.*,
@@ -341,6 +375,8 @@ router.get('/feed', async (req, res) => {
     rec.fullname AS receiver_fullname,
     rec.profile_image_url AS receiver_profile_image,
     receiver_frame.code AS receiver_frame_code,
+    COUNT(DISTINCT rc.id)::int AS comment_count,
+    COUNT(DISTINCT rr.id)::int AS repost_count,
 
     COALESCE(
       json_agg(
@@ -369,6 +405,8 @@ router.get('/feed', async (req, res) => {
     ON receiver_frame.id = receiver_uaf.frame_id
 
   LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
+  LEFT JOIN recognition_comments rc ON r.id = rc.recognition_id
+  LEFT JOIN recognition_reposts rr ON r.id = rr.recognition_id
   GROUP BY
     r.id,
     s.id,
@@ -941,6 +979,8 @@ router.post('/:id/comments', async (req, res) => {
 router.get('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
+    const currentUserId = req.query.userId || null;
+    await ensureCommentLikesTable();
 
     const comments = await pool.query(
       `SELECT
@@ -951,12 +991,25 @@ router.get('/:id/comments', async (req, res) => {
           rc.parent_comment_id,
           rc.created_at,
           COALESCE(u.display_name, u.fullname) AS user_name,
-          u.profile_image_url
+          u.email,
+          u.profile_image_url,
+          (rc.user_id = r.sender_id) AS is_author,
+          COUNT(DISTINCT rcl.id)::int AS like_count,
+          COALESCE(BOOL_OR(rcl.user_id = $2), FALSE)::boolean AS liked_by_current_user,
+          EXISTS (
+            SELECT 1
+            FROM recognition_comment_likes author_like
+            WHERE author_like.comment_id = rc.id
+              AND author_like.user_id = r.sender_id
+          ) AS author_liked
        FROM recognition_comments rc
        JOIN users u ON rc.user_id = u.id
+       JOIN recognitions r ON r.id = rc.recognition_id
+       LEFT JOIN recognition_comment_likes rcl ON rcl.comment_id = rc.id
        WHERE rc.recognition_id = $1
+       GROUP BY rc.id, u.id, r.sender_id
        ORDER BY rc.created_at ASC`,
-      [id]
+      [id, currentUserId]
     );
 
     const allComments = comments.rows;
@@ -991,6 +1044,207 @@ router.get('/:id/comments', async (req, res) => {
   } catch (err) {
     console.error('Error en GET /:id/comments:', err.message);
     res.status(500).send('Error al obtener comentarios.');
+  }
+});
+
+router.post('/comments/:commentId/like', async (req, res) => {
+  try {
+    await ensureCommentLikesTable();
+    const { commentId } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    const existing = await pool.query(
+      `SELECT id
+       FROM recognition_comment_likes
+       WHERE comment_id = $1 AND user_id = $2`,
+      [commentId, user_id]
+    );
+
+    if (existing.rows.length > 0) {
+      await pool.query(
+        `DELETE FROM recognition_comment_likes
+         WHERE comment_id = $1 AND user_id = $2`,
+        [commentId, user_id]
+      );
+      return res.json({ liked: false });
+    }
+
+    await pool.query(
+      `INSERT INTO recognition_comment_likes (comment_id, user_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [commentId, user_id]
+    );
+
+    res.json({ liked: true });
+  } catch (err) {
+    console.error('Error en POST /comments/:commentId/like:', err.message);
+    res.status(500).json({ error: 'No se pudo actualizar el like del comentario.' });
+  }
+});
+
+router.delete('/comments/:commentId', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await ensureCommentLikesTable();
+    const { commentId } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    const comment = await client.query(
+      `SELECT id, user_id, recognition_id
+       FROM recognition_comments
+       WHERE id = $1`,
+      [commentId]
+    );
+
+    if (comment.rows.length === 0) {
+      return res.status(404).json({ error: 'Comentario no encontrado.' });
+    }
+
+    if (Number(comment.rows[0].user_id) !== Number(user_id)) {
+      return res.status(403).json({ error: 'Solo puedes borrar tus propios comentarios.' });
+    }
+
+    await client.query('BEGIN');
+
+    const commentIds = await client.query(
+      `WITH RECURSIVE comment_tree AS (
+         SELECT id FROM recognition_comments WHERE id = $1
+         UNION ALL
+         SELECT child.id
+         FROM recognition_comments child
+         JOIN comment_tree parent ON child.parent_comment_id = parent.id
+       )
+       SELECT id FROM comment_tree`,
+      [commentId]
+    );
+
+    const ids = commentIds.rows.map((row) => row.id);
+
+    if (ids.length > 0) {
+      await client.query(`DELETE FROM comment_mentions WHERE comment_id = ANY($1::int[])`, [ids]);
+      await client.query(`DELETE FROM recognition_comment_likes WHERE comment_id = ANY($1::int[])`, [ids]);
+      await client.query(`DELETE FROM recognition_comments WHERE id = ANY($1::int[])`, [ids]);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      recognition_id: comment.rows[0].recognition_id,
+      deleted_count: ids.length,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error en DELETE /comments/:commentId:', err.message);
+    res.status(500).json({ error: 'No se pudo eliminar el comentario.' });
+  } finally {
+    client.release();
+  }
+});
+
+// ===============================
+// REPOSTEAR RECONOCIMIENTO
+// ===============================
+router.post('/:id/repost', async (req, res) => {
+  try {
+    await ensureRepostTable();
+    const { id } = req.params;
+    const { user_id, comment } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    const repost = await pool.query(
+      `INSERT INTO recognition_reposts (user_id, recognition_id, comment)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, recognition_id)
+       DO UPDATE SET comment = EXCLUDED.comment, created_at = CURRENT_TIMESTAMP
+       RETURNING *, (xmax = 0) AS created`,
+      [user_id, id, comment || null]
+    );
+
+    res.json(repost.rows[0]);
+  } catch (err) {
+    console.error('Error en POST /:id/repost:', err.message);
+    res.status(500).json({ error: 'No se pudo repostear.' });
+  }
+});
+
+router.delete('/:id/repost', async (req, res) => {
+  try {
+    await ensureRepostTable();
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'Falta user_id.' });
+    }
+
+    await pool.query(
+      `DELETE FROM recognition_reposts
+       WHERE user_id = $1 AND recognition_id = $2`,
+      [user_id, id]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en DELETE /:id/repost:', err.message);
+    res.status(500).json({ error: 'No se pudo quitar el repost.' });
+  }
+});
+
+router.get('/reposts/:userId', async (req, res) => {
+  try {
+    await ensureRepostTable();
+    const { userId } = req.params;
+
+    const reposts = await pool.query(
+      `SELECT
+        rr.id AS repost_id,
+        rr.comment AS repost_comment,
+        rr.created_at AS reposted_at,
+        r.*,
+        COALESCE(s.display_name, s.fullname) AS sender_name,
+        s.fullname AS sender_fullname,
+        s.profile_image_url AS sender_profile_image,
+        COALESCE(rec.display_name, rec.fullname) AS receiver_name,
+        rec.fullname AS receiver_fullname,
+        rec.profile_image_url AS receiver_profile_image,
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'id', rm.id,
+              'media_url', rm.media_url,
+              'media_type', rm.media_type
+            )
+          ) FILTER (WHERE rm.id IS NOT NULL),
+          '[]'
+        ) AS media
+       FROM recognition_reposts rr
+       JOIN recognitions r ON r.id = rr.recognition_id
+       JOIN users s ON r.sender_id = s.id
+       JOIN users rec ON r.receiver_id = rec.id
+       LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
+       WHERE rr.user_id = $1
+       GROUP BY rr.id, r.id, s.id, rec.id
+       ORDER BY rr.created_at DESC`,
+      [userId]
+    );
+
+    res.json(reposts.rows);
+  } catch (err) {
+    console.error('Error en GET /reposts/:userId:', err.message);
+    res.status(500).json({ error: 'No se pudieron obtener reposts.' });
   }
 });
 

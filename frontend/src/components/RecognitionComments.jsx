@@ -3,16 +3,28 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
 
-function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
+function RecognitionComments({
+  recognitionId,
+  currentUserId,
+  recognition,
+  resolveImageUrl: resolveExternalImageUrl,
+  onOpenProfile,
+  onCommentAdded,
+  onCommentDeleted,
+}) {
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyInputs, setReplyInputs] = useState({});
   const [replyLoadingMap, setReplyLoadingMap] = useState({});
+  const [expandedReplies, setExpandedReplies] = useState({});
+  const [likingComments, setLikingComments] = useState({});
+  const [deletingComments, setDeletingComments] = useState({});
 
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
@@ -28,12 +40,22 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
     return `${API_BASE}${url}`;
   };
 
+  const resolveMediaUrl = resolveExternalImageUrl || resolveImageUrl;
+  const commentMedia = Array.isArray(recognition?.media) ? recognition.media : [];
+  const mainMedia = commentMedia[Math.min(activeMediaIndex, Math.max(commentMedia.length - 1, 0))] || null;
+  const mainMediaUrl = mainMedia?.fullUrl || resolveMediaUrl(mainMedia?.media_url);
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const date = new Date(dateString);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
+    const days = Math.floor(diffMs / 86400000);
+    if (minutes < 1) return 'ahora';
+    if (minutes < 60) return `${minutes} min`;
+    if (hours < 24) return `${hours} h`;
+    if (days < 7) return `${days} d`;
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
   };
 
   const getInitials = (name) => {
@@ -49,7 +71,9 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
   const fetchComments = async () => {
     try {
       setLoadingComments(true);
-      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/comments`);
+      const response = await axios.get(
+        `${API_BASE}/api/recognitions/${recognitionId}/comments?userId=${currentUserId}`
+      );
       setComments(response.data);
     } catch (error) {
       console.error('Error al obtener comentarios:', error);
@@ -63,6 +87,19 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
       fetchComments();
     }
   }, [showComments, recognitionId]);
+
+  useEffect(() => {
+    setActiveMediaIndex(0);
+  }, [recognitionId, showComments]);
+
+  useEffect(() => {
+    if (!showComments) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showComments]);
 
   const detectMentionQuery = (text) => {
     const match = text.match(/(?:^|\s)@([a-zA-Z0-9._]*)$/);
@@ -214,6 +251,7 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
       setShowMentionSuggestions(false);
       setMentionQuery('');
       fetchComments();
+      onCommentAdded?.(recognitionId);
     } catch (error) {
       console.error('Error al enviar comentario:', error);
       alert(error.response?.data?.error || 'No se pudo enviar el comentario.');
@@ -249,6 +287,7 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
       setMentionQuery('');
       setReplyingToId(null);
       fetchComments();
+      onCommentAdded?.(recognitionId);
     } catch (error) {
       console.error('Error al responder comentario:', error);
       alert(error.response?.data?.error || 'No se pudo enviar la respuesta.');
@@ -257,6 +296,40 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
         ...prev,
         [commentId]: false,
       }));
+    }
+  };
+
+  const handleToggleCommentLike = async (commentId) => {
+    if (!currentUserId) return;
+    try {
+      setLikingComments((prev) => ({ ...prev, [commentId]: true }));
+      await axios.post(`${API_BASE}/api/recognitions/comments/${commentId}/like`, {
+        user_id: currentUserId,
+      });
+      await fetchComments();
+    } catch (error) {
+      console.error('Error al dar like al comentario:', error);
+      alert(error.response?.data?.error || 'No se pudo actualizar el like.');
+    } finally {
+      setLikingComments((prev) => ({ ...prev, [commentId]: false }));
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!currentUserId || !commentId) return;
+
+    try {
+      setDeletingComments((prev) => ({ ...prev, [commentId]: true }));
+      const response = await axios.delete(`${API_BASE}/api/recognitions/comments/${commentId}`, {
+        data: { user_id: currentUserId },
+      });
+      await fetchComments();
+      onCommentDeleted?.(recognitionId, Number(response.data?.deleted_count || 1));
+    } catch (error) {
+      console.error('Error al eliminar comentario:', error);
+      alert(error.response?.data?.error || 'No se pudo eliminar el comentario.');
+    } finally {
+      setDeletingComments((prev) => ({ ...prev, [commentId]: false }));
     }
   };
 
@@ -301,6 +374,9 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
   };
 
   const renderCommentTree = (item, level = 0) => {
+    const replies = Array.isArray(item.replies) ? item.replies : [];
+    const repliesOpen = Boolean(expandedReplies[item.id]);
+
     return (
       <div
         key={item.id}
@@ -322,6 +398,17 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
                 {getInitials(item.user_name)}
               </div>
             )}
+            <div className="comment-profile-card">
+              {item.profile_image_url ? (
+                <img src={resolveImageUrl(item.profile_image_url)} alt={item.user_name} />
+              ) : (
+                <span>{getInitials(item.user_name)}</span>
+              )}
+              <div>
+                <strong>{item.user_name}</strong>
+                <small>{item.email ? `@${item.email.split('@')[0]}` : 'Perfil Tec You'}</small>
+              </div>
+            </div>
           </div>
 
           <div className="comment-body">
@@ -333,12 +420,22 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
               >
                 {item.user_name}
               </button>
+              {item.is_author && <em>Autor</em>}
+              {item.author_liked && <span className="comment-author-liked">❤</span>}
               <span>{formatDate(item.created_at)}</span>
             </div>
 
             <p>{renderCommentWithMentions(item.comment)}</p>
 
             <div className="comment-actions-row">
+              <button
+                type="button"
+                className={`comment-like-action ${item.liked_by_current_user ? 'liked' : ''}`}
+                onClick={() => handleToggleCommentLike(item.id)}
+                disabled={Boolean(likingComments[item.id])}
+              >
+                Me gusta
+              </button>
               <button
                 type="button"
                 className="comment-reply-toggle-btn"
@@ -348,8 +445,29 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
               >
                 {replyingToId === item.id ? 'Cancelar' : 'Responder'}
               </button>
+              {Number(item.user_id) === Number(currentUserId) && (
+                <button
+                  type="button"
+                  className="comment-delete-action"
+                  onClick={() => handleDeleteComment(item.id)}
+                  disabled={Boolean(deletingComments[item.id])}
+                >
+                  {deletingComments[item.id] ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              )}
             </div>
           </div>
+
+          <button
+            type="button"
+            className={`comment-side-like ${item.liked_by_current_user ? 'liked' : ''}`}
+            onClick={() => handleToggleCommentLike(item.id)}
+            disabled={Boolean(likingComments[item.id])}
+            title="Me gusta"
+          >
+            <span>{item.liked_by_current_user ? '♥' : '♡'}</span>
+            <strong>{Number(item.like_count || 0)}</strong>
+          </button>
         </div>
 
         {replyingToId === item.id && (
@@ -376,10 +494,23 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
           </div>
         )}
 
-        {Array.isArray(item.replies) && item.replies.length > 0 && (
-          <div className="reply-list">
-            {item.replies.map((reply) => renderCommentTree(reply, level + 1))}
-          </div>
+        {replies.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="view-replies-btn"
+              onClick={() =>
+                setExpandedReplies((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+              }
+            >
+              {repliesOpen ? 'Ocultar respuestas' : `Ver ${replies.length} respuesta${replies.length === 1 ? '' : 's'}`}
+            </button>
+            {repliesOpen && (
+              <div className="reply-list">
+                {replies.map((reply) => renderCommentTree(reply, level + 1))}
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -398,7 +529,66 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
       </div>
 
       {showComments && (
-        <div className="comments-panel">
+        <div className="instagram-comments-overlay" onClick={() => setShowComments(false)}>
+        <div className="comments-panel instagram-comments-panel" onClick={(event) => event.stopPropagation()}>
+          <div className="instagram-comments-post-preview">
+            {mainMedia ? (
+              <>
+                {mainMedia.media_type === 'video' ? (
+                  <video src={mainMediaUrl} controls className="instagram-comments-media" />
+                ) : (
+                  <img src={mainMediaUrl} alt="Publicacion" className="instagram-comments-media" />
+                )}
+                {commentMedia.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="instagram-comments-media-nav prev"
+                      onClick={() => setActiveMediaIndex((prev) => (prev - 1 + commentMedia.length) % commentMedia.length)}
+                      aria-label="Medio anterior"
+                    >
+                      {'\u2039'}
+                    </button>
+                    <button
+                      type="button"
+                      className="instagram-comments-media-nav next"
+                      onClick={() => setActiveMediaIndex((prev) => (prev + 1) % commentMedia.length)}
+                      aria-label="Siguiente medio"
+                    >
+                      {'\u203A'}
+                    </button>
+                    <div className="instagram-comments-media-dots">
+                      {commentMedia.map((item, index) => (
+                        <button
+                          key={item.id || index}
+                          type="button"
+                          className={index === activeMediaIndex ? 'active' : ''}
+                          onClick={() => setActiveMediaIndex(index)}
+                          aria-label={`Ver medio ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="instagram-comments-text-preview">
+                <strong>{recognition?.sender_name}</strong>
+                <p>{recognition?.message}</p>
+              </div>
+            )}
+          </div>
+          <div className="instagram-comments-header">
+            <span />
+            <strong>Comentarios</strong>
+            <button type="button" onClick={() => setShowComments(false)} aria-label="Cerrar comentarios">
+              {'\u00D7'}
+            </button>
+          </div>
+          <div className="instagram-comments-caption">
+            <strong>{recognition?.sender_name}</strong>
+            <span>{recognition?.message}</span>
+          </div>
           <form onSubmit={handleSubmitComment} className="comment-form">
             <textarea
               className="comment-input"
@@ -423,6 +613,7 @@ function RecognitionComments({ recognitionId, currentUserId, onOpenProfile }) {
               comments.map((item) => renderCommentTree(item))
             )}
           </div>
+        </div>
         </div>
       )}
     </div>

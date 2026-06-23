@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-const MUSIC_SUGGESTIONS = [
-  { title: 'Desde Que Te Tengo', artist: 'Carin Leon' },
-  { title: 'Las Mañanitas', artist: 'Ariel Camacho' },
-  { title: 'Life Goes On', artist: 'Oliver Tree' },
-  { title: 'Oye Mi Amor', artist: 'Mana' },
-  { title: 'Polvo Rosita', artist: 'Lenin Ramirez' },
-  { title: 'Niña De Mi Corazón', artist: 'La Arrolladora' },
-];
+function ImageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+    </svg>
+  );
+}
 
 function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [caption, setCaption] = useState('');
@@ -15,10 +16,14 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [audioFile, setAudioFile] = useState(null);
   const [musicName, setMusicName] = useState('');
   const [musicSearch, setMusicSearch] = useState('');
+  const [musicResults, setMusicResults] = useState([]);
+  const [musicLoading, setMusicLoading] = useState(false);
+  const [selectedMusicPreview, setSelectedMusicPreview] = useState('');
   const [durationSeconds, setDurationSeconds] = useState(30);
   const [visibilityType, setVisibilityType] = useState('public');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [excludedUsers, setExcludedUsers] = useState([]);
+  const mediaInputRef = useRef(null);
 
   const mediaPreview = useMemo(
     () => (mediaFile ? URL.createObjectURL(mediaFile) : null),
@@ -30,10 +35,6 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     [audioFile]
   );
 
-  const filteredSongs = MUSIC_SUGGESTIONS.filter((song) =>
-    `${song.title} ${song.artist}`.toLowerCase().includes(musicSearch.toLowerCase())
-  );
-
   useEffect(() => {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -43,6 +44,32 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    const query = musicSearch.trim();
+    if (query.length < 2) {
+      setMusicResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setMusicLoading(true);
+        const response = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=8`
+        );
+        const data = await response.json();
+        setMusicResults(Array.isArray(data.results) ? data.results : []);
+      } catch (error) {
+        console.error('Error buscando musica:', error);
+        setMusicResults([]);
+      } finally {
+        setMusicLoading(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [musicSearch]);
+
   if (!isOpen) return null;
 
   const resetForm = () => {
@@ -51,6 +78,8 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     setAudioFile(null);
     setMusicName('');
     setMusicSearch('');
+    setMusicResults([]);
+    setSelectedMusicPreview('');
     setDurationSeconds(30);
     setVisibilityType('public');
     setSelectedUsers([]);
@@ -68,6 +97,19 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     if (!file) return;
     if (file.type.startsWith('image/')) setDurationSeconds(30);
     if (file.type.startsWith('video/')) setDurationSeconds(60);
+  };
+
+  const applyVisibility = (value) => {
+    setVisibilityType(value);
+    if (value === 'following') {
+      setSelectedUsers((users || []).filter((item) => item.is_following).map((item) => item.id));
+      setExcludedUsers([]);
+      return;
+    }
+    if (value === 'public') {
+      setSelectedUsers([]);
+      setExcludedUsers([]);
+    }
   };
 
   const toggleUser = (userId, mode) => {
@@ -93,9 +135,10 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     data.append('storyMedia', mediaFile);
     data.append('caption', caption);
     data.append('music_name', musicName);
+    data.append('music_external_url', selectedMusicPreview);
     data.append('music_start_seconds', 0);
     data.append('duration_seconds', finalDuration);
-    data.append('visibility_type', visibilityType);
+    data.append('visibility_type', visibilityType === 'following' ? 'only_selected' : visibilityType);
     data.append('selected_users', JSON.stringify(selectedUsers));
     data.append('excluded_users', JSON.stringify(excludedUsers));
 
@@ -123,12 +166,19 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             </div>
           </div>
 
-          <label className="story-studio-action">
-            <span>{'\uD83D\uDDBC'}</span>
+          <label className="story-studio-action" htmlFor="story-media-input">
+            <ImageIcon />
             <strong>Foto o video</strong>
             <small>Imagen 30s, video maximo 60s</small>
-            <input type="file" accept="image/*,video/*" onChange={handleMediaChange} />
           </label>
+          <input
+            id="story-media-input"
+            ref={mediaInputRef}
+            className="story-hidden-file"
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleMediaChange}
+          />
 
           <label className="story-studio-field">
             <span>Texto</span>
@@ -144,23 +194,35 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             <input
               value={musicSearch}
               onChange={(event) => setMusicSearch(event.target.value)}
-              placeholder="Buscar musica"
+              placeholder="Buscar musica en iTunes"
             />
             <div className="story-music-results">
-              {filteredSongs.map((song) => (
+              {musicLoading && <small>Buscando canciones...</small>}
+              {musicResults.length > 0 ? musicResults.map((song) => (
                 <button
                   type="button"
-                  key={`${song.title}-${song.artist}`}
+                  key={song.trackId}
                   onClick={() => {
-                    setMusicName(`${song.title} - ${song.artist}`);
-                    setMusicSearch(song.title);
+                    setMusicName(`${song.trackName} - ${song.artistName}`);
+                    setMusicSearch(song.trackName);
+                    setSelectedMusicPreview(song.previewUrl || '');
                   }}
                 >
-                  <strong>{song.title}</strong>
-                  <small>{song.artist}</small>
+                  {song.artworkUrl60 && <img src={song.artworkUrl60} alt={song.trackName} />}
+                  <strong>{song.trackName}</strong>
+                  <small>{song.artistName}</small>
                 </button>
-              ))}
+              )) : (
+                <small>
+                  {musicSearch.trim().length >= 2
+                    ? 'Sin resultados por ahora.'
+                    : 'Escribe al menos 2 letras para buscar canciones.'}
+                </small>
+              )}
             </div>
+            {selectedMusicPreview && (
+              <audio controls src={selectedMusicPreview} className="story-music-preview-audio" />
+            )}
             <label className="story-local-audio">
               Subir audio local
               <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
@@ -172,14 +234,15 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             <div className="story-privacy-options">
               {[
                 ['public', 'Publico', 'Cualquier usuario de la comunidad'],
-                ['only_selected', 'Personalizado', 'Solo personas elegidas'],
+                ['following', 'Personas que sigo', 'Solo usuarios que sigues'],
+                ['only_selected', 'Personalizado', 'Elige personas especificas'],
                 ['exclude_selected', 'Ocultar historia a', 'Todos excepto algunos'],
               ].map(([value, title, description]) => (
                 <button
                   type="button"
                   key={value}
                   className={visibilityType === value ? 'active' : ''}
-                  onClick={() => setVisibilityType(value)}
+                  onClick={() => applyVisibility(value)}
                 >
                   <strong>{title}</strong>
                   <small>{description}</small>
@@ -191,20 +254,18 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
           {visibilityType !== 'public' && (
             <div className="story-users-box studio-users">
               <strong>
-                {visibilityType === 'only_selected'
-                  ? 'Quien puede verla'
-                  : 'Ocultar historia a'}
+                {visibilityType === 'exclude_selected' ? 'Ocultar historia a' : visibilityType === 'following' ? 'Personas que sigo' : 'Quien puede verla'}
               </strong>
               <div className="story-users-list">
                 {users?.map((user) => {
-                  const list = visibilityType === 'only_selected' ? selectedUsers : excludedUsers;
+                  const list = visibilityType === 'exclude_selected' ? excludedUsers : selectedUsers;
                   return (
                     <label key={user.id} className="story-user-option">
                       <input
                         type="checkbox"
                         checked={list.includes(user.id)}
                         onChange={() =>
-                          toggleUser(user.id, visibilityType === 'only_selected' ? 'allow' : 'exclude')
+                          toggleUser(user.id, visibilityType === 'exclude_selected' ? 'exclude' : 'allow')
                         }
                       />
                       <span>{user.display_name || user.fullname}</span>

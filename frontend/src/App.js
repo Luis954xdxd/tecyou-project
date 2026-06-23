@@ -32,6 +32,173 @@ import TecAgentChatbot from './components/TecAgentChatbot';
 
 const API_BASE = 'http://localhost:5000';
 
+function LucideIcon({ name, size = 22 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    'aria-hidden': true,
+  };
+
+  const icons = {
+    message: (
+      <>
+        <path d="M22 17a2 2 0 0 1-2 2H6.8a2 2 0 0 0-1.4.6l-2.2 2.2A.7.7 0 0 1 2 21.3V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+        <path d="M7 11h10" />
+        <path d="M7 15h6" />
+        <path d="M7 7h8" />
+      </>
+    ),
+    heart: <path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 12 5a5.5 5.5 0 0 0-10 3.5c0 2.3 1.5 4 3 5.5l7 7z" />,
+    comment: (
+      <>
+        <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+      </>
+    ),
+    share: (
+      <>
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+        <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+      </>
+    ),
+    repeat: (
+      <>
+        <path d="m2 9 3-3 3 3" />
+        <path d="M13 18H7a2 2 0 0 1-2-2V6" />
+        <path d="m22 15-3 3-3-3" />
+        <path d="M11 6h6a2 2 0 0 1 2 2v10" />
+      </>
+    ),
+    bookmark: <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />,
+    expand: (
+      <>
+        <path d="M15 3h6v6" />
+        <path d="m21 3-7 7" />
+        <path d="M9 21H3v-6" />
+        <path d="m3 21 7-7" />
+      </>
+    ),
+    shrink: (
+      <>
+        <path d="M8 3v5H3" />
+        <path d="m3 8 5-5" />
+        <path d="M16 21v-5h5" />
+        <path d="m21 16-5 5" />
+      </>
+    ),
+    x: (
+      <>
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </>
+    ),
+    phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />,
+    video: (
+      <>
+        <path d="m16 13 5 3V8l-5 3" />
+        <rect x="3" y="5" width="13" height="14" rx="2" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4" />
+        <path d="M12 8h.01" />
+      </>
+    ),
+    image: (
+      <>
+        <rect width="18" height="18" x="3" y="3" rx="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+      </>
+    ),
+    mic: (
+      <>
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <path d="M12 19v3" />
+      </>
+    ),
+    smile: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+        <path d="M9 9h.01" />
+        <path d="M15 9h.01" />
+      </>
+    ),
+    grid: (
+      <>
+        <rect width="7" height="7" x="3" y="3" rx="1" />
+        <rect width="7" height="7" x="14" y="3" rx="1" />
+        <rect width="7" height="7" x="14" y="14" rx="1" />
+        <rect width="7" height="7" x="3" y="14" rx="1" />
+      </>
+    ),
+    more: (
+      <>
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+        <circle cx="5" cy="12" r="1" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M3 6h18" />
+        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+        <path d="M10 11v6" />
+        <path d="M14 11v6" />
+      </>
+    ),
+    flag: (
+      <>
+        <path d="M4 22V4a2 2 0 0 1 2-2h11l-1 5 1 5H6" />
+      </>
+    ),
+    sparkle: (
+      <>
+        <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" />
+        <path d="M5 3v4" />
+        <path d="M3 5h4" />
+        <path d="M19 17v4" />
+        <path d="M17 19h4" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+        <path d="M16 3.1a4 4 0 0 1 0 7.8" />
+      </>
+    ),
+    square: (
+      <>
+        <rect width="16" height="16" x="4" y="4" rx="2" />
+        <path d="M9 9h6v6H9z" />
+      </>
+    ),
+    link: (
+      <>
+        <path d="M10 13a5 5 0 0 0 7.1 0l2.8-2.8a5 5 0 0 0-7.1-7.1L11 4.9" />
+        <path d="M14 11a5 5 0 0 0-7.1 0l-2.8 2.8a5 5 0 0 0 7.1 7.1L13 19.1" />
+      </>
+    ),
+  };
+
+  return <svg {...common}>{icons[name]}</svg>;
+}
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,6 +255,11 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [showRecognitionComposer, setShowRecognitionComposer] = useState(false);
   const [deletingRecognitionIds, setDeletingRecognitionIds] = useState({});
   const [deleteCandidateId, setDeleteCandidateId] = useState(null);
+  const [openPostMenuId, setOpenPostMenuId] = useState(null);
+  const [reactionPanelSignalById, setReactionPanelSignalById] = useState({});
+  const [repostCandidate, setRepostCandidate] = useState(null);
+  const [repostComment, setRepostComment] = useState('');
+  const [appToast, setAppToast] = useState(null);
   const [showSocialMenu, setShowSocialMenu] = useState(false);
   const [showMessengerPanel, setShowMessengerPanel] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
@@ -103,6 +275,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [chatImageViewer, setChatImageViewer] = useState(null);
   const [showChatExtras, setShowChatExtras] = useState(false);
   const [recordingAudio, setRecordingAudio] = useState(false);
+  const [mediaSlideByRecognition, setMediaSlideByRecognition] = useState({});
 
   const [favoriteIds, setFavoriteIds] = useState({});
   const [favoritingIds, setFavoritingIds] = useState({});
@@ -336,7 +509,17 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
         user_id: user.id,
         comment,
       });
+
+      const targetStory = storyViewer.stories.find((story) => Number(story.id) === Number(storyId));
+      if (targetStory?.user_id && Number(targetStory.user_id) !== Number(user.id)) {
+        const formData = new FormData();
+        formData.append('sender_id', user.id);
+        formData.append('content', `Respondio a tu historia: ${comment}`);
+        await axios.post(`${API_BASE}/api/chat/direct/${targetStory.user_id}/messages`, formData);
+      }
+
       await fetchStoryComments(storyId);
+      fetchChatConversations();
     } catch (error) {
       console.error('Error al comentar historia:', error);
       alert(error.response?.data?.error || 'No se pudo comentar la historia.');
@@ -400,13 +583,21 @@ const handleToggleAvatarFrames = () => {
   };
 
   const openStoryViewer = async (userStories, index = 0) => {
+    const allStorySequence = groupedStories.flatMap((group) => group.stories || []);
+    const selectedStory = userStories[index];
+    const globalIndex = allStorySequence.findIndex(
+      (story) => Number(story.id) === Number(selectedStory?.id)
+    );
+    const storiesToShow = allStorySequence.length ? allStorySequence : userStories;
+    const startIndex = globalIndex >= 0 ? globalIndex : index;
+
     setStoryViewer({
       isOpen: true,
-      stories: userStories,
-      currentIndex: index,
+      stories: storiesToShow,
+      currentIndex: startIndex,
     });
 
-    const story = userStories[index];
+    const story = storiesToShow[startIndex];
     if (!story || !user?.id) return;
 
     try {
@@ -510,6 +701,11 @@ const handleToggleAvatarFrames = () => {
 
     return Object.values(groups);
   }, [stories]);
+
+  const storyUserIds = useMemo(
+    () => new Set(groupedStories.map((group) => Number(group.user_id))),
+    [groupedStories]
+  );
 
   const fetchStories = async () => {
     try {
@@ -674,10 +870,33 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     if (!user?.id) return;
     try {
       const response = await axios.get(`${API_BASE}/api/chat/conversations/${user.id}`);
-      setChatConversations(Array.isArray(response.data) ? response.data : []);
+      const sorted = Array.isArray(response.data)
+        ? [...response.data].sort(
+            (a, b) =>
+              new Date(b.last_message_at || b.updated_at || 0) -
+              new Date(a.last_message_at || a.updated_at || 0)
+          )
+        : [];
+      setChatConversations(sorted);
     } catch (error) {
       console.error('Error al cargar conversaciones:', error);
     }
+  };
+
+  const formatChatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const today = new Date();
+    const sameDay = date.toDateString() === today.toDateString();
+    return sameDay
+      ? date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+      : date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  };
+
+  const formatPresenceText = (presence) => {
+    if (presence?.online) return 'Activo ahora';
+    if (!presence?.lastSeen) return 'Disponible para mensajes';
+    return `Activo ${formatChatTime(presence.lastSeen)}`;
   };
 
   const fetchChatMessages = async (conversationId) => {
@@ -959,6 +1178,16 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
     return () => clearTimeout(timer);
   }, [showUnlockToast, activeUnlockItem]);
+
+  useEffect(() => {
+    if (!appToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setAppToast(null);
+    }, 3600);
+
+    return () => clearTimeout(timer);
+  }, [appToast]);
 
   const getInitials = (name) => {
     if (!name) return 'TSJ';
@@ -1252,6 +1481,73 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       );
     } finally {
       setFavoritingIds((prev) => ({ ...prev, [recognitionId]: false }));
+    }
+  };
+
+  const refreshRecognitionReactions = async (recognitionId) => {
+    const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
+    const nextTotals = { like: 0, celebrate: 0, inspire: 0, love: 0 };
+    (response.data?.totals || []).forEach((item) => {
+      if (nextTotals[item.reaction_type] !== undefined) {
+        nextTotals[item.reaction_type] = Number(item.total) || 0;
+      }
+    });
+    const nextUsers = response.data?.users || [];
+    const nextUserReaction =
+      nextUsers.find((item) => Number(item.user_id) === Number(user?.id))?.reaction_type || null;
+
+    setReactionTotals((prev) => ({ ...prev, [recognitionId]: nextTotals }));
+    setReactionUsersMap((prev) => ({ ...prev, [recognitionId]: nextUsers }));
+    setUserReactionMap((prev) => ({ ...prev, [recognitionId]: nextUserReaction }));
+  };
+
+  const handleLoveRecognition = async (recognitionId) => {
+    if (!user?.id) return;
+    try {
+      setReactingIds((prev) => ({ ...prev, [recognitionId]: true }));
+      await axios.post(`${API_BASE}/api/recognitions/${recognitionId}/react`, {
+        user_id: user.id,
+        reaction_type: 'love',
+      });
+      await refreshRecognitionReactions(recognitionId);
+    } catch (err) {
+      console.error('Error al reaccionar:', err);
+      alert(err.response?.data?.error || 'No se pudo reaccionar.');
+    } finally {
+      setReactingIds((prev) => ({ ...prev, [recognitionId]: false }));
+    }
+  };
+
+  const handleSubmitRepost = async () => {
+    if (!user?.id || !repostCandidate?.id) return;
+    try {
+      const response = await axios.post(`${API_BASE}/api/recognitions/${repostCandidate.id}/repost`, {
+        user_id: user.id,
+        comment: repostComment,
+      });
+      if (response.data?.created !== false) {
+        setRecognitions((prev) =>
+          prev.map((rec) =>
+            Number(rec.id) === Number(repostCandidate.id)
+              ? { ...rec, repost_count: Number(rec.repost_count || 0) + 1 }
+              : rec
+          )
+        );
+      }
+      setRepostCandidate(null);
+      setRepostComment('');
+      setAppToast({
+        type: 'success',
+        message: 'Tu repost fue agregado al perfil.',
+        actionLabel: 'Ver perfil',
+        onAction: () => navigate(`/perfil/${user.id}?tab=reposts`),
+      });
+    } catch (err) {
+      console.error('Error al repostear:', err);
+      setAppToast({
+        type: 'error',
+        message: err.response?.data?.error || 'No se pudo repostear.',
+      });
     }
   };
 
@@ -1573,62 +1869,6 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       });
     }
   };
-  const getComposedRecognitionMedia = (mediaItems = []) => {
-    if (!Array.isArray(mediaItems) || mediaItems.length === 0) {
-      return {
-        primaryMedia: null,
-        imageOnlyMedia: [],
-        secondaryMedia: [],
-        layoutType: 'empty',
-        visibleSecondaryMedia: [],
-        remainingCount: 0,
-      };
-    }
-
-    const videoItems = mediaItems.filter((item) => item.media_type === 'video');
-    const imageItems = mediaItems.filter((item) => item.media_type === 'image');
-
-    if (videoItems.length > 0) {
-      const primaryMedia = videoItems[0];
-      const secondaryMedia = imageItems;
-      const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
-      const remainingCount = Math.max(secondaryMedia.length - 3, 0);
-
-      let layoutType = 'video-only';
-      if (visibleSecondaryMedia.length === 1) layoutType = 'video-plus-1';
-      if (visibleSecondaryMedia.length === 2) layoutType = 'video-plus-2';
-      if (visibleSecondaryMedia.length >= 3) layoutType = 'video-plus-3';
-
-      return {
-        primaryMedia,
-        imageOnlyMedia: imageItems,
-        secondaryMedia,
-        layoutType,
-        visibleSecondaryMedia,
-        remainingCount,
-      };
-    }
-
-    const primaryMedia = imageItems[0] || null;
-    const secondaryMedia = imageItems.slice(1);
-    const visibleSecondaryMedia = secondaryMedia.slice(0, 3);
-    const remainingCount = Math.max(secondaryMedia.length - 3, 0);
-
-    let layoutType = 'image-single';
-    if (imageItems.length === 2) layoutType = 'image-2';
-    if (imageItems.length === 3) layoutType = 'image-3';
-    if (imageItems.length >= 4) layoutType = 'image-4plus';
-
-    return {
-      primaryMedia,
-      imageOnlyMedia: imageItems,
-      secondaryMedia,
-      layoutType,
-      visibleSecondaryMedia,
-      remainingCount,
-    };
-  };
-
   const renderRecognitionCard = (rec) => {
     const categoryMeta = getCategoryMeta(rec.category);
     const recMedia = Array.isArray(rec.media)
@@ -1638,16 +1878,24 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         }))
       : [];
 
-    const {
-      primaryMedia,
-      imageOnlyMedia,
-      layoutType,
-      remainingCount,
-      visibleSecondaryMedia,
-    } = getComposedRecognitionMedia(recMedia);
-
     const canDelete = Number(rec.sender_id) === Number(user?.id);
     const isDeleting = Boolean(deletingRecognitionIds[rec.id]);
+    const reactionTotal = Object.values(reactionTotals[rec.id] || {}).reduce(
+      (sum, total) => sum + Number(total || 0),
+      0
+    );
+    const commentCount = Number(rec.comment_count || 0);
+    const repostCount = Number(rec.repost_count || 0);
+    const activeMediaIndex = Math.min(
+      mediaSlideByRecognition[rec.id] || 0,
+      Math.max(recMedia.length - 1, 0)
+    );
+    const activeMedia = recMedia[activeMediaIndex];
+    const goToMedia = (nextIndex) => {
+      if (recMedia.length <= 1) return;
+      const normalized = (nextIndex + recMedia.length) % recMedia.length;
+      setMediaSlideByRecognition((prev) => ({ ...prev, [rec.id]: normalized }));
+    };
 
     return (
       <article
@@ -1664,6 +1912,8 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               name={rec.sender_name}
               frameCode={hideAvatarFrames ? null : rec.sender_frame_code}
               sizeClass="size-feed"
+              hasStory={storyUserIds.has(Number(rec.sender_id))}
+              showPreview
             />
           </div>
 
@@ -1695,18 +1945,64 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             </div>
           </div>
 
-          {canDelete && (
+          <div className="social-post-options">
             <button
               type="button"
-              className="social-post-delete-btn"
-              onClick={() => setDeleteCandidateId(rec.id)}
-              disabled={isDeleting}
-              title={'Eliminar publicaci\u00f3n'}
-              aria-label={'Eliminar publicaci\u00f3n'}
+              className="social-post-options-btn"
+              onClick={() => setOpenPostMenuId((prev) => (prev === rec.id ? null : rec.id))}
+              title="Opciones"
+              aria-label="Opciones de publicacion"
             >
-              {isDeleting ? '...' : '\u00d7'}
+              <LucideIcon name="more" size={22} />
             </button>
-          )}
+            {openPostMenuId === rec.id && (
+              <div className="social-post-menu">
+                <button type="button" onClick={() => navigate(`/reconocimiento/${rec.id}`)}>
+                  <LucideIcon name="message" size={16} />
+                  Ir a la publicacion
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(`${window.location.origin}/reconocimiento/${rec.id}`);
+                    setOpenPostMenuId(null);
+                  }}
+                >
+                  <LucideIcon name="link" size={16} />
+                  Copiar enlace
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenPostMenuId(null);
+                    handleShareRecognition(rec);
+                  }}
+                >
+                  <LucideIcon name="share" size={16} />
+                  Compartir
+                </button>
+                {canDelete ? (
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => {
+                      setOpenPostMenuId(null);
+                      setDeleteCandidateId(rec.id);
+                    }}
+                    disabled={isDeleting}
+                  >
+                    <LucideIcon name="trash" size={16} />
+                    {isDeleting ? 'Eliminando...' : 'Eliminar publicacion'}
+                  </button>
+                ) : (
+                  <button type="button" className="danger" onClick={() => setOpenPostMenuId(null)}>
+                    <LucideIcon name="flag" size={16} />
+                    Denunciar
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="recognition-body social-post-body">
@@ -1716,75 +2012,67 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             })}
           </p>
 
-          {recMedia.length > 0 && (
-            <div className={`recognition-media-premium ${layoutType}`}>
-              {primaryMedia && (
-                <div className="recognition-media-premium-main">
-                  {primaryMedia.media_type === 'video' ? (
-                    <RecognitionVideoPlayer
-                      src={primaryMedia.fullUrl}
-                      className="recognition-media-premium-main-video"
-                      autoPlayWhenVisible={true}
-                      showDurationBadge={true}
+          {activeMedia && (
+            <div className="recognition-instagram-carousel">
+              <div className="recognition-carousel-stage">
+                {activeMedia.media_type === 'video' ? (
+                  <RecognitionVideoPlayer
+                    src={activeMedia.fullUrl}
+                    className="recognition-carousel-video"
+                    autoPlayWhenVisible={true}
+                    showDurationBadge={true}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="recognition-carousel-image-btn"
+                    onClick={() => {
+                      const imageOnlyMedia = recMedia.filter((item) => item.media_type === 'image');
+                      const imageIndex = imageOnlyMedia.findIndex((item) => item.id === activeMedia.id);
+                      if (imageIndex >= 0) openImageViewer(imageOnlyMedia, imageIndex);
+                    }}
+                  >
+                    <img
+                      src={activeMedia.fullUrl}
+                      alt="Media del reconocimiento"
+                      className="recognition-carousel-image"
                     />
-                  ) : (
+                  </button>
+                )}
+
+                {recMedia.length > 1 && (
+                  <>
                     <button
                       type="button"
-                      className="recognition-media-premium-main-button"
-                      onClick={() => {
-                        const imageIndex = imageOnlyMedia.findIndex(
-                          (item) => item.id === primaryMedia.id
-                        );
-                        if (imageIndex >= 0) {
-                          openImageViewer(imageOnlyMedia, imageIndex);
-                        }
-                      }}
+                      className="recognition-carousel-nav prev"
+                      onClick={() => goToMedia(activeMediaIndex - 1)}
+                      aria-label="Medio anterior"
                     >
-                      <img
-                        src={primaryMedia.fullUrl}
-                        alt="Media principal del reconocimiento"
-                        className="recognition-media-premium-main-image"
-                      />
+                      {'\u2039'}
                     </button>
-                  )}
-                </div>
-              )}
+                    <button
+                      type="button"
+                      className="recognition-carousel-nav next"
+                      onClick={() => goToMedia(activeMediaIndex + 1)}
+                      aria-label="Siguiente medio"
+                    >
+                      {'\u203A'}
+                    </button>
+                  </>
+                )}
+              </div>
 
-              {visibleSecondaryMedia.length > 0 && (
-                <div className="recognition-media-premium-secondary">
-                  {visibleSecondaryMedia.map((item, mediaIndex) => {
-                    const isLastVisible =
-                      mediaIndex === visibleSecondaryMedia.length - 1 &&
-                      remainingCount > 0;
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="recognition-media-premium-secondary-item"
-                        onClick={() => {
-                          const imageIndex = imageOnlyMedia.findIndex(
-                            (mediaItem) => mediaItem.id === item.id
-                          );
-                          if (imageIndex >= 0) {
-                            openImageViewer(imageOnlyMedia, imageIndex);
-                          }
-                        }}
-                      >
-                        <img
-                          src={item.fullUrl}
-                          alt={`Media secundaria ${mediaIndex + 1}`}
-                          className="recognition-media-premium-secondary-image"
-                        />
-
-                        {isLastVisible && (
-                          <div className="recognition-media-premium-overlay">
-                            +{remainingCount}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+              {recMedia.length > 1 && (
+                <div className="recognition-carousel-dots">
+                  {recMedia.map((item, index) => (
+                    <button
+                      key={item.id || index}
+                      type="button"
+                      className={index === activeMediaIndex ? 'active' : ''}
+                      onClick={() => goToMedia(index)}
+                      aria-label={`Ver medio ${index + 1}`}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -1793,23 +2081,63 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           <div className="social-post-actions-row">
             <button
               type="button"
-              className={`recognition-favorite-btn ${favoriteIds[rec.id] ? 'is-favorite' : ''}`}
-              onClick={() => handleFavoriteToggle(rec.id)}
-              disabled={Boolean(favoritingIds[rec.id])}
+              className={`post-icon-action ${userReactionMap[rec.id] ? 'is-reaction-active' : ''}`}
+              onClick={(event) => {
+                if (event.target.closest('.post-action-count')) {
+                  setReactionPanelSignalById((prev) => ({
+                    ...prev,
+                    [rec.id]: (prev[rec.id] || 0) + 1,
+                  }));
+                  return;
+                }
+                handleLoveRecognition(rec.id);
+              }}
+              disabled={Boolean(reactingIds[rec.id])}
+              title="Reaccionar"
             >
-              {favoritingIds[rec.id]
-                ? 'Guardando...'
-                : favoriteIds[rec.id]
-                ? '\u2605 Guardado'
-                : '\u2606 Guardar'}
+              <LucideIcon name="heart" size={22} />
+              <span className="post-action-count">{reactionTotal}</span>
             </button>
 
             <button
               type="button"
-              className="recognition-share-btn"
-              onClick={() => handleShareRecognition(rec)}
+              className="post-icon-action"
+              title="Comentarios"
+              onClick={() => {
+                recognitionRefs.current[rec.id]?.querySelector('.comments-toggle-btn')?.click();
+              }}
             >
-              Compartir
+              <LucideIcon name="comment" size={22} />
+              <span className="post-action-count">{commentCount}</span>
+            </button>
+
+            <button
+              type="button"
+              className="post-icon-action"
+              onClick={() => setRepostCandidate(rec)}
+              title="Repostear en tu perfil"
+            >
+              <LucideIcon name="repeat" size={22} />
+              <span className="post-action-count">{repostCount}</span>
+            </button>
+
+            <button
+              type="button"
+              className="post-icon-action"
+              onClick={() => handleShareRecognition(rec)}
+              title="Compartir enlace"
+            >
+              <LucideIcon name="share" size={22} />
+            </button>
+
+            <button
+              type="button"
+              className={`post-icon-action save ${favoriteIds[rec.id] ? 'is-favorite' : ''}`}
+              onClick={() => handleFavoriteToggle(rec.id)}
+              disabled={Boolean(favoritingIds[rec.id])}
+              title="Guardar"
+            >
+              <LucideIcon name="bookmark" size={22} />
             </button>
           </div>
 
@@ -1819,6 +2147,14 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             initialTotals={reactionTotals[rec.id]}
             initialUserReaction={userReactionMap[rec.id]}
             initialUsers={reactionUsersMap[rec.id]}
+            openPanelSignal={reactionPanelSignalById[rec.id] || 0}
+            closeSignal={location.key}
+            hideMainButton
+            onReactionChange={(recognitionId, nextTotals, nextUsers, nextUserReaction) => {
+              setReactionTotals((prev) => ({ ...prev, [recognitionId]: nextTotals }));
+              setReactionUsersMap((prev) => ({ ...prev, [recognitionId]: nextUsers }));
+              setUserReactionMap((prev) => ({ ...prev, [recognitionId]: nextUserReaction }));
+            }}
             resolveImageUrl={resolveImageUrl}
             openUserProfile={openUserProfile}
           />
@@ -1826,7 +2162,30 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           <RecognitionComments
             recognitionId={rec.id}
             currentUserId={user?.id}
+            recognition={rec}
+            resolveImageUrl={resolveImageUrl}
             onOpenProfile={openUserProfile}
+            onCommentAdded={(recognitionId) => {
+              setRecognitions((prev) =>
+                prev.map((item) =>
+                  Number(item.id) === Number(recognitionId)
+                    ? { ...item, comment_count: Number(item.comment_count || 0) + 1 }
+                    : item
+                )
+              );
+            }}
+            onCommentDeleted={(recognitionId, deletedCount = 1) => {
+              setRecognitions((prev) =>
+                prev.map((item) =>
+                  Number(item.id) === Number(recognitionId)
+                    ? {
+                        ...item,
+                        comment_count: Math.max(0, Number(item.comment_count || 0) - Number(deletedCount || 1)),
+                      }
+                    : item
+                )
+              );
+            }}
           />
         </div>
       </article>
@@ -1862,7 +2221,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               title="Menu"
               aria-label="Abrir menu"
             >
-              <span className="nav-social-action-icon">{'\u25A6'}</span>
+              <span className="nav-social-action-icon"><LucideIcon name="grid" size={20} /></span>
             </button>
             <button
               type="button"
@@ -1874,7 +2233,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               title="Mensajes"
               aria-label="Abrir mensajes"
             >
-              <span className="nav-social-action-icon">{'\u2709'}</span>
+              <span className="nav-social-action-icon"><LucideIcon name="message" size={20} /></span>
               <span className="nav-social-badge">1</span>
             </button>
             <button
@@ -1901,6 +2260,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               onToggleDark={() => setDarkMode((prev) => !prev)}
               hideAvatarFrames={hideAvatarFrames}
               onToggleAvatarFrames={handleToggleAvatarFrames}
+              hasStory={storyUserIds.has(Number(user?.id))}
             />
           </div>
         </div>
@@ -1915,20 +2275,21 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 name={displayName || user?.display_name || user?.fullname}
                 frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
                 sizeClass="size-nav"
+                hasStory={storyUserIds.has(Number(user?.id))}
               />
               <span>{displayName || user?.fullname || 'Mi perfil'}</span>
             </button>
 
             <button type="button" className="social-rail-item" onClick={() => setShowRecognitionComposer(true)}>
-              <span className="social-rail-icon">{'\u2728'}</span>
+              <span className="social-rail-icon"><LucideIcon name="sparkle" size={18} /></span>
               Crear reconocimiento
             </button>
             <button type="button" className="social-rail-item" onClick={() => navigate('/usuarios')}>
-              <span className="social-rail-icon">{'\uD83D\uDC65'}</span>
+              <span className="social-rail-icon"><LucideIcon name="users" size={18} /></span>
               Comunidad
             </button>
             <button type="button" className="social-rail-item" onClick={() => setShowCreateStoryModal(true)}>
-              <span className="social-rail-icon">{'\u25A3'}</span>
+              <span className="social-rail-icon"><LucideIcon name="square" size={18} /></span>
               Crear historia
             </button>
             <button type="button" className="social-rail-item" onClick={() => setHashtagFilter('')}>
@@ -1980,6 +2341,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 name={displayName || user?.display_name || user?.fullname}
                 frameCode={hideAvatarFrames ? null : user?.equipped_frame_code}
                 sizeClass="size-nav"
+                hasStory={storyUserIds.has(Number(user?.id))}
               />
               <button
                 type="button"
@@ -1992,10 +2354,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 {'\u00bf'}A qui{'\u00e9'}n quieres reconocer hoy, {(displayName || user?.fullname || 'compa').split(' ')[0]}?
               </button>
               <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
-                {'\uD83D\uDCF7'}
+                <LucideIcon name="image" size={18} />
               </button>
               <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
-                {'\u2728'}
+                <LucideIcon name="sparkle" size={18} />
               </button>
             </div>
 
@@ -2251,9 +2613,9 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                   onClick={() => setIsMessengerExpanded((prev) => !prev)}
                   title={isMessengerExpanded ? 'Reducir' : 'Ampliar'}
                 >
-                  {isMessengerExpanded ? '\u21F2' : '\u26F6'}
+                  <LucideIcon name={isMessengerExpanded ? 'shrink' : 'expand'} size={20} />
                 </button>
-                <button type="button" onClick={() => setShowMessengerPanel(false)}>{'\u00d7'}</button>
+                <button type="button" onClick={() => setShowMessengerPanel(false)}><LucideIcon name="x" size={20} /></button>
               </div>
             </div>
             <div className="tec-messenger-toolbar">
@@ -2281,7 +2643,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                       }`}
                       onClick={() => openConversation(conversation)}
                     >
-                      <span className="tec-chat-avatar">
+                      <span className={`tec-chat-avatar ${storyUserIds.has(Number(conversation.other_user_id)) ? 'has-story-ring' : ''}`}>
                         {conversation.other_profile_image ? (
                           <img
                             src={resolveImageUrl(conversation.other_profile_image)}
@@ -2302,6 +2664,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                               : 'Sin mensajes')}
                         </small>
                       </div>
+                      <time>{formatChatTime(conversation.last_message_at || conversation.updated_at)}</time>
                       {conversation.unread_count > 0 && (
                         <em>{conversation.unread_count}</em>
                       )}
@@ -2315,7 +2678,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                   <>
                     <div className="tec-chat-window-header">
                       <div className="tec-chat-title-user">
-                        <span className="tec-chat-avatar header">
+                        <span className={`tec-chat-avatar header ${storyUserIds.has(Number(activeChat.other_user_id)) ? 'has-story-ring' : ''}`}>
                           {activeChat.other_profile_image ? (
                             <img
                               src={resolveImageUrl(activeChat.other_profile_image)}
@@ -2328,16 +2691,14 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                         <div>
                           <strong>{activeChat.display_name || 'Chat Tec You'}</strong>
                           <small>
-                            {onlineUsers[activeChat.other_user_id]?.online
-                              ? 'Activo ahora'
-                              : 'Disponible para mensajes'}
+                            {formatPresenceText(onlineUsers[activeChat.other_user_id])}
                           </small>
                         </div>
                       </div>
                       <div className="tec-chat-call-actions">
-                        <button type="button" title="Llamada de voz">{'\u260E'}</button>
-                        <button type="button" title="Videollamada">{'\u25B6'}</button>
-                        <button type="button" title="Info">{'\u2139'}</button>
+                        <button type="button" title="Llamada de voz"><LucideIcon name="phone" size={18} /></button>
+                        <button type="button" title="Videollamada"><LucideIcon name="video" size={18} /></button>
+                        <button type="button" title="Info"><LucideIcon name="info" size={18} /></button>
                       </div>
                     </div>
 
@@ -2377,6 +2738,9 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                                 Ver archivo
                               </a>
                             )}
+                            <time className="tec-chat-bubble-time">
+                              {formatChatTime(message.created_at)}
+                            </time>
                           </div>
                         ))
                       )}
@@ -2439,7 +2803,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
                     <div className="tec-message-composer">
                       <label>
-                        {'\uD83D\uDCF7'}
+                        <LucideIcon name="image" size={18} />
                         <input
                           ref={chatFileInputRef}
                           type="file"
@@ -2454,10 +2818,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                         className={recordingAudio ? 'recording' : ''}
                         onClick={recordingAudio ? stopAudioRecording : startAudioRecording}
                       >
-                        {'\uD83C\uDFA4'}
+                        <LucideIcon name="mic" size={18} />
                       </button>
                       <button type="button" onClick={() => setShowChatExtras((prev) => !prev)}>
-                        {'\uD83D\uDE00'}
+                        <LucideIcon name="smile" size={18} />
                       </button>
                       <input
                         placeholder="Escribe un mensaje..."
@@ -2614,6 +2978,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 isOwnProfile={true}
                 onFavoritesChanged={refreshGlobalFavorites}
                 hideAvatarFrames={hideAvatarFrames}
+                activeStoryUserIds={Array.from(storyUserIds)}
                 onOpenRecognition={(recognitionId) => {
                   navigate('/', {
                     state: { highlightRecognitionId: recognitionId },
@@ -2644,6 +3009,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         isOwnProfile={false}
         onFavoritesChanged={refreshGlobalFavorites}
         hideAvatarFrames={hideAvatarFrames}
+        activeStoryUserIds={Array.from(storyUserIds)}
         onOpenRecognition={(recognitionId) => {
           navigate('/', {
             state: { highlightRecognitionId: recognitionId },
@@ -2891,6 +3257,47 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         </div>
       )}
 
+      {repostCandidate && (
+        <div className="repost-modal-overlay" onClick={() => setRepostCandidate(null)}>
+          <section className="repost-modal" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="repost-close-btn" onClick={() => setRepostCandidate(null)}>
+              {'\u00D7'}
+            </button>
+            <h2>Repostear en tu perfil</h2>
+            <textarea
+              value={repostComment}
+              onChange={(event) => setRepostComment(event.target.value)}
+              placeholder="Agrega un comentario o repostea tal cual..."
+            />
+            <div className="repost-preview-card">
+              <div className="repost-preview-header">
+                <strong>{repostCandidate.sender_name}</strong>
+                <span>reconocio a</span>
+                <strong>{repostCandidate.receiver_name}</strong>
+              </div>
+              <p>{repostCandidate.message}</p>
+              {Array.isArray(repostCandidate.media) && repostCandidate.media[0] && (
+                <div className="repost-preview-media">
+                  {repostCandidate.media[0].media_type === 'video' ? (
+                    <video src={resolveImageUrl(repostCandidate.media[0].media_url)} controls />
+                  ) : (
+                    <img src={resolveImageUrl(repostCandidate.media[0].media_url)} alt="Vista previa del repost" />
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="repost-modal-actions">
+              <button type="button" onClick={() => setRepostComment('')}>
+                Repostear sin comentario
+              </button>
+              <button type="button" className="primary" onClick={handleSubmitRepost}>
+                Repostear
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <CreateStoryModal
         isOpen={showCreateStoryModal}
         onClose={() => setShowCreateStoryModal(false)}
@@ -2913,6 +3320,26 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
       {showUnlockToast && activeUnlockItem && (
         <AchievementUnlockToast item={activeUnlockItem} onClose={closeUnlockToast} />
+      )}
+
+      {appToast && (
+        <div className={`tec-app-toast ${appToast.type || 'success'}`} role="status">
+          <span>{appToast.message}</span>
+          {appToast.actionLabel && (
+            <button
+              type="button"
+              onClick={() => {
+                appToast.onAction?.();
+                setAppToast(null);
+              }}
+            >
+              {appToast.actionLabel}
+            </button>
+          )}
+          <button type="button" className="tec-app-toast-close" onClick={() => setAppToast(null)}>
+            {'\u00D7'}
+          </button>
+        </div>
       )}
 
       {showScrollTop && location.pathname === '/' && (

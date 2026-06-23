@@ -15,21 +15,23 @@ function StoryViewer({
 }) {
   const [commentText, setCommentText] = useState('');
   const audioRef = useRef(null);
+  const videoTimerRef = useRef(null);
   const currentStory = storyViewer?.stories?.[storyViewer.currentIndex];
 
   const reactionMeta = useMemo(
     () => ({
-      like: { emoji: '👍', label: 'Me gusta' },
-      love: { emoji: '❤️', label: 'Me encanta' },
-      laugh: { emoji: '😂', label: 'Me divierte' },
-      wow: { emoji: '😮', label: 'Wow' },
-      sad: { emoji: '😢', label: 'Triste' },
+      like: { emoji: '\u{1F44D}', label: 'Me gusta' },
+      love: { emoji: '\u2764\uFE0F', label: 'Me encanta' },
+      laugh: { emoji: '\u{1F602}', label: 'Me divierte' },
+      wow: { emoji: '\u{1F62E}', label: 'Wow' },
+      sad: { emoji: '\u{1F622}', label: 'Triste' },
     }),
     []
   );
 
   useEffect(() => {
-    if (!currentStory) return;
+    if (!currentStory) return undefined;
+    if (currentStory.media_type === 'video') return undefined;
     const durationMs = Number(currentStory.duration_seconds || 30) * 1000;
     const timer = setTimeout(() => {
       audioRef.current?.pause();
@@ -39,7 +41,7 @@ function StoryViewer({
   }, [currentStory, onNext]);
 
   useEffect(() => {
-    if (!currentStory || !audioRef.current || !currentStory.music_url) return;
+    if (!currentStory || !audioRef.current || !currentStory.music_url) return undefined;
     const audio = audioRef.current;
     const startAt = Number(currentStory.music_start_seconds || 0);
 
@@ -57,6 +59,12 @@ function StoryViewer({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.pause();
       audio.currentTime = 0;
+    };
+  }, [currentStory]);
+
+  useEffect(() => {
+    return () => {
+      if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
     };
   }, [currentStory]);
 
@@ -94,14 +102,34 @@ function StoryViewer({
 
   const close = () => {
     audioRef.current?.pause();
+    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
     onClose();
+  };
+
+  const handleVideoMetadata = (event) => {
+    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
+    const limitMs = Number(currentStory.duration_seconds || 60) * 1000;
+    const realDurationMs = Number.isFinite(event.currentTarget.duration)
+      ? event.currentTarget.duration * 1000
+      : limitMs;
+    const nextDelay = Math.min(realDurationMs || limitMs, limitMs);
+    videoTimerRef.current = setTimeout(() => {
+      audioRef.current?.pause();
+      onNext();
+    }, nextDelay);
+  };
+
+  const handleVideoEnded = () => {
+    if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
+    audioRef.current?.pause();
+    onNext();
   };
 
   return (
     <div className="story-viewer-overlay fb-story-viewer-overlay">
       <aside className="fb-story-sidebar">
         <button type="button" className="fb-story-close" onClick={close}>
-          {'\u00d7'}
+          {'\u00D7'}
         </button>
         <h2>Historias</h2>
         <p>Archivo · Configuracion</p>
@@ -131,7 +159,7 @@ function StoryViewer({
         <section className="fb-story-side-section">
           <h3>Reacciones</h3>
           {storyReactionUsers.slice(0, 12).map((item) => {
-            const meta = reactionMeta[item.reaction_type] || { emoji: '✨', label: item.reaction_type };
+            const meta = reactionMeta[item.reaction_type] || { emoji: '\u2728', label: item.reaction_type };
             const name = item.display_name || item.fullname || 'Usuario';
             return (
               <div key={`${item.user_id}-${item.reaction_type}`} className="fb-story-person-row">
@@ -164,7 +192,7 @@ function StoryViewer({
           {authorAvatar ? <img src={authorAvatar} alt={authorName} /> : <span>{authorName[0]}</span>}
           <strong>{authorName}</strong>
           <small>{formatTimeAgo(currentStory.created_at)}</small>
-          {currentStory.music_name && <em>♫ {currentStory.music_name}</em>}
+          {currentStory.music_name && <em>{'\u266B'} {currentStory.music_name}</em>}
         </div>
 
         <button type="button" className="fb-story-nav prev" onClick={onPrev}>
@@ -176,7 +204,14 @@ function StoryViewer({
 
         <div className="fb-story-card">
           {currentStory.media_type === 'video' ? (
-            <video src={mediaSrc} autoPlay controls className="story-viewer-video" />
+            <video
+              src={mediaSrc}
+              autoPlay
+              controls
+              className="story-viewer-video"
+              onLoadedMetadata={handleVideoMetadata}
+              onEnded={handleVideoEnded}
+            />
           ) : (
             <img src={mediaSrc} alt="Historia" className="story-viewer-image" />
           )}
