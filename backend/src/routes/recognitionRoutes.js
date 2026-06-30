@@ -422,8 +422,9 @@ router.get('/feed', async (req, res) => {
     ON receiver_frame.id = receiver_uaf.frame_id
 
   LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
-  LEFT JOIN recognition_comments rc ON r.id = rc.recognition_id
+  LEFT JOIN recognition_comments rc ON r.id = rc.recognition_id AND COALESCE(rc.moderation_status, 'visible') = 'visible'
   LEFT JOIN recognition_reposts rr ON r.id = rr.recognition_id
+  WHERE COALESCE(r.moderation_status, 'visible') = 'visible'
   GROUP BY
     r.id,
     s.id,
@@ -1023,7 +1024,7 @@ router.get('/:id/comments', async (req, res) => {
        JOIN users u ON rc.user_id = u.id
        JOIN recognitions r ON r.id = rc.recognition_id
        LEFT JOIN recognition_comment_likes rcl ON rcl.comment_id = rc.id
-       WHERE rc.recognition_id = $1
+       WHERE rc.recognition_id = $1 AND COALESCE(rc.moderation_status, 'visible') = 'visible'
        GROUP BY rc.id, u.id, r.sender_id
        ORDER BY rc.created_at ASC`,
       [id, currentUserId]
@@ -1296,7 +1297,7 @@ router.get('/:id/detail', async (req, res) => {
       JOIN users s ON r.sender_id = s.id
       JOIN users rec ON r.receiver_id = rec.id
       LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
-      WHERE r.id = $1
+      WHERE r.id = $1 AND COALESCE(r.moderation_status, 'visible') = 'visible'
       GROUP BY r.id, s.id, rec.id
       `,
       [id]

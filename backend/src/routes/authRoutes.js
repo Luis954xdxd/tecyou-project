@@ -1,8 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
+const { issueSessionToken } = require('../middleware/adminAuth');
 
 const router = express.Router();
+
+const ensureAccountColumns = async () => {
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS system_role VARCHAR(30) DEFAULT 'user'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(30) DEFAULT 'active'`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMP`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP`);
+};
 
 const STUDENT_REGEX = /^za\d+@zapopan\.tecmm\.edu\.mx$/i;
 const TEACHER_REGEX = /^[a-z]+(?:\.[a-z]+)+@zapopan\.tecmm\.edu\.mx$/i;
@@ -36,6 +44,7 @@ const sanitizeUser = (userRow) => {
 // ===============================
 router.post('/register', async (req, res) => {
   try {
+    await ensureAccountColumns();
     const { email, password, confirmPassword } = req.body;
 
     const normalizedEmail = normalizeEmail(email);
@@ -156,6 +165,7 @@ router.post('/register', async (req, res) => {
 // ===============================
 router.post('/login', async (req, res) => {
   try {
+    await ensureAccountColumns();
     const { email, password } = req.body;
 
     const normalizedEmail = normalizeEmail(email);
@@ -184,7 +194,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = userResult.rows[0];
+    let user = userResult.rows[0];
 
     // Usuario antiguo sin contraseña
     if (!user.password_hash) {
@@ -212,6 +222,85 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({
       error: 'Error interno al iniciar sesión.',
     });
+  }
+});
+
+// Login con sesion firmada. Se mantiene /login por compatibilidad temporal.
+router.post('/session', async (req, res) => {
+  try {
+    await ensureAccountColumns();
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const password = req.body.password || '';
+
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({ error: 'Correo y contrasena son obligatorios.' });
+    }
+    if (!isValidInstitutionalEmail(normalizedEmail)) {
+      return res.status(400).json({ error: 'Usa un correo institucional valido del TSJ.' });
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+      [normalizedEmail]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No existe una cuenta registrada con ese correo.' });
+    }
+
+    let user = result.rows[0];
+    if (!user.password_hash) {
+      return res.status(403).json({
+        code: 'ACCOUNT_NEEDS_ACTIVATION',
+        error: 'Esta cuenta necesita activarse desde la pantalla de registro.',
+      });
+    }
+    if (!(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ error: 'La contrasena es incorrecta.' });
+    }
+
+    const configuredSuperAdmin = normalizeEmail(process.env.SUPER_ADMIN_EMAIL || '');
+    if (configuredSuperAdmin && normalizedEmail === configuredSuperAdmin) {
+      const promoted = await pool.query(
+        `UPDATE users SET system_role = 'super_admin' WHERE id = $1 RETURNING *`,
+        [user.id]
+      );
+      user = promoted.rows[0] || user;
+    }
+
+    const suspensionActive =
+      user.account_status === 'suspended' &&
+      (!user.suspended_until || new Date(user.suspended_until) > new Date());
+    if (user.account_status === 'disabled' || suspensionActive) {
+      return res.status(403).json({
+        code: 'ACCOUNT_RESTRICTED',
+        error: user.account_status === 'disabled'
+          ? 'Esta cuenta fue deshabilitada. Contacta a un administrador.'
+          : 'Esta cuenta se encuentra suspendida temporalmente.',
+      });
+    }
+
+    if (user.account_status === 'suspended') {
+      const reactivated = await pool.query(
+        `UPDATE users SET account_status = 'active', suspended_until = NULL WHERE id = $1 RETURNING *`,
+        [user.id]
+      );
+      user = reactivated.rows[0] || user;
+    }
+
+    const loginResult = await pool.query(
+      `UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+      [user.id]
+    );
+    user = loginResult.rows[0] || user;
+
+    return res.json({
+      message: 'Inicio de sesion exitoso.',
+      user: sanitizeUser(user),
+      token: issueSessionToken(user),
+    });
+  } catch (error) {
+    console.error('Error en POST /session:', error.message);
+    return res.status(500).json({ error: 'Error interno al iniciar sesion.' });
   }
 });
 

@@ -17587,6 +17587,160 @@ body,
   opacity: 0.62;
 }
 
+/* ADMIN REPORTING: user report dialog */
+.comment-report-action {
+  border: 0;
+  background: transparent;
+  color: #7a8496;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.comment-report-action:hover { color: #d0443c; }
+.comment-report-notice, .profile-report-notice, .story-report-notice {
+  position: fixed;
+  z-index: 22000;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  border-radius: 7px;
+  padding: 11px 16px;
+  background: #147a4b;
+  color: #fff;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, .25);
+  font-weight: 750;
+}
+.profile-twitter-report-btn {
+  min-height: 40px;
+  border: 1px solid #d4dbea;
+  border-radius: 20px;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+.profile-twitter-report-btn:hover { border-color: #e05b55; color: #d0443c; background: rgba(220, 68, 60, .07); }
+.fb-story-report-btn {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, .65);
+  color: #fff;
+  cursor: pointer;
+}
+.fb-story-report-btn:hover { background: #c7352d; }
+.tec-chat-bubble { position: relative; }
+.tec-chat-report-message {
+  border: 0;
+  background: transparent;
+  color: #8591a6;
+  padding: 3px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .16s ease, color .16s ease;
+}
+.tec-chat-bubble:hover .tec-chat-report-message, .tec-chat-report-message:focus-visible { opacity: 1; }
+.tec-chat-report-message:hover { color: #e2564d; }
+.tec-report-inline-error { margin: 10px 0 0 !important; color: #c43228 !important; font-size: 13px !important; font-weight: 700; }
+.tec-report-close.icon-close { display: grid; place-items: center; font-size: initial; }
+.App.dark .profile-twitter-report-btn { border-color: #3a4860; }
+.App.dark .comment-report-action { color: #9ca8ba; }
+
+.tec-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 21000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 13, 25, .76);
+  overflow-y: auto;
+}
+
+.tec-report-modal {
+  position: relative;
+  width: min(540px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border: 1px solid #dce2ee;
+  border-radius: 8px;
+  padding: 25px;
+  background: #fff;
+  color: #172033;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .3);
+}
+
+.tec-report-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #eef1f6;
+  color: #344054;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.tec-report-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #feeceb;
+  color: #c43228;
+}
+
+.tec-report-modal h2 { margin: 15px 0 5px; font-size: 22px; }
+.tec-report-modal > p { margin: 0; color: #667085; line-height: 1.5; font-size: 14px; }
+.tec-report-preview { margin: 16px 0; padding: 12px 14px; border: 1px solid #e0e5ee; border-radius: 7px; background: #f8f9fc; display: grid; gap: 4px; }
+.tec-report-preview span { color: #475467; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tec-report-modal fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 7px; }
+.tec-report-modal legend { margin-bottom: 9px; font-weight: 800; }
+.tec-report-modal fieldset label { min-height: 42px; border: 1px solid #d8deea; border-radius: 7px; padding: 0 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.tec-report-modal fieldset label:hover, .tec-report-modal fieldset label.selected { border-color: #6366f1; background: #f3f3ff; }
+.tec-report-modal fieldset input { accent-color: #4f46e5; }
+.tec-report-details { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; margin-top: 15px; font-size: 13px; font-weight: 800; }
+.tec-report-details small { color: #667085; font-weight: 500; }
+.tec-report-details textarea { grid-column: 1 / -1; min-height: 82px; resize: vertical; border: 1px solid #d8deea; border-radius: 7px; padding: 10px 11px; font: inherit; }
+.tec-report-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 18px; }
+.tec-report-actions button { min-height: 40px; border: 1px solid #d4d9e5; border-radius: 7px; background: #fff; padding: 0 15px; font-weight: 800; cursor: pointer; }
+.tec-report-actions button[type="submit"] { border-color: #4f46e5; background: #4f46e5; color: #fff; }
+.tec-report-actions button:disabled { opacity: .5; cursor: not-allowed; }
+
+.App.dark .tec-report-modal { border-color: #2c3850; background: #111a2c; color: #f7f8fc; }
+.App.dark .tec-report-close { background: #202b3e; color: #e8ecf5; }
+.App.dark .tec-report-modal > p, .App.dark .tec-report-details small { color: #aeb8ca; }
+.App.dark .tec-report-preview { border-color: #2c3850; background: #172236; }
+.App.dark .tec-report-preview span { color: #c5cddd; }
+.App.dark .tec-report-modal fieldset label { border-color: #344159; background: #152034; }
+.App.dark .tec-report-modal fieldset label:hover, .App.dark .tec-report-modal fieldset label.selected { border-color: #818cf8; background: #20264b; }
+.App.dark .tec-report-details textarea { border-color: #344159; background: #172236; color: #fff; }
+.App.dark .tec-report-actions button { border-color: #3a465b; background: #202b3e; color: #fff; }
+.App.dark .tec-report-actions button[type="submit"] { background: #6366f1; border-color: #6366f1; }
+
+@media (max-width: 600px) {
+  .tec-report-overlay { padding: 0; align-items: end; }
+  .tec-report-modal { max-height: 92vh; border-radius: 8px 8px 0 0; padding: 21px 17px; }
+  .tec-report-actions button { flex: 1; }
+}
+
 /* FINAL POLISH 7: remove repost from own profile */
 .profile-repost-remove-btn {
   width: 100%;

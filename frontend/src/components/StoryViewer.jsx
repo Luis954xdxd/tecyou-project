@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Flag } from 'lucide-react';
+import ReportDialog from './ReportDialog';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -12,8 +14,11 @@ function StoryViewer({
   comments,
   reactions,
   views,
+  currentUser,
 }) {
   const [commentText, setCommentText] = useState('');
+  const [showStoryReport, setShowStoryReport] = useState(false);
+  const [reportNotice, setReportNotice] = useState('');
   const audioRef = useRef(null);
   const videoTimerRef = useRef(null);
   const currentStory = storyViewer?.stories?.[storyViewer.currentIndex];
@@ -193,6 +198,11 @@ function StoryViewer({
           <strong>{authorName}</strong>
           <small>{formatTimeAgo(currentStory.created_at)}</small>
           {currentStory.music_name && <em>{'\u266B'} {currentStory.music_name}</em>}
+          {Number(currentStory.user_id) !== Number(currentUser?.id) && (
+            <button type="button" className="fb-story-report-btn" onClick={() => setShowStoryReport(true)} title="Reportar historia">
+              <Flag size={18} />
+            </button>
+          )}
         </div>
 
         <button type="button" className="fb-story-nav prev" onClick={onPrev}>
@@ -250,6 +260,21 @@ function StoryViewer({
           </div>
         )}
       </main>
+      {reportNotice && <div className="story-report-notice">{reportNotice}</div>}
+      {showStoryReport && (
+        <ReportDialog
+          targetType="story"
+          targetId={currentStory.id}
+          title="Reportar historia"
+          author={authorName}
+          preview={currentStory.caption || 'Historia con contenido multimedia'}
+          onClose={() => setShowStoryReport(false)}
+          onSuccess={(message) => {
+            setReportNotice(message);
+            setTimeout(() => setReportNotice(''), 3500);
+          }}
+        />
+      )}
     </div>
   );
 }

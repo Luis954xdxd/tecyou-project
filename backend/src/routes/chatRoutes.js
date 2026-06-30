@@ -97,6 +97,7 @@ const ensureTables = async () => {
       message_type VARCHAR(20) DEFAULT 'text',
       media_url TEXT,
       media_mime VARCHAR(120),
+      moderation_status VARCHAR(30) DEFAULT 'visible',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
@@ -156,7 +157,7 @@ const buildMessagePayload = async (messageId) => {
        u.profile_image_url AS sender_profile_image
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
-     WHERE m.id = $1`,
+     WHERE m.id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'`,
     [messageId]
   );
   return result.rows[0];
@@ -325,7 +326,7 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
        u.profile_image_url AS sender_profile_image
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
-     WHERE m.conversation_id = $1
+     WHERE m.conversation_id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'
      ORDER BY m.created_at ASC
      LIMIT 200`,
     [conversationId]

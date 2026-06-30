@@ -31,18 +31,19 @@ function LoginPage({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_BASE}/api/auth/login`, {
+      const response = await axios.post(`${API_BASE}/api/auth/session`, {
         email: form.email,
         password: form.password,
       });
 
       const loggedUser = response.data.user;
+      const sessionToken = response.data.token;
 
       if (onLoginSuccess) {
-        onLoginSuccess(loggedUser);
+        await onLoginSuccess(loggedUser, sessionToken);
       }
 
-      navigate('/');
+      navigate(['moderator', 'admin', 'super_admin'].includes(loggedUser.system_role) ? '/admin' : '/');
     } catch (err) {
       setError(
         err.response?.data?.error ||

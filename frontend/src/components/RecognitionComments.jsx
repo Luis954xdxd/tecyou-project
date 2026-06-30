@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import ReportDialog from './ReportDialog';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -25,6 +26,8 @@ function RecognitionComments({
   const [expandedReplies, setExpandedReplies] = useState({});
   const [likingComments, setLikingComments] = useState({});
   const [deletingComments, setDeletingComments] = useState({});
+  const [reportingComment, setReportingComment] = useState(null);
+  const [reportNotice, setReportNotice] = useState('');
 
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
@@ -455,6 +458,15 @@ function RecognitionComments({
                   {deletingComments[item.id] ? 'Eliminando...' : 'Eliminar'}
                 </button>
               )}
+              {Number(item.user_id) !== Number(currentUserId) && (
+                <button
+                  type="button"
+                  className="comment-report-action"
+                  onClick={() => setReportingComment(item)}
+                >
+                  Reportar
+                </button>
+              )}
             </div>
           </div>
 
@@ -615,6 +627,21 @@ function RecognitionComments({
           </div>
         </div>
         </div>
+      )}
+      {reportNotice && <div className="comment-report-notice">{reportNotice}</div>}
+      {reportingComment && (
+        <ReportDialog
+          targetType="comment"
+          targetId={reportingComment.id}
+          title="Reportar comentario"
+          author={reportingComment.user_name}
+          preview={reportingComment.comment}
+          onClose={() => setReportingComment(null)}
+          onSuccess={(message) => {
+            setReportNotice(message);
+            setTimeout(() => setReportNotice(''), 3500);
+          }}
+        />
       )}
     </div>
   );

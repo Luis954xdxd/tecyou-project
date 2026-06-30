@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import axios from 'axios';
+import { ShieldCheck } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import './App.css';
 import RecognitionForm from './components/RecognitionForm';
@@ -17,8 +18,9 @@ import logoTSJ from './assets/logo-tsj.png';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import UsersPage from './pages/UsersPage';
+import AdminPage from './pages/AdminPage';
 import './styles/auth.css';
-import { clearUserSession, getUserSession, saveUserSession } from './utils/authStorage';
+import { clearUserSession, getSessionToken, getUserSession, saveSessionToken, saveUserSession } from './utils/authStorage';
 import RecognitionPage from './pages/RecognitionPage';
 import { renderTextWithHashtags } from './textFormatters';
 import StoriesBar from './components/StoriesBar';
@@ -27,10 +29,16 @@ import CreateStoryModal from './components/CreateStoryModal';
 import FramedAvatar from './components/FramedAvatar';
 import AchievementUnlockToast from './components/AchievementUnlockToast';
 import ReactionBar from './components/ReactionBar';
+import ReportDialog from './components/ReportDialog';
 
 import TecAgentChatbot from './components/TecAgentChatbot';
 
 const API_BASE = 'http://localhost:5000';
+
+const existingSessionToken = getSessionToken();
+if (existingSessionToken) {
+  axios.defaults.headers.common.Authorization = `Bearer ${existingSessionToken}`;
+}
 
 function LucideIcon({ name, size = 22 }) {
   const common = {
@@ -260,6 +268,10 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [repostCandidate, setRepostCandidate] = useState(null);
   const [repostComment, setRepostComment] = useState('');
   const [appToast, setAppToast] = useState(null);
+  const [reportCandidate, setReportCandidate] = useState(null);
+  const [reportForm, setReportForm] = useState({ reason: '', details: '' });
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportingChatMessage, setReportingChatMessage] = useState(null);
   const [showSocialMenu, setShowSocialMenu] = useState(false);
   const [showMessengerPanel, setShowMessengerPanel] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
@@ -794,11 +806,13 @@ const handleToggleAvatarFrames = () => {
     await fetchFavorites();
   };
 
- const handleAuthSuccess = async (loggedUser) => {
+ const handleAuthSuccess = async (loggedUser, sessionToken) => {
     // 1. Guardamos inmediatamente lo que devuelve el login
     //    para que la UI ya tenga algo mientras carga el perfil completo.
     setUser(loggedUser);
     saveUserSession(loggedUser);
+    saveSessionToken(sessionToken);
+    if (sessionToken) axios.defaults.headers.common.Authorization = `Bearer ${sessionToken}`;
 
     // 2. Hacemos fetch del perfil completo para obtener
     //    profile_image_url, equipped_frame_code, display_name, etc.
@@ -839,7 +853,33 @@ const handleToggleAvatarFrames = () => {
   const handleLogout = () => {
     setUser(null);
     clearUserSession();
+    delete axios.defaults.headers.common.Authorization;
     navigate('/login');
+  };
+
+  const handleSubmitReport = async (event) => {
+    event.preventDefault();
+    if (!reportCandidate || !reportForm.reason) return;
+
+    setSubmittingReport(true);
+    try {
+      const response = await axios.post(`${API_BASE}/api/reports`, {
+        target_type: 'recognition',
+        target_id: reportCandidate.id,
+        reason: reportForm.reason,
+        details: reportForm.details,
+      });
+      setReportCandidate(null);
+      setReportForm({ reason: '', details: '' });
+      setAppToast({ type: 'success', message: response.data?.message || 'Reporte enviado a moderacion.' });
+    } catch (error) {
+      setAppToast({
+        type: 'error',
+        message: error.response?.data?.error || 'No se pudo enviar el reporte.',
+      });
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   const handleShareRecognition = async (recognition) => {
@@ -1995,7 +2035,15 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                     {isDeleting ? 'Eliminando...' : 'Eliminar publicacion'}
                   </button>
                 ) : (
-                  <button type="button" className="danger" onClick={() => setOpenPostMenuId(null)}>
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => {
+                      setOpenPostMenuId(null);
+                      setReportCandidate(rec);
+                      setReportForm({ reason: '', details: '' });
+                    }}
+                  >
                     <LucideIcon name="flag" size={16} />
                     Denunciar
                   </button>
@@ -2211,6 +2259,17 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           <GlobalSectionSearch sections={sectionSearchItems} />
 
           <div className="user-info">
+            {['moderator', 'admin', 'super_admin'].includes(user?.system_role) && (
+              <button
+                type="button"
+                className="nav-social-action-btn"
+                onClick={() => navigate('/admin')}
+                title="Panel administrativo"
+                aria-label="Abrir panel administrativo"
+              >
+                <span className="nav-social-action-icon"><ShieldCheck size={20} /></span>
+              </button>
+            )}
             <button
               type="button"
               className={`nav-social-action-btn ${showSocialMenu ? 'active' : ''}`}
@@ -2566,6 +2625,72 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         </div>
       )}
 
+      {reportCandidate && (
+        <div
+          className="tec-report-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tec-report-title"
+          onMouseDown={(event) => event.target === event.currentTarget && setReportCandidate(null)}
+        >
+          <form className="tec-report-modal" onSubmit={handleSubmitReport}>
+            <button type="button" className="tec-report-close" onClick={() => setReportCandidate(null)} aria-label="Cerrar">
+              {'\u00d7'}
+            </button>
+            <span className="tec-report-icon"><LucideIcon name="flag" size={24} /></span>
+            <h2 id="tec-report-title">Reportar publicaci{`\u00f3`}n</h2>
+            <p>El equipo de moderaci{`\u00f3`}n revisar{`\u00e1`} el contenido y su contexto. El autor no sabr{`\u00e1`} qui{`\u00e9`}n envi{`\u00f3`} el reporte.</p>
+
+            <div className="tec-report-preview">
+              <strong>{reportCandidate.sender_name}</strong>
+              <span>{reportCandidate.message}</span>
+            </div>
+
+            <fieldset>
+              <legend>{`\u00bf`}Por qu{`\u00e9`} quieres reportarlo?</legend>
+              {[
+                ['harassment', 'Acoso, insultos o amenazas'],
+                ['inappropriate', 'Contenido inapropiado'],
+                ['impersonation', 'Suplantaci\u00f3n de identidad'],
+                ['spam', 'Spam o contenido repetitivo'],
+                ['false_information', 'Informaci\u00f3n falsa'],
+                ['personal_information', 'Expone informaci\u00f3n personal'],
+                ['other', 'Otro motivo'],
+              ].map(([value, label]) => (
+                <label key={value} className={reportForm.reason === value ? 'selected' : ''}>
+                  <input
+                    type="radio"
+                    name="report-reason"
+                    value={value}
+                    checked={reportForm.reason === value}
+                    onChange={(event) => setReportForm((current) => ({ ...current, reason: event.target.value }))}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+
+            <label className="tec-report-details">
+              Informaci{`\u00f3`}n adicional <small>Opcional, excepto en “Otro motivo”</small>
+              <textarea
+                value={reportForm.details}
+                onChange={(event) => setReportForm((current) => ({ ...current, details: event.target.value }))}
+                placeholder="Ayuda al moderador a entender lo ocurrido..."
+                maxLength={1000}
+                required={reportForm.reason === 'other'}
+              />
+            </label>
+
+            <div className="tec-report-actions">
+              <button type="button" onClick={() => setReportCandidate(null)}>Cancelar</button>
+              <button type="submit" disabled={!reportForm.reason || submittingReport}>
+                {submittingReport ? 'Enviando...' : 'Enviar reporte'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {showSocialMenu && (
         <div className="tec-popover-overlay" onClick={() => setShowSocialMenu(false)}>
           <section className="tec-social-menu-panel" onClick={(e) => e.stopPropagation()}>
@@ -2741,6 +2866,16 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                             <time className="tec-chat-bubble-time">
                               {formatChatTime(message.created_at)}
                             </time>
+                            {Number(message.sender_id) !== Number(user?.id) && (
+                              <button
+                                type="button"
+                                className="tec-chat-report-message"
+                                onClick={() => setReportingChatMessage(message)}
+                                title="Reportar mensaje"
+                              >
+                                <LucideIcon name="flag" size={13} /> Reportar
+                              </button>
+                            )}
                           </div>
                         ))
                       )}
@@ -2887,6 +3022,17 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           <img src={chatImageViewer.src} alt={chatImageViewer.alt} />
         </div>
       )}
+      {reportingChatMessage && (
+        <ReportDialog
+          targetType="chat_message"
+          targetId={reportingChatMessage.id}
+          title="Reportar mensaje"
+          author={reportingChatMessage.sender_name || activeChat?.other_user_name || 'Usuario'}
+          preview={reportingChatMessage.content || `Mensaje con archivo ${reportingChatMessage.message_type || ''}`}
+          onClose={() => setReportingChatMessage(null)}
+          onSuccess={(message) => setAppToast({ type: 'success', message })}
+        />
+      )}
     </>
   ) : null;
 
@@ -2896,7 +3042,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         <Route
           path="/login"
           element={
-            user ? <Navigate to="/" replace /> : <LoginPage onLoginSuccess={handleAuthSuccess} />
+            user ? <Navigate to={['moderator', 'admin', 'super_admin'].includes(user.system_role) ? '/admin' : '/'} replace /> : <LoginPage onLoginSuccess={handleAuthSuccess} />
           }
         />
 
@@ -2919,6 +3065,21 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         />
 
         <Route path="/" element={user ? dashboardView : <Navigate to="/login" replace />} />
+
+        <Route
+          path="/admin"
+          element={
+            user ? (
+              <AdminPage
+                currentUser={user}
+                onBackToFeed={() => navigate('/')}
+                onLogout={handleLogout}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
         <Route
           path="/reconocimiento/:id"

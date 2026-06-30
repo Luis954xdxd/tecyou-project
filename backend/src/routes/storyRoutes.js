@@ -224,6 +224,7 @@ router.get('/feed/:userId', async (req, res) => {
       FROM stories s
       JOIN users u ON u.id = s.user_id
       WHERE s.expires_at > NOW()
+        AND COALESCE(s.moderation_status, 'visible') = 'visible'
         AND (
           s.user_id = $1
           OR s.visibility_type = 'public'

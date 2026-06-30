@@ -4,6 +4,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import { renderTextWithHashtags } from '../textFormatters';
 import ProgressPanel from '../components/ProgressPanel';
+import ReportDialog from '../components/ReportDialog';
+import { Flag } from 'lucide-react';
 import copperFrame from '../assets/frames/copper-frame.png';
 import silverFrame from '../assets/frames/silver-frame.png';
 import goldFrame from '../assets/frames/gold-frame.png';
@@ -78,6 +80,8 @@ const [loadingProfileActivity, setLoadingProfileActivity] = useState(false);
         }
       : null
   );
+  const [showProfileReport, setShowProfileReport] = useState(false);
+  const [profileReportNotice, setProfileReportNotice] = useState('');
   const profileUserId = viewedProfile?.id;
   const hasActiveStory = activeStoryUserIds.map(Number).includes(Number(profileUserId));
   const fetchSavedRecognitionReactions = async (recognitionId) => {
@@ -564,13 +568,18 @@ useEffect(() => {
                   Editar perfil
                 </button>
               ) : (
-                <button
-                  type="button"
-                  className="profile-twitter-edit-btn"
-                  onClick={() => navigate('/')}
-                >
-                  Volver al inicio
-                </button>
+                <>
+                  <button type="button" className="profile-twitter-report-btn" onClick={() => setShowProfileReport(true)}>
+                    <Flag size={17} /> Reportar perfil
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-twitter-edit-btn"
+                    onClick={() => navigate('/')}
+                  >
+                    Volver al inicio
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -1217,6 +1226,21 @@ useEffect(() => {
   )}
 </div>
         </aside>
+        {profileReportNotice && <div className="profile-report-notice">{profileReportNotice}</div>}
+        {showProfileReport && viewedProfile && (
+          <ReportDialog
+            targetType="profile"
+            targetId={viewedProfile.id}
+            title="Reportar perfil"
+            author={displayName}
+            preview={profileBio || viewedProfile.email}
+            onClose={() => setShowProfileReport(false)}
+            onSuccess={(message) => {
+              setProfileReportNotice(message);
+              setTimeout(() => setProfileReportNotice(''), 3500);
+            }}
+          />
+        )}
       </div>
     </div>
   );

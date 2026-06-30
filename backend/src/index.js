@@ -11,6 +11,8 @@ const aiRoutes = require('./routes/aiRoutes');
 const tecAgentRoutes = require('./routes/tecAgentRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const { startModerationService } = require('./services/moderationProcess');
 
 const app = express();
@@ -32,6 +34,8 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/tec-agent', tecAgentRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {
@@ -48,6 +52,7 @@ app.use((err, req, res, next) => {
 });
 
 const startServer = async () => {
+  await reportRoutes.ensureReportSchema();
   await startModerationService();
 
   app.listen(PORT, () => {
