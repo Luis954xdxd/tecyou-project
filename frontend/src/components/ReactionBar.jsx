@@ -79,7 +79,7 @@ export default function ReactionBar({
         reaction_type: reactionKey,
       });
 
-      const res = await axios.get(`${API_BASE}/api/recognitions/${recId}/reactions`);
+      const res = await axios.get(`${API_BASE}/api/recognitions/${recId}/reactions`, { params: { userId } });
       const newTotals = { like: 0, celebrate: 0, inspire: 0, love: 0 };
       (res.data?.totals || []).forEach((item) => {
         if (newTotals[item.reaction_type] !== undefined) {

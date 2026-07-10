@@ -5,7 +5,7 @@ import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import { renderTextWithHashtags } from '../textFormatters';
 import ProgressPanel from '../components/ProgressPanel';
 import ReportDialog from '../components/ReportDialog';
-import { Flag } from 'lucide-react';
+import { Ban, Flag } from 'lucide-react';
 import copperFrame from '../assets/frames/copper-frame.png';
 import silverFrame from '../assets/frames/silver-frame.png';
 import goldFrame from '../assets/frames/gold-frame.png';
@@ -27,6 +27,7 @@ function ProfilePage({
   onFavoritesChanged,
   onOpenRecognition,
   onBadgeAssigned,
+  onBlockChanged,
 
   // Controla si se muestran u ocultan los marcos
   hideAvatarFrames,
@@ -82,12 +83,18 @@ const [loadingProfileActivity, setLoadingProfileActivity] = useState(false);
   );
   const [showProfileReport, setShowProfileReport] = useState(false);
   const [profileReportNotice, setProfileReportNotice] = useState('');
+  const [blockingProfile, setBlockingProfile] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [blockNotice, setBlockNotice] = useState('');
   const profileUserId = viewedProfile?.id;
+  const hasBlockedMe = Boolean(viewedProfile?.has_blocked_me);
+  const isBlockedByMe = Boolean(viewedProfile?.is_blocked_by_me);
   const hasActiveStory = activeStoryUserIds.map(Number).includes(Number(profileUserId));
   const fetchSavedRecognitionReactions = async (recognitionId) => {
    try {
     const response = await axios.get(
-      `${API_BASE}/api/recognitions/${recognitionId}/reactions`
+      `${API_BASE}/api/recognitions/${recognitionId}/reactions`,
+      { params: { userId: loggedInUserId || null } }
     );
 
     console.log('Reactions response', recognitionId, response.data);
@@ -321,7 +328,7 @@ useEffect(() => {
 
       try {
         setLoadingViewedProfile(true);
-        const response = await axios.get(`${API_BASE}/api/users/profile/${userId}`);
+        const response = await axios.get(`${API_BASE}/api/users/profile/${userId}?viewerId=${loggedInUserId || ''}`);
         const profile = response.data;
 
         setViewedProfile({
@@ -373,7 +380,7 @@ useEffect(() => {
   fetchProfileActivity();
 }, [viewedProfile?.id]);
 
-  const safeRecognitions = Array.isArray(recognitions) ? recognitions : [];
+  const safeRecognitions = hasBlockedMe ? [] : (Array.isArray(recognitions) ? recognitions : []);
   const recognitionsSent = useMemo(
     () =>
       safeRecognitions.filter(
@@ -466,6 +473,42 @@ useEffect(() => {
     .map((word) => word[0])
     .join('')
     .toUpperCase();
+
+
+
+  const handleToggleBlockProfile = async () => {
+    if (!loggedInUserId || !profileUserId || isOwnProfile) return;
+
+    const nextBlocked = !isBlockedByMe;
+    if (nextBlocked && !showBlockConfirm) {
+      setShowBlockConfirm(true);
+      return;
+    }
+
+    try {
+      setBlockingProfile(true);
+      if (nextBlocked) {
+        await axios.post(`${API_BASE}/api/users/${profileUserId}/block`, {
+          blocker_id: loggedInUserId,
+        });
+      } else {
+        await axios.delete(`${API_BASE}/api/users/${profileUserId}/block`, {
+          data: { blocker_id: loggedInUserId },
+        });
+      }
+
+      setShowBlockConfirm(false);
+      setViewedProfile((prev) => prev ? { ...prev, is_blocked_by_me: nextBlocked } : prev);
+      setBlockNotice(nextBlocked ? 'Usuario bloqueado.' : 'Usuario desbloqueado.');
+      setTimeout(() => setBlockNotice(''), 3500);
+      await onBlockChanged?.();
+    } catch (error) {
+      console.error('Error actualizando bloqueo:', error);
+      alert(error.response?.data?.error || 'No se pudo actualizar el bloqueo.');
+    } finally {
+      setBlockingProfile(false);
+    }
+  };
 
   if (!viewedProfile && !isOwnProfile) {
     return (
@@ -571,6 +614,14 @@ useEffect(() => {
                 <>
                   <button type="button" className="profile-twitter-report-btn" onClick={() => setShowProfileReport(true)}>
                     <Flag size={17} /> Reportar perfil
+                  </button>
+                  <button
+                    type="button"
+                    className={`profile-twitter-block-btn ${isBlockedByMe ? 'is-blocked' : ''}`}
+                    onClick={handleToggleBlockProfile}
+                    disabled={blockingProfile}
+                  >
+                    <Ban size={17} /> {blockingProfile ? 'Procesando...' : isBlockedByMe ? 'Desbloquear' : 'Bloquear'}
                   </button>
                   <button
                     type="button"
@@ -710,6 +761,13 @@ useEffect(() => {
           </div>
 
           <div className="profile-twitter-content">
+            {hasBlockedMe && (
+              <div className="profile-twitter-section profile-blocked-state">
+                <h2>Perfil no disponible</h2>
+                <p className="profile-twitter-empty">Este usuario te bloqueo. No puedes ver sus publicaciones.</p>
+              </div>
+            )}
+
             {(activeTab === 'received' || activeTab === 'sent') && (
               <div className="profile-twitter-inline-search">
                 <input
@@ -1226,7 +1284,29 @@ useEffect(() => {
   )}
 </div>
         </aside>
-        {profileReportNotice && <div className="profile-report-notice">{profileReportNotice}</div>}
+        {(profileReportNotice || blockNotice) && <div className="profile-report-notice">{profileReportNotice || blockNotice}</div>}
+        {showBlockConfirm && (
+          <div className="tec-block-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="profile-block-title">
+            <div className="tec-block-confirm-modal">
+              <button type="button" className="tec-block-confirm-close" onClick={() => setShowBlockConfirm(false)} aria-label="Cerrar" disabled={blockingProfile}>
+                {'\u00d7'}
+              </button>
+              <div className="tec-block-confirm-icon">!</div>
+              <h2 id="profile-block-title">{'\u00bf'}Est{'\u00e1'}s seguro?</h2>
+              <p>
+                Si bloqueas a <strong>{displayName}</strong>, esa persona ya no podr{'\u00e1'} ver tus publicaciones ni interactuar con tu contenido.
+              </p>
+              <div className="tec-block-confirm-actions">
+                <button type="button" className="tec-block-confirm-secondary" onClick={() => setShowBlockConfirm(false)} disabled={blockingProfile}>
+                  Cancelar
+                </button>
+                <button type="button" className="tec-block-confirm-primary" onClick={handleToggleBlockProfile} disabled={blockingProfile}>
+                  {blockingProfile ? 'Bloqueando...' : 'Si, bloquear'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {showProfileReport && viewedProfile && (
           <ReportDialog
             targetType="profile"

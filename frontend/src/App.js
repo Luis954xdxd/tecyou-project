@@ -263,6 +263,8 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [showRecognitionComposer, setShowRecognitionComposer] = useState(false);
   const [deletingRecognitionIds, setDeletingRecognitionIds] = useState({});
   const [deleteCandidateId, setDeleteCandidateId] = useState(null);
+  const [blockCandidate, setBlockCandidate] = useState(null);
+  const [blockingUserFromPost, setBlockingUserFromPost] = useState(false);
   const [openPostMenuId, setOpenPostMenuId] = useState(null);
   const [reactionPanelSignalById, setReactionPanelSignalById] = useState({});
   const [repostCandidate, setRepostCandidate] = useState(null);
@@ -424,7 +426,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
 
   const fetchRecognitionReactions = async (recognitionId) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
+      const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`, { params: { userId: user?.id || null } });
       const totals = normalizeReactionTotals(response.data?.totals || []);
       const usersList = response.data?.users || [];
 
@@ -451,7 +453,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
     try {
       const results = await Promise.all(
         feedItems.map(async (rec) => {
-          const response = await axios.get(`${API_BASE}/api/recognitions/${rec.id}/reactions`);
+          const response = await axios.get(`${API_BASE}/api/recognitions/${rec.id}/reactions`, { params: { userId: user?.id || null } });
           return {
             recognitionId: rec.id,
             totals: normalizeReactionTotals(response.data?.totals || []),
@@ -489,7 +491,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const fetchFeed = async () => {
     try {
       setLoadingFeed(true);
-      const response = await axios.get(`${API_BASE}/api/recognitions/feed`);
+      const response = await axios.get(`${API_BASE}/api/recognitions/feed`, { params: { viewerId: user?.id || null } });
       setRecognitions(response.data);
       await fetchAllReactionsForFeed(response.data);
 
@@ -879,6 +881,34 @@ const handleToggleAvatarFrames = () => {
       });
     } finally {
       setSubmittingReport(false);
+    }
+  };
+
+  const handleBlockUserFromPost = (targetUserId, targetName = 'este usuario') => {
+    if (!user?.id || !targetUserId || Number(user.id) === Number(targetUserId)) return;
+    setOpenPostMenuId(null);
+    setBlockCandidate({ id: targetUserId, name: targetName });
+  };
+
+  const confirmBlockUserFromPost = async () => {
+    if (!user?.id || !blockCandidate?.id) return;
+
+    try {
+      setBlockingUserFromPost(true);
+      await axios.post(`${API_BASE}/api/users/${blockCandidate.id}/block`, {
+        blocker_id: user.id,
+      });
+      setBlockCandidate(null);
+      setAppToast({ type: 'success', message: 'Usuario bloqueado.' });
+      await fetchFeed();
+    } catch (error) {
+      console.error('Error bloqueando usuario desde publicacion:', error);
+      setAppToast({
+        type: 'error',
+        message: error.response?.data?.error || 'No se pudo bloquear al usuario.',
+      });
+    } finally {
+      setBlockingUserFromPost(false);
     }
   };
 
@@ -1525,7 +1555,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
   };
 
   const refreshRecognitionReactions = async (recognitionId) => {
-    const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`);
+    const response = await axios.get(`${API_BASE}/api/recognitions/${recognitionId}/reactions`, { params: { userId: user?.id || null } });
     const nextTotals = { like: 0, celebrate: 0, inspire: 0, love: 0 };
     (response.data?.totals || []).forEach((item) => {
       if (nextTotals[item.reaction_type] !== undefined) {
@@ -2035,18 +2065,28 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                     {isDeleting ? 'Eliminando...' : 'Eliminar publicacion'}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => {
-                      setOpenPostMenuId(null);
-                      setReportCandidate(rec);
-                      setReportForm({ reason: '', details: '' });
-                    }}
-                  >
-                    <LucideIcon name="flag" size={16} />
-                    Denunciar
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="block"
+                      onClick={() => handleBlockUserFromPost(rec.sender_id, rec.sender_name)}
+                    >
+                      <LucideIcon name="x" size={16} />
+                      Bloquear usuario
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => {
+                        setOpenPostMenuId(null);
+                        setReportCandidate(rec);
+                        setReportForm({ reason: '', details: '' });
+                      }}
+                    >
+                      <LucideIcon name="flag" size={16} />
+                      Denunciar
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -2152,6 +2192,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               className="post-icon-action"
               title="Comentarios"
               onClick={() => {
+                setOpenPostMenuId(null);
                 recognitionRefs.current[rec.id]?.querySelector('.comments-toggle-btn')?.click();
               }}
             >
@@ -2619,6 +2660,29 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 disabled={Boolean(deletingRecognitionIds[deleteCandidateId])}
               >
                 {deletingRecognitionIds[deleteCandidateId] ? 'Eliminando...' : 'Si, eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {blockCandidate && (
+        <div className="tec-block-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="tec-block-title">
+          <div className="tec-block-confirm-modal">
+            <button type="button" className="tec-block-confirm-close" onClick={() => setBlockCandidate(null)} aria-label="Cerrar" disabled={blockingUserFromPost}>
+              {'\u00d7'}
+            </button>
+            <div className="tec-block-confirm-icon"><LucideIcon name="x" size={24} /></div>
+            <h2 id="tec-block-title">{'\u00bf'}Est{'\u00e1'}s seguro?</h2>
+            <p>
+              Si bloqueas a <strong>{blockCandidate.name}</strong>, esa persona ya no podr{'\u00e1'} ver tus publicaciones ni interactuar con tu contenido.
+            </p>
+            <div className="tec-block-confirm-actions">
+              <button type="button" className="tec-block-confirm-secondary" onClick={() => setBlockCandidate(null)} disabled={blockingUserFromPost}>
+                Cancelar
+              </button>
+              <button type="button" className="tec-block-confirm-primary" onClick={confirmBlockUserFromPost} disabled={blockingUserFromPost}>
+                {blockingUserFromPost ? 'Bloqueando...' : 'Si, bloquear'}
               </button>
             </div>
           </div>

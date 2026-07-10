@@ -34,6 +34,19 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
+const ensureUserBlocksTable = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS user_blocks (
+            id SERIAL PRIMARY KEY,
+            blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(blocker_id, blocked_id),
+            CHECK (blocker_id <> blocked_id)
+        )
+    `);
+};
+
 // BUSCAR USUARIOS
 router.get('/search', async (req, res) => {
     try {
@@ -129,7 +142,9 @@ router.get('/all', async (req, res) => {
 // OBTENER PERFIL
 router.get('/profile/:id', async (req, res) => {
     try {
+        await ensureUserBlocksTable();
         const { id } = req.params;
+        const viewerId = req.query.viewerId || null;
 
         const user = await pool.query(
             `SELECT
@@ -156,7 +171,19 @@ router.get('/profile/:id', async (req, res) => {
                     SELECT COUNT(*)
                     FROM user_follows uf
                     WHERE uf.follower_id = u.id
-                )::int AS following_count
+                )::int AS following_count,
+                EXISTS (
+                    SELECT 1
+                    FROM user_blocks ub
+                    WHERE ub.blocker_id = $2::int
+                      AND ub.blocked_id = u.id
+                ) AS is_blocked_by_me,
+                EXISTS (
+                    SELECT 1
+                    FROM user_blocks ub
+                    WHERE ub.blocker_id = u.id
+                      AND ub.blocked_id = $2::int
+                ) AS has_blocked_me
              FROM users u
              LEFT JOIN user_avatar_frames uaf
                ON uaf.user_id = u.id
@@ -164,7 +191,7 @@ router.get('/profile/:id', async (req, res) => {
              LEFT JOIN avatar_frame_definitions afd
                ON afd.id = uaf.frame_id
              WHERE u.id = $1`,
-            [id]
+            [id, viewerId]
         );
 
         if (user.rows.length === 0) {
@@ -175,6 +202,103 @@ router.get('/profile/:id', async (req, res) => {
     } catch (err) {
         console.error('Error en GET /profile/:id:', err.message);
         res.status(500).send('Error al obtener el perfil.');
+    }
+});
+
+
+
+router.get('/:id/block-status', async (req, res) => {
+    try {
+        await ensureUserBlocksTable();
+        const { id } = req.params;
+        const viewerId = req.query.viewerId || null;
+
+        if (!viewerId) {
+            return res.status(400).json({ error: 'viewerId es requerido.' });
+        }
+
+        const result = await pool.query(
+            `SELECT
+                EXISTS (
+                    SELECT 1 FROM user_blocks
+                    WHERE blocker_id = $1 AND blocked_id = $2
+                ) AS is_blocked_by_me,
+                EXISTS (
+                    SELECT 1 FROM user_blocks
+                    WHERE blocker_id = $2 AND blocked_id = $1
+                ) AS has_blocked_me`,
+            [viewerId, id]
+        );
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Error en GET /:id/block-status:', err.message);
+        res.status(500).send('Error al consultar bloqueo.');
+    }
+});
+
+router.post('/:id/block', async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        await ensureUserBlocksTable();
+        const { id } = req.params;
+        const { blocker_id } = req.body;
+
+        if (!blocker_id) {
+            return res.status(400).json({ error: 'blocker_id es requerido.' });
+        }
+
+        if (Number(blocker_id) === Number(id)) {
+            return res.status(400).json({ error: 'No puedes bloquearte a ti mismo.' });
+        }
+
+        await client.query('BEGIN');
+        const inserted = await client.query(
+            `INSERT INTO user_blocks (blocker_id, blocked_id)
+             VALUES ($1, $2)
+             ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+             RETURNING *`,
+            [blocker_id, id]
+        );
+        await client.query(
+            `DELETE FROM user_follows
+             WHERE (follower_id = $1 AND following_id = $2)
+                OR (follower_id = $2 AND following_id = $1)`,
+            [blocker_id, id]
+        );
+        await client.query('COMMIT');
+
+        res.json({ success: true, blocked: true, data: inserted.rows[0] || null });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error en POST /:id/block:', err.message);
+        res.status(500).send('Error al bloquear usuario.');
+    } finally {
+        client.release();
+    }
+});
+
+router.delete('/:id/block', async (req, res) => {
+    try {
+        await ensureUserBlocksTable();
+        const { id } = req.params;
+        const { blocker_id } = req.body;
+
+        if (!blocker_id) {
+            return res.status(400).json({ error: 'blocker_id es requerido.' });
+        }
+
+        await pool.query(
+            `DELETE FROM user_blocks
+             WHERE blocker_id = $1 AND blocked_id = $2`,
+            [blocker_id, id]
+        );
+
+        res.json({ success: true, blocked: false });
+    } catch (err) {
+        console.error('Error en DELETE /:id/block:', err.message);
+        res.status(500).send('Error al desbloquear usuario.');
     }
 });
 
@@ -518,6 +642,8 @@ router.get('/:id/public', async (req, res) => {
         const { id } = req.params;
         const viewerId = req.query.viewerId || null;
 
+        await ensureUserBlocksTable();
+
         const userResult = await pool.query(
             `SELECT
                 u.id,
@@ -539,6 +665,18 @@ router.get('/:id/public', async (req, res) => {
                     FROM user_follows uf
                     WHERE uf.follower_id = $2 AND uf.following_id = u.id
                 ) AS is_following,
+                EXISTS (
+                    SELECT 1
+                    FROM user_blocks ub
+                    WHERE ub.blocker_id = $2::int
+                      AND ub.blocked_id = u.id
+                ) AS is_blocked_by_me,
+                EXISTS (
+                    SELECT 1
+                    FROM user_blocks ub
+                    WHERE ub.blocker_id = u.id
+                      AND ub.blocked_id = $2::int
+                ) AS has_blocked_me,
                 (
                     SELECT COUNT(*)
                     FROM user_follows uf
@@ -571,6 +709,14 @@ router.get('/:id/public', async (req, res) => {
 
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        if (userResult.rows[0].has_blocked_me) {
+            return res.json({
+                user: userResult.rows[0],
+                recognitions_received: [],
+                recognitions_sent: [],
+            });
         }
 
         const recognitionsReceived = await pool.query(

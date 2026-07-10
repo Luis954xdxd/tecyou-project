@@ -88,6 +88,19 @@ ensureRepostTable().catch((err) => {
 ensureCommentLikesTable().catch((err) => {
   console.error('Error creando tabla recognition_comment_likes:', err.message);
 });
+
+const ensureUserBlocksTable = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_blocks (
+      id SERIAL PRIMARY KEY,
+      blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(blocker_id, blocked_id),
+      CHECK (blocker_id <> blocked_id)
+    )
+  `);
+};
 const withTimeout = (promise, timeoutMs, label) => {
   let timer;
 
@@ -380,6 +393,8 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
 router.get('/feed', async (req, res) => {
   try {
     await ensureRepostTable();
+    await ensureUserBlocksTable();
+    const viewerId = req.query.viewerId || null;
     const feed = await pool.query(`
   SELECT
     r.*,
@@ -392,7 +407,15 @@ router.get('/feed', async (req, res) => {
     rec.fullname AS receiver_fullname,
     rec.profile_image_url AS receiver_profile_image,
     receiver_frame.code AS receiver_frame_code,
-    COUNT(DISTINCT rc.id)::int AS comment_count,
+    COUNT(DISTINCT rc.id) FILTER (
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM user_blocks comment_block
+        WHERE comment_block.blocker_id = r.sender_id
+          AND comment_block.blocked_id = rc.user_id
+          AND rc.user_id <> $1::int
+      )
+    )::int AS comment_count,
     COUNT(DISTINCT rr.id)::int AS repost_count,
 
     COALESCE(
@@ -425,6 +448,16 @@ router.get('/feed', async (req, res) => {
   LEFT JOIN recognition_comments rc ON r.id = rc.recognition_id AND COALESCE(rc.moderation_status, 'visible') = 'visible'
   LEFT JOIN recognition_reposts rr ON r.id = rr.recognition_id
   WHERE COALESCE(r.moderation_status, 'visible') = 'visible'
+    AND (
+      $1::int IS NULL
+      OR r.sender_id = $1::int
+      OR NOT EXISTS (
+        SELECT 1
+        FROM user_blocks feed_block
+        WHERE feed_block.blocker_id = r.sender_id
+          AND feed_block.blocked_id = $1::int
+      )
+    )
   GROUP BY
     r.id,
     s.id,
@@ -432,7 +465,7 @@ router.get('/feed', async (req, res) => {
     sender_frame.code,
     receiver_frame.code
   ORDER BY r.created_at DESC
-`);
+`, [viewerId]);
 
     res.json(feed.rows);
   } catch (err) {
@@ -540,6 +573,7 @@ router.post('/:id/react', async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id, reaction_type } = req.body;
+    await ensureUserBlocksTable();
 
     const validReactions = ['like', 'celebrate', 'inspire', 'love'];
 
@@ -554,11 +588,18 @@ router.post('/:id/react', async (req, res) => {
     );
 
     const recognitionOwner = await pool.query(
-      `SELECT receiver_id FROM recognitions WHERE id = $1`,
+      `SELECT sender_id, receiver_id FROM recognitions WHERE id = $1`,
       [id]
     );
 
+    const recognitionSenderId = recognitionOwner.rows[0]?.sender_id || null;
     const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
+    const isBlockedByRecognitionOwner = recognitionSenderId
+      ? (await pool.query(
+          `SELECT 1 FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2`,
+          [recognitionSenderId, user_id]
+        )).rows.length > 0
+      : false;
 
     if (existingReaction.rows.length > 0) {
       if (existingReaction.rows[0].reaction_type === reaction_type) {
@@ -579,7 +620,7 @@ router.post('/:id/react', async (req, res) => {
         [reaction_type, id, user_id]
       );
 
-      if (receiverId && Number(receiverId) !== Number(user_id)) {
+      if (!isBlockedByRecognitionOwner && receiverId && Number(receiverId) !== Number(user_id)) {
         await pool.query(
           `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
            VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -614,7 +655,7 @@ router.post('/:id/react', async (req, res) => {
       [id, user_id, reaction_type]
     );
 
-    if (receiverId && Number(receiverId) !== Number(user_id)) {
+    if (!isBlockedByRecognitionOwner && receiverId && Number(receiverId) !== Number(user_id)) {
       await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -629,7 +670,7 @@ router.post('/:id/react', async (req, res) => {
       );
     }
     try {
-      if (receiverId) {
+      if (!isBlockedByRecognitionOwner && receiverId) {
         await evaluateAndUnlockAchievementsForUser(Number(receiverId), {
           sourceType: 'reaction_received',
           sourceId: Number(id),
@@ -652,13 +693,28 @@ router.post('/:id/react', async (req, res) => {
 router.get('/:id/reactions', async (req, res) => {
   try {
     const { id } = req.params;
+    const currentUserId = req.query.userId || null;
+    await ensureUserBlocksTable();
+
+    const visibilityWhere = `
+       WHERE rr.recognition_id = $1
+         AND (
+           rr.user_id = $2::int
+           OR NOT EXISTS (
+             SELECT 1
+             FROM user_blocks reaction_block
+             WHERE reaction_block.blocker_id = r.sender_id
+               AND reaction_block.blocked_id = rr.user_id
+           )
+         )`;
 
     const reactions = await pool.query(
-      `SELECT reaction_type, COUNT(*)::int AS total
-       FROM recognition_reactions
-       WHERE recognition_id = $1
-       GROUP BY reaction_type`,
-      [id]
+      `SELECT rr.reaction_type, COUNT(*)::int AS total
+       FROM recognition_reactions rr
+       JOIN recognitions r ON r.id = rr.recognition_id
+       ${visibilityWhere}
+       GROUP BY rr.reaction_type`,
+      [id, currentUserId]
     );
 
     const userReactions = await pool.query(
@@ -669,9 +725,10 @@ router.get('/:id/reactions', async (req, res) => {
           u.profile_image_url
        FROM recognition_reactions rr
        JOIN users u ON rr.user_id = u.id
-       WHERE rr.recognition_id = $1
+       JOIN recognitions r ON r.id = rr.recognition_id
+       ${visibilityWhere}
        ORDER BY rr.created_at DESC`,
-      [id]
+      [id, currentUserId]
     );
 
     res.json({
@@ -865,6 +922,7 @@ router.get('/favorites/:userId', async (req, res) => {
 // ===============================
 router.post('/:id/comments', async (req, res) => {
   try {
+    await ensureUserBlocksTable();
     const { id } = req.params;
     const { user_id, comment, parent_comment_id } = req.body;
 
@@ -916,13 +974,6 @@ router.post('/:id/comments', async (req, res) => {
 
     const insertedCommentId = newComment.rows[0].id;
 
-    await createMentionNotifications({
-      commentId: insertedCommentId,
-      recognitionId: id,
-      actorUserId: user_id,
-      commentText: comment.trim(),
-    });
-
     const commentWithUser = await pool.query(
       `SELECT
           rc.id,
@@ -940,13 +991,29 @@ router.post('/:id/comments', async (req, res) => {
     );
 
     const recognitionOwner = await pool.query(
-      `SELECT receiver_id FROM recognitions WHERE id = $1`,
+      `SELECT sender_id, receiver_id FROM recognitions WHERE id = $1`,
       [id]
     );
 
+    const recognitionSenderId = recognitionOwner.rows[0]?.sender_id || null;
     const receiverId = recognitionOwner.rows[0]?.receiver_id || null;
+    const isBlockedByRecognitionOwner = recognitionSenderId
+      ? (await pool.query(
+          `SELECT 1 FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2`,
+          [recognitionSenderId, user_id]
+        )).rows.length > 0
+      : false;
 
-    if (parentCommentData && Number(parentCommentData.user_id) !== Number(user_id)) {
+    if (!isBlockedByRecognitionOwner) {
+      await createMentionNotifications({
+        commentId: insertedCommentId,
+        recognitionId: id,
+        actorUserId: user_id,
+        commentText: comment.trim(),
+      });
+    }
+
+    if (!isBlockedByRecognitionOwner && parentCommentData && Number(parentCommentData.user_id) !== Number(user_id)) {
       await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -959,7 +1026,7 @@ router.post('/:id/comments', async (req, res) => {
           Number(id),
         ]
       );
-    } else if (receiverId && Number(receiverId) !== Number(user_id)) {
+    } else if (!isBlockedByRecognitionOwner && receiverId && Number(receiverId) !== Number(user_id)) {
       await pool.query(
         `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -974,7 +1041,7 @@ router.post('/:id/comments', async (req, res) => {
       );
     }
     try {
-      if (receiverId) {
+      if (!isBlockedByRecognitionOwner && receiverId) {
         await evaluateAndUnlockAchievementsForUser(Number(receiverId), {
           sourceType: 'comment_received',
           sourceId: Number(id),
@@ -1024,7 +1091,17 @@ router.get('/:id/comments', async (req, res) => {
        JOIN users u ON rc.user_id = u.id
        JOIN recognitions r ON r.id = rc.recognition_id
        LEFT JOIN recognition_comment_likes rcl ON rcl.comment_id = rc.id
-       WHERE rc.recognition_id = $1 AND COALESCE(rc.moderation_status, 'visible') = 'visible'
+       WHERE rc.recognition_id = $1
+         AND COALESCE(rc.moderation_status, 'visible') = 'visible'
+         AND (
+           rc.user_id = $2::int
+           OR NOT EXISTS (
+             SELECT 1
+             FROM user_blocks comment_block
+             WHERE comment_block.blocker_id = r.sender_id
+               AND comment_block.blocked_id = rc.user_id
+           )
+         )
        GROUP BY rc.id, u.id, r.sender_id
        ORDER BY rc.created_at ASC`,
       [id, currentUserId]

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import ReportDialog from './ReportDialog';
 
@@ -18,7 +19,13 @@ function RecognitionComments({
   const [loadingComments, setLoadingComments] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  useEffect(() => {
+    document.body.classList.toggle('comments-modal-open', showComments);
+
+    return () => {
+      document.body.classList.remove('comments-modal-open');
+    };
+  }, [showComments]);
 
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyInputs, setReplyInputs] = useState({});
@@ -43,10 +50,6 @@ function RecognitionComments({
     return `${API_BASE}${url}`;
   };
 
-  const resolveMediaUrl = resolveExternalImageUrl || resolveImageUrl;
-  const commentMedia = Array.isArray(recognition?.media) ? recognition.media : [];
-  const mainMedia = commentMedia[Math.min(activeMediaIndex, Math.max(commentMedia.length - 1, 0))] || null;
-  const mainMediaUrl = mainMedia?.fullUrl || resolveMediaUrl(mainMedia?.media_url);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -91,9 +94,6 @@ function RecognitionComments({
     }
   }, [showComments, recognitionId]);
 
-  useEffect(() => {
-    setActiveMediaIndex(0);
-  }, [recognitionId, showComments]);
 
   useEffect(() => {
     if (!showComments) return undefined;
@@ -540,56 +540,17 @@ function RecognitionComments({
         </button>
       </div>
 
-      {showComments && (
+      {showComments && createPortal(
         <div className="instagram-comments-overlay" onClick={() => setShowComments(false)}>
         <div className="comments-panel instagram-comments-panel" onClick={(event) => event.stopPropagation()}>
-          <div className="instagram-comments-post-preview">
-            {mainMedia ? (
-              <>
-                {mainMedia.media_type === 'video' ? (
-                  <video src={mainMediaUrl} controls className="instagram-comments-media" />
-                ) : (
-                  <img src={mainMediaUrl} alt="Publicacion" className="instagram-comments-media" />
-                )}
-                {commentMedia.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      className="instagram-comments-media-nav prev"
-                      onClick={() => setActiveMediaIndex((prev) => (prev - 1 + commentMedia.length) % commentMedia.length)}
-                      aria-label="Medio anterior"
-                    >
-                      {'\u2039'}
-                    </button>
-                    <button
-                      type="button"
-                      className="instagram-comments-media-nav next"
-                      onClick={() => setActiveMediaIndex((prev) => (prev + 1) % commentMedia.length)}
-                      aria-label="Siguiente medio"
-                    >
-                      {'\u203A'}
-                    </button>
-                    <div className="instagram-comments-media-dots">
-                      {commentMedia.map((item, index) => (
-                        <button
-                          key={item.id || index}
-                          type="button"
-                          className={index === activeMediaIndex ? 'active' : ''}
-                          onClick={() => setActiveMediaIndex(index)}
-                          aria-label={`Ver medio ${index + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <div className="instagram-comments-text-preview">
-                <strong>{recognition?.sender_name}</strong>
-                <p>{recognition?.message}</p>
-              </div>
-            )}
-          </div>
+          <button
+            type="button"
+            className="instagram-comments-close-floating"
+            onClick={() => setShowComments(false)}
+            aria-label="Cerrar comentarios"
+          >
+            {'\u00D7'}
+          </button>
           <div className="instagram-comments-header">
             <span />
             <strong>Comentarios</strong>
@@ -601,6 +562,16 @@ function RecognitionComments({
             <strong>{recognition?.sender_name}</strong>
             <span>{recognition?.message}</span>
           </div>
+          <div className="comments-list">
+            {loadingComments ? (
+              <p className="comments-empty">Cargando comentarios...</p>
+            ) : comments.length === 0 ? (
+              <p className="comments-empty">Aún no hay comentarios.</p>
+            ) : (
+              comments.map((item) => renderCommentTree(item))
+            )}
+          </div>
+
           <form onSubmit={handleSubmitComment} className="comment-form">
             <textarea
               className="comment-input"
@@ -615,18 +586,9 @@ function RecognitionComments({
               {sendingComment ? 'Comentando...' : 'Comentar'}
             </button>
           </form>
-
-          <div className="comments-list">
-            {loadingComments ? (
-              <p className="comments-empty">Cargando comentarios...</p>
-            ) : comments.length === 0 ? (
-              <p className="comments-empty">Aún no hay comentarios.</p>
-            ) : (
-              comments.map((item) => renderCommentTree(item))
-            )}
-          </div>
         </div>
         </div>
+        , document.body
       )}
       {reportNotice && <div className="comment-report-notice">{reportNotice}</div>}
       {reportingComment && (
