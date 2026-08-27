@@ -1,5 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const {
+    requireSession,
+    requireSelfParam,
+    bindAuthenticatedActor,
+} = require('../middleware/adminAuth');
+router.use(requireSession);
+router.use(bindAuthenticatedActor('follower_id', 'blocker_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
@@ -51,7 +58,7 @@ const ensureUserBlocksTable = async () => {
 router.get('/search', async (req, res) => {
     try {
         const q = (req.query.q || '').trim();
-        const currentUserId = req.query.currentUserId || null;
+        const currentUserId = req.authUser.id;
 
         if (!q || q.length < 2) {
             return res.json([]);
@@ -101,7 +108,7 @@ router.get('/search', async (req, res) => {
 // LISTAR TODOS LOS USUARIOS
 router.get('/all', async (req, res) => {
     try {
-        const currentUserId = req.query.currentUserId || null;
+        const currentUserId = req.authUser.id;
 
         const result = await pool.query(
             `SELECT
@@ -144,7 +151,7 @@ router.get('/profile/:id', async (req, res) => {
     try {
         await ensureUserBlocksTable();
         const { id } = req.params;
-        const viewerId = req.query.viewerId || null;
+        const viewerId = req.authUser.id;
 
         const user = await pool.query(
             `SELECT
@@ -211,11 +218,7 @@ router.get('/:id/block-status', async (req, res) => {
     try {
         await ensureUserBlocksTable();
         const { id } = req.params;
-        const viewerId = req.query.viewerId || null;
-
-        if (!viewerId) {
-            return res.status(400).json({ error: 'viewerId es requerido.' });
-        }
+        const viewerId = req.authUser.id;
 
         const result = await pool.query(
             `SELECT
@@ -303,7 +306,7 @@ router.delete('/:id/block', async (req, res) => {
 });
 
 // ACTUALIZAR PERFIL
-router.put('/profile/:id', async (req, res) => {
+router.put('/profile/:id', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
         const { display_name, bio, tags, birth_date, location } = req.body;
@@ -373,7 +376,7 @@ router.put('/profile/:id', async (req, res) => {
 });
 
 // SUBIR FOTO DE PERFIL
-router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res) => {
+router.post('/profile/:id/photo', requireSelfParam('id'), upload.single('profileImage'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -430,7 +433,7 @@ router.post('/profile/:id/photo', upload.single('profileImage'), async (req, res
 });
 
 // SUBIR PORTADA
-router.post('/profile/:id/cover', upload.single('coverImage'), async (req, res) => {
+router.post('/profile/:id/cover', requireSelfParam('id'), upload.single('coverImage'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -640,7 +643,7 @@ router.get('/:id/followers', async (req, res) => {
 router.get('/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
-        const viewerId = req.query.viewerId || null;
+        const viewerId = req.authUser.id;
 
         await ensureUserBlocksTable();
 
@@ -841,7 +844,7 @@ router.get('/:id/activity', async (req, res) => {
 });
 
 // NOTIFICACIONES DEL USUARIO
-router.get('/:id/notifications', async (req, res) => {
+router.get('/:id/notifications', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -880,7 +883,7 @@ router.get('/:id/notifications', async (req, res) => {
 });
 
 // CONTAR NOTIFICACIONES NO LEÍDAS
-router.get('/:id/notifications/unread-count', async (req, res) => {
+router.get('/:id/notifications/unread-count', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -909,9 +912,9 @@ router.patch('/notifications/:notificationId/read', async (req, res) => {
         const updated = await pool.query(
             `UPDATE notifications
              SET is_read = TRUE
-             WHERE id = $1
+             WHERE id = $1 AND user_id = $2
              RETURNING *`,
-            [notificationId]
+            [notificationId, req.authUser.id]
         );
 
         if (updated.rows.length === 0) {
@@ -929,7 +932,7 @@ router.patch('/notifications/:notificationId/read', async (req, res) => {
 });
 
 // MARCAR TODAS COMO LEÍDAS
-router.patch('/:id/notifications/read-all', async (req, res) => {
+router.patch('/:id/notifications/read-all', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -949,7 +952,7 @@ router.patch('/:id/notifications/read-all', async (req, res) => {
 });
 
 // MARCAR NOTIFICACIONES COMO LEÍDAS (legacy)
-router.patch('/:id/notifications/read', async (req, res) => {
+router.patch('/:id/notifications/read', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
 

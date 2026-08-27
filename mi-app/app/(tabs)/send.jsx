@@ -18,6 +18,7 @@ import { colors } from '../../constants/colors';
 import { fontSize, spacing, radius, fontWeight, shadow } from '../../constants/theme';
 import Avatar from '../../components/Avatar';
 import { resolveImageUrl } from '../utils/getInitials';
+import { authenticatedFetch } from '../../utils/authenticatedFetch';
 
 const CATEGORIES = [
   { key: 'Colaboración', icon: '🤝' },
@@ -69,7 +70,7 @@ export default function SendScreen() {
       }
       try {
         setSearching(true);
-        const res = await fetch(
+        const res = await authenticatedFetch(
           `${API_BASE}/api/users/search?q=${encodeURIComponent(search)}`
         );
         const text = await res.text();
@@ -125,7 +126,7 @@ export default function SendScreen() {
         });
       }
 
-      const res = await fetch(`${API_BASE}/api/recognitions/send`, {
+      const res = await authenticatedFetch(`${API_BASE}/api/recognitions/send`, {
         method: 'POST',
         body: formData,
       });

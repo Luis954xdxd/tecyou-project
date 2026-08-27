@@ -16,10 +16,6 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [audioFile, setAudioFile] = useState(null);
   const [musicName, setMusicName] = useState('');
   const [musicSearch, setMusicSearch] = useState('');
-  const [musicLyrics, setMusicLyrics] = useState('');
-  const [showLyrics, setShowLyrics] = useState(true);
-  const [lyricsPositionX, setLyricsPositionX] = useState(50);
-  const [lyricsPositionY, setLyricsPositionY] = useState(76);
   const [musicResults, setMusicResults] = useState([]);
   const [musicLoading, setMusicLoading] = useState(false);
   const [selectedMusicPreview, setSelectedMusicPreview] = useState('');
@@ -27,6 +23,7 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [visibilityType, setVisibilityType] = useState('public');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [excludedUsers, setExcludedUsers] = useState([]);
+  const [taggedUsers, setTaggedUsers] = useState([]);
   const [mediaFit, setMediaFit] = useState('cover');
   const [mediaPositionX, setMediaPositionX] = useState(50);
   const [mediaPositionY, setMediaPositionY] = useState(50);
@@ -42,6 +39,29 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     () => (audioFile ? URL.createObjectURL(audioFile) : null),
     [audioFile]
   );
+
+  const activeNameQuery = useMemo(() => {
+    const match = caption.match(/[@A-Za-z0-9._\-ÁÉÍÓÚÜÑáéíóúüñ]{2,30}$/);
+    if (!match) return '';
+    return match[0].replace(/^@/, '').toLowerCase();
+  }, [caption]);
+
+  const tagSuggestions = useMemo(() => {
+    if (!activeNameQuery) return [];
+    return (users || [])
+      .filter((user) => !taggedUsers.some((tagged) => Number(tagged.id) === Number(user.id)))
+      .filter((user) => {
+        const name = `${user.display_name || ''} ${user.fullname || ''}`.toLowerCase();
+        const email = String(user.email || '').toLowerCase();
+        return name.split(/\s+/).some((part) => part.startsWith(activeNameQuery)) || email.startsWith(activeNameQuery);
+      })
+      .sort((a, b) => {
+        const aName = String(a.display_name || a.fullname || '').toLowerCase();
+        const bName = String(b.display_name || b.fullname || '').toLowerCase();
+        return Number(bName.startsWith(activeNameQuery)) - Number(aName.startsWith(activeNameQuery));
+      })
+      .slice(0, 6);
+  }, [activeNameQuery, taggedUsers, users]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,16 +106,13 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     setAudioFile(null);
     setMusicName('');
     setMusicSearch('');
-    setMusicLyrics('');
-    setShowLyrics(true);
-    setLyricsPositionX(50);
-    setLyricsPositionY(76);
     setMusicResults([]);
     setSelectedMusicPreview('');
     setDurationSeconds(30);
     setVisibilityType('public');
     setSelectedUsers([]);
     setExcludedUsers([]);
+    setTaggedUsers([]);
     setMediaFit('cover');
     setMediaPositionX(50);
     setMediaPositionY(50);
@@ -139,6 +156,30 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     );
   };
 
+  const addTaggedUser = (user) => {
+    setTaggedUsers((prev) => [...prev, user]);
+    const displayName = user.display_name || user.fullname;
+    setCaption((prev) => prev.replace(
+      /[@A-Za-z0-9._\-ÁÉÍÓÚÜÑáéíóúüñ]{2,30}$/,
+      `@${displayName} `
+    ));
+    setExcludedUsers((prev) => prev.filter((id) => Number(id) !== Number(user.id)));
+    if (visibilityType === 'only_selected' || visibilityType === 'following') {
+      setSelectedUsers((prev) => prev.includes(user.id) ? prev : [...prev, user.id]);
+    }
+  };
+
+  const handleCaptionChange = (value) => {
+    setCaption(value);
+    setTaggedUsers((prev) => prev.filter((user) => value.includes(`@${user.display_name || user.fullname}`)));
+  };
+
+  const removeTaggedUser = (user) => {
+    const mention = `@${user.display_name || user.fullname}`;
+    setTaggedUsers((prev) => prev.filter((item) => Number(item.id) !== Number(user.id)));
+    setCaption((prev) => prev.replace(mention, '').replace(/\s{2,}/g, ' ').trimStart());
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!mediaFile) {
@@ -155,16 +196,13 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     data.append('storyMedia', mediaFile);
     data.append('caption', caption);
     data.append('music_name', musicName);
-    data.append('music_lyrics', musicLyrics);
-    data.append('show_lyrics', showLyrics);
-    data.append('lyrics_position_x', lyricsPositionX);
-    data.append('lyrics_position_y', lyricsPositionY);
     data.append('music_external_url', selectedMusicPreview);
     data.append('music_start_seconds', 0);
     data.append('duration_seconds', finalDuration);
     data.append('visibility_type', visibilityType === 'following' ? 'only_selected' : visibilityType);
     data.append('selected_users', JSON.stringify(selectedUsers));
     data.append('excluded_users', JSON.stringify(excludedUsers));
+    data.append('tagged_user_ids', JSON.stringify(taggedUsers.map((user) => user.id)));
     data.append('media_fit', mediaFit);
     data.append('media_position_x', mediaPositionX);
     data.append('media_position_y', mediaPositionY);
@@ -207,14 +245,38 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             onChange={handleMediaChange}
           />
 
-          <label className="story-studio-field">
+          <div className="story-studio-field story-caption-field">
             <span>Texto</span>
             <textarea
               value={caption}
-              onChange={(event) => setCaption(event.target.value)}
-              placeholder="Agrega texto a tu historia..."
+              onChange={(event) => handleCaptionChange(event.target.value)}
+              placeholder="Agrega texto y escribe un nombre para etiquetar..."
             />
-          </label>
+            {tagSuggestions.length > 0 && (
+              <div className="story-tag-suggestions">
+                {tagSuggestions.map((user) => (
+                  <button type="button" key={user.id} onClick={() => addTaggedUser(user)}>
+                    <strong>{user.display_name || user.fullname}</strong>
+                    <small>{user.email}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+            {taggedUsers.length > 0 && (
+              <div className="story-tagged-users">
+                {taggedUsers.map((user) => (
+                  <button
+                    type="button"
+                    key={user.id}
+                    onClick={() => removeTaggedUser(user)}
+                    title="Quitar etiqueta"
+                  >
+                    @{user.display_name || user.fullname} {'\u00d7'}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="story-studio-field">
             <span>Musica</span>
@@ -249,32 +311,6 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             </div>
             {selectedMusicPreview && (
               <audio controls src={selectedMusicPreview} className="story-music-preview-audio" />
-            )}
-            <textarea
-              className="story-lyrics-input"
-              value={musicLyrics}
-              onChange={(event) => setMusicLyrics(event.target.value)}
-              placeholder="Letra opcional. Para letra automática hace falta conectar una API de letras sincronizadas."
-            />
-            <label className="story-lyrics-toggle">
-              <input
-                type="checkbox"
-                checked={showLyrics}
-                onChange={(event) => setShowLyrics(event.target.checked)}
-              />
-              <span>Mostrar letra en la historia</span>
-            </label>
-            {showLyrics && (
-              <div className="story-lyrics-position-controls">
-                <label>
-                  <small>Posicion horizontal de letra</small>
-                  <input type="range" min="8" max="92" value={lyricsPositionX} onChange={(event) => setLyricsPositionX(Number(event.target.value))} />
-                </label>
-                <label>
-                  <small>Posicion vertical de letra</small>
-                  <input type="range" min="18" max="88" value={lyricsPositionY} onChange={(event) => setLyricsPositionY(Number(event.target.value))} />
-                </label>
-              </div>
             )}
             <label className="story-local-audio">
               Subir audio local
@@ -387,17 +423,6 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
               </div>
             )}
             {caption && <p className="story-preview-caption">{caption}</p>}
-            {showLyrics && musicLyrics && (
-              <p
-                className="story-preview-lyrics"
-                style={{
-                  '--lyrics-x': `${lyricsPositionX}%`,
-                  '--lyrics-y': `${lyricsPositionY}%`,
-                }}
-              >
-                {musicLyrics.split('\n').filter(Boolean)[0]}
-              </p>
-            )}
             {musicName && <span className="story-preview-music">{'\u266B'} {musicName}</span>}
           </div>
           {audioPreview && <audio controls src={audioPreview} />}

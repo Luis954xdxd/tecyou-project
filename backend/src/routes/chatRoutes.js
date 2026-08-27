@@ -11,6 +11,9 @@ const {
 } = require('../services/realtimeHub');
 
 const router = express.Router();
+const { requireSession, bindAuthenticatedActor } = require('../middleware/adminAuth');
+router.use(requireSession);
+router.use(bindAuthenticatedActor('user_id', 'sender_id', 'created_by'));
 
 const uploadDir = path.join(__dirname, '..', 'uploads', 'chat');
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -66,6 +69,7 @@ const ensureTables = async () => {
           'comment_received',
           'comment_reply_received',
           'mention_received',
+          'story_mention',
           'favorite_received',
           'chat_message'
         )
@@ -219,7 +223,7 @@ const notifyParticipants = async ({ conversationId, senderId, message }) => {
 router.get('/events/:userId', async (req, res) => {
   await ready;
 
-  const { userId } = req.params;
+  const userId = req.authUser.id;
   res.set({
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -244,7 +248,7 @@ router.get('/presence', (req, res) => {
 
 router.get('/conversations/:userId', async (req, res) => {
   await ready;
-  const { userId } = req.params;
+  const userId = req.authUser.id;
 
   const result = await pool.query(
     `SELECT
@@ -304,7 +308,7 @@ router.get('/conversations/:userId', async (req, res) => {
 router.get('/conversations/:conversationId/messages', async (req, res) => {
   await ready;
   const { conversationId } = req.params;
-  const { userId } = req.query;
+  const userId = req.authUser.id;
 
   const allowed = await pool.query(
     'SELECT 1 FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
@@ -335,7 +339,11 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
   res.json(result.rows);
 });
 
-router.post('/direct/:targetUserId/messages', upload.array('attachments', 5), async (req, res) => {
+router.post(
+  '/direct/:targetUserId/messages',
+  upload.array('attachments', 5),
+  bindAuthenticatedActor('user_id', 'sender_id'),
+  async (req, res) => {
   await ready;
   const { targetUserId } = req.params;
   const { sender_id, content } = req.body;
@@ -364,9 +372,14 @@ router.post('/direct/:targetUserId/messages', upload.array('attachments', 5), as
   }
 
   res.json({ conversation_id: conversationId, messages });
-});
+  }
+);
 
-router.post('/conversations/:conversationId/messages', upload.array('attachments', 5), async (req, res) => {
+router.post(
+  '/conversations/:conversationId/messages',
+  upload.array('attachments', 5),
+  bindAuthenticatedActor('user_id', 'sender_id'),
+  async (req, res) => {
   await ready;
   const { conversationId } = req.params;
   const { sender_id, content } = req.body;
@@ -396,7 +409,8 @@ router.post('/conversations/:conversationId/messages', upload.array('attachments
   }
 
   res.json({ conversation_id: Number(conversationId), messages });
-});
+  }
+);
 
 router.post('/groups', async (req, res) => {
   await ready;

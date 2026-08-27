@@ -71,11 +71,11 @@ function StoriesBar({
         title="1 clic: crear historia | 2 clics: ver historia"
       >
         <div className="story-card-media own">
-          {myStoriesGroup?.stories?.[0]?.media_url ? (
-            myStoriesGroup.stories[0].media_type === 'video' ? (
-              <video src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} muted />
+          {myStoriesGroup?.stories?.at(-1)?.media_url ? (
+            myStoriesGroup.stories.at(-1).media_type === 'video' ? (
+              <video src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} muted />
             ) : (
-              <img src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} alt="Tu historia" />
+              <img src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} alt="Tu historia" />
             )
           ) : currentUser?.profile_image_url ? (
             <img src={resolveImageUrl(currentUser.profile_image_url)} alt="Tu historia" />
@@ -85,59 +85,36 @@ function StoriesBar({
         <span className="story-name">Crear historia</span>
       </button>
 
-      {myStoriesGroup?.stories?.length > 0 && (
-        <button
-          type="button"
-          className="story-bubble story-card"
-          onClick={() => onOpenStory(myStoriesGroup.stories, 0)}
-        >
-          <div className="story-card-media">
-            {myStoriesGroup.stories[0].media_type === 'video' ? (
-              <video src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} muted />
-            ) : (
-              <img src={resolveImageUrl(myStoriesGroup.stories[0].media_url)} alt="Tu historia" />
-            )}
-          </div>
-          <div className="story-avatar-ring">
-            {myStoriesGroup.profile_image_url ? (
-              <img
-                src={resolveImageUrl(myStoriesGroup.profile_image_url)}
-                alt="Tu historia"
-                className="story-avatar-image"
-              />
-            ) : (
-              <div className="story-avatar-fallback">T</div>
-            )}
-          </div>
-          <span className="story-name">Tu historia</span>
-        </button>
-      )}
-
-      {/* HISTORIAS DE OTROS USUARIOS */}
+      {/* HISTORIAS ORDENADAS POR LA PUBLICACION MAS RECIENTE */}
       {groupedStories
-        .filter((group) => Number(group.user_id) !== Number(currentUser?.id))
         .map((group) => {
           const avatar = resolveImageUrl(group.profile_image_url);
+          const isOwnGroup = Number(group.user_id) === Number(currentUser?.id);
           const displayName =
+            (isOwnGroup && 'Tu historia') ||
             group.display_name ||
             group.fullname ||
             'Usuario';
+          const coverStory = group.stories?.at(-1);
+          const firstUnseenIndex = group.stories.findIndex((story) => !story.has_viewed);
+          const startIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
+          const hasUnseen = !isOwnGroup && firstUnseenIndex >= 0;
 
           return (
             <button
               key={group.user_id}
               type="button"
-              className="story-bubble story-card"
-              onClick={() => onOpenStory(group.stories, 0)}
+              className={`story-bubble story-card ${hasUnseen ? 'has-unseen' : 'is-seen'}`}
+              onClick={() => onOpenStory(group.stories, startIndex)}
             >
               <div className="story-card-media">
-                {group.stories?.[0]?.media_type === 'video' ? (
-                  <video src={resolveImageUrl(group.stories[0].media_url)} muted />
-                ) : group.stories?.[0]?.media_url ? (
-                  <img src={resolveImageUrl(group.stories[0].media_url)} alt={displayName} />
+                {coverStory?.media_type === 'video' ? (
+                  <video src={resolveImageUrl(coverStory.media_url)} muted />
+                ) : coverStory?.media_url ? (
+                  <img src={resolveImageUrl(coverStory.media_url)} alt={displayName} />
                 ) : null}
               </div>
-              <div className="story-avatar-ring">
+              <div className="story-avatar-ring" aria-label={hasUnseen ? 'Historia nueva' : 'Historia vista'}>
                 {avatar ? (
                   <img
                     src={avatar}

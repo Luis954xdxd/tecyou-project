@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { requireSession, bindAuthenticatedActor } = require('../middleware/adminAuth');
+router.use(requireSession);
+router.use(bindAuthenticatedActor('user_id', 'sender_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
@@ -181,7 +184,11 @@ const createMentionNotifications = async ({
 // ===============================
 // ENVIAR RECONOCIMIENTO
 // ===============================
-router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
+router.post(
+  '/send',
+  upload.array('recognitionMedia', 5),
+  bindAuthenticatedActor('user_id', 'sender_id'),
+  async (req, res) => {
   try {
     const {
       sender_id,
@@ -385,7 +392,8 @@ router.post('/send', upload.array('recognitionMedia', 5), async (req, res) => {
     console.error('Error en /send:', err.message);
     res.status(500).send('Error interno al procesar el reconocimiento.');
   }
-});
+  }
+);
 
 // ===============================
 // FEED DE RECONOCIMIENTOS
@@ -394,7 +402,7 @@ router.get('/feed', async (req, res) => {
   try {
     await ensureRepostTable();
     await ensureUserBlocksTable();
-    const viewerId = req.query.viewerId || null;
+    const viewerId = req.authUser.id;
     const feed = await pool.query(`
   SELECT
     r.*,
@@ -693,7 +701,7 @@ router.post('/:id/react', async (req, res) => {
 router.get('/:id/reactions', async (req, res) => {
   try {
     const { id } = req.params;
-    const currentUserId = req.query.userId || null;
+    const currentUserId = req.authUser.id;
     await ensureUserBlocksTable();
 
     const visibilityWhere = `
@@ -838,7 +846,8 @@ router.delete('/:id/favorite', async (req, res) => {
 // Ver si un reconocimiento estÃƒÂ¡ guardado por un usuario
 router.get('/:id/favorite-status/:userId', async (req, res) => {
   try {
-    const { id, userId } = req.params;
+    const { id } = req.params;
+    const userId = req.authUser.id;
 
     const result = await pool.query(
       `SELECT 1
@@ -860,7 +869,7 @@ router.get('/:id/favorite-status/:userId', async (req, res) => {
 // Obtener todos los favoritos de un usuario
 router.get('/favorites/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.authUser.id;
 
     const favorites = await pool.query(
       `SELECT
@@ -1064,7 +1073,7 @@ router.post('/:id/comments', async (req, res) => {
 router.get('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params;
-    const currentUserId = req.query.userId || null;
+    const currentUserId = req.authUser.id;
     await ensureCommentLikesTable();
 
     const comments = await pool.query(

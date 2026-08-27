@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
 
-function NotificationsBell({ userId, onOpenProfile }) {
+function NotificationsBell({ userId, onOpenProfile, onOpenStory }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [openDropdown, setOpenDropdown] = useState(false);
@@ -54,6 +54,9 @@ function NotificationsBell({ userId, onOpenProfile }) {
     }
     if (item.type === 'comment_reply_received') {
       return `${item.actor_name} respondió tu comentario`;
+    }
+    if (item.type === 'story_mention') {
+      return `${item.actor_name} te etiquetó en una historia`;
     }
 
     return item.title || 'Nueva notificación';
@@ -232,8 +235,13 @@ function NotificationsBell({ userId, onOpenProfile }) {
                     <button
                       type="button"
                       className="inline-user-link notification-main-link"
-                      onClick={() => {
-                        if (item.actor_id) onOpenProfile(item.actor_id);
+                      onClick={async () => {
+                        await handleMarkAsRead(item.id);
+                        if (item.type === 'story_mention' && item.reference_id && onOpenStory) {
+                          onOpenStory(item.reference_id);
+                        } else if (item.actor_id) {
+                          onOpenProfile(item.actor_id);
+                        }
                         setOpenDropdown(false);
                       }}
                     >

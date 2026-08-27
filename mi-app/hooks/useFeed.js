@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { API_BASE } from '../constants/api';
+import { authenticatedFetch } from '../utils/authenticatedFetch';
 
 export function useFeed() {
   const [recognitions, setRecognitions] = useState([]);
@@ -10,7 +11,7 @@ export function useFeed() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch(`${API_BASE}/api/recognitions/feed`);
+      const response = await authenticatedFetch(`${API_BASE}/api/recognitions/feed`);
 
       const text = await response.text();
       let data;

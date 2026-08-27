@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { requireSession, bindAuthenticatedActor } = require('../middleware/adminAuth');
+router.use(requireSession);
+router.use(bindAuthenticatedActor('user_id', 'viewer_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
@@ -51,6 +54,63 @@ const upload = multer({
   },
 });
 
+const requireStoryAccess = async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT 1
+       FROM stories s
+       WHERE s.id = $1
+         AND s.expires_at > NOW()
+         AND COALESCE(s.moderation_status, 'visible') = 'visible'
+         AND (
+           s.user_id = $2
+           OR s.visibility_type = 'public'
+           OR (
+             s.visibility_type = 'only_selected'
+             AND EXISTS (
+               SELECT 1 FROM story_audience_rules sar
+               WHERE sar.story_id = s.id AND sar.target_user_id = $2 AND sar.rule_type = 'allow'
+             )
+           )
+           OR (
+             s.visibility_type = 'exclude_selected'
+             AND NOT EXISTS (
+               SELECT 1 FROM story_audience_rules sar
+               WHERE sar.story_id = s.id AND sar.target_user_id = $2 AND sar.rule_type = 'exclude'
+             )
+           )
+         )`,
+      [req.params.id, req.authUser.id]
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Historia no encontrada o no disponible.' });
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const ensureStoryMentionSchema = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS story_mentions (
+      story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      mentioned_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (story_id, mentioned_user_id)
+    )
+  `);
+  await pool.query(`
+    ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+    ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+      CHECK (type IN (
+        'new_follower', 'recognition_received', 'reaction_received',
+        'comment_received', 'comment_reply_received', 'mention_received',
+        'story_mention', 'favorite_received', 'chat_message'
+      ))
+  `);
+};
+
 const parseJsonArray = (value) => {
   if (!value) return [];
   try {
@@ -85,6 +145,7 @@ router.post(
     { name: 'storyMedia', maxCount: 1 },
     { name: 'storyAudio', maxCount: 1 },
   ]),
+  bindAuthenticatedActor('user_id', 'viewer_id'),
   async (req, res) => {
     try {
       const {
@@ -101,12 +162,14 @@ router.post(
         visibility_type,
         selected_users,
         excluded_users,
+        tagged_user_ids,
         media_fit,
         media_position_x,
         media_position_y,
       } = req.body;
 
       await ensureStoryPresentationColumns();
+      await ensureStoryMentionSchema();
 
       if (!user_id) {
         return res.status(400).json({ error: 'Falta user_id.' });
@@ -206,8 +269,18 @@ router.post(
       const story = storyResult.rows[0];
       const storyId = story.id;
 
-      const selectedUsers = parseJsonArray(selected_users);
-      const excludedUsers = parseJsonArray(excluded_users);
+      const taggedUsers = Array.from(new Set(
+        parseJsonArray(tagged_user_ids)
+          .map(Number)
+          .filter((id) => Number.isInteger(id) && id > 0 && id !== Number(user_id))
+      ));
+      const selectedUsers = Array.from(new Set([
+        ...parseJsonArray(selected_users).map(Number),
+        ...(finalVisibility === 'only_selected' ? taggedUsers : []),
+      ])).filter((id) => Number.isInteger(id) && id > 0);
+      const excludedUsers = parseJsonArray(excluded_users)
+        .map(Number)
+        .filter((id) => Number.isInteger(id) && id > 0 && !taggedUsers.includes(id));
 
       if (finalVisibility === 'only_selected' && selectedUsers.length > 0) {
         for (const targetUserId of selectedUsers) {
@@ -235,6 +308,32 @@ router.post(
         }
       }
 
+      if (taggedUsers.length > 0) {
+        const validUsers = await pool.query(
+          `SELECT id FROM users
+           WHERE id = ANY($1::int[])
+             AND COALESCE(account_status, 'active') <> 'disabled'`,
+          [taggedUsers]
+        );
+
+        for (const mentionedUser of validUsers.rows) {
+          const mention = await pool.query(
+            `INSERT INTO story_mentions (story_id, mentioned_user_id)
+             VALUES ($1, $2)
+             ON CONFLICT DO NOTHING
+             RETURNING mentioned_user_id`,
+            [storyId, mentionedUser.id]
+          );
+          if (!mention.rows[0]) continue;
+
+          await pool.query(
+            `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+             VALUES ($1, $2, 'story_mention', 'Te etiquetaron en una historia', $3, $4)`,
+            [mentionedUser.id, user_id, caption?.trim() || null, storyId]
+          );
+        }
+      }
+
       res.status(201).json({
         message: 'Historia creada correctamente.',
         story,
@@ -251,7 +350,8 @@ router.post(
  */
 router.get('/feed/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    await ensureStoryMentionSchema();
+    const userId = req.authUser.id;
 
     const result = await pool.query(
       `
@@ -259,7 +359,23 @@ router.get('/feed/:userId', async (req, res) => {
         s.*,
         u.fullname,
         u.display_name,
-        u.profile_image_url
+        u.profile_image_url,
+        EXISTS (
+          SELECT 1
+          FROM story_views seen
+          WHERE seen.story_id = s.id
+            AND seen.viewer_id = $1
+        ) AS has_viewed,
+        COALESCE((
+          SELECT json_agg(json_build_object(
+            'id', mentioned.id,
+            'display_name', mentioned.display_name,
+            'fullname', mentioned.fullname
+          ) ORDER BY COALESCE(mentioned.display_name, mentioned.fullname))
+          FROM story_mentions sm
+          JOIN users mentioned ON mentioned.id = sm.mentioned_user_id
+          WHERE sm.story_id = s.id
+        ), '[]'::json) AS mentioned_users
       FROM stories s
       JOIN users u ON u.id = s.user_id
       WHERE s.expires_at > NOW()
@@ -301,9 +417,110 @@ router.get('/feed/:userId', async (req, res) => {
 });
 
 /**
+ * Obtener una historia concreta desde una notificacion, respetando privacidad.
+ */
+router.get('/:id', requireStoryAccess, async (req, res) => {
+  try {
+    await ensureStoryMentionSchema();
+    const result = await pool.query(
+      `SELECT
+         s.*,
+         u.fullname,
+         u.display_name,
+         u.profile_image_url,
+         COALESCE((
+           SELECT json_agg(json_build_object(
+             'id', mentioned.id,
+             'display_name', mentioned.display_name,
+             'fullname', mentioned.fullname
+           ) ORDER BY COALESCE(mentioned.display_name, mentioned.fullname))
+           FROM story_mentions sm
+           JOIN users mentioned ON mentioned.id = sm.mentioned_user_id
+           WHERE sm.story_id = s.id
+         ), '[]'::json) AS mentioned_users
+       FROM stories s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.id = $1`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Historia no encontrada.' });
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error obteniendo historia:', error.message);
+    return res.status(500).json({ error: 'No se pudo abrir la historia.' });
+  }
+});
+
+/**
+ * Eliminar manualmente una historia propia y sus datos asociados.
+ */
+router.delete('/:id', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await ensureStoryMentionSchema();
+    const storyId = Number(req.params.id);
+    if (!Number.isInteger(storyId) || storyId <= 0) {
+      return res.status(400).json({ error: 'Historia invalida.' });
+    }
+
+    await client.query('BEGIN');
+    const storyResult = await client.query(
+      `SELECT id, user_id, media_url, music_url
+       FROM stories
+       WHERE id = $1
+       FOR UPDATE`,
+      [storyId]
+    );
+
+    if (!storyResult.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Historia no encontrada.' });
+    }
+
+    const story = storyResult.rows[0];
+    if (Number(story.user_id) !== Number(req.authUser.id)) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Solo el autor puede eliminar esta historia.' });
+    }
+
+    await client.query('DELETE FROM story_comments WHERE story_id = $1', [storyId]);
+    await client.query('DELETE FROM story_reactions WHERE story_id = $1', [storyId]);
+    await client.query('DELETE FROM story_views WHERE story_id = $1', [storyId]);
+    await client.query('DELETE FROM story_audience_rules WHERE story_id = $1', [storyId]);
+    await client.query('DELETE FROM story_mentions WHERE story_id = $1', [storyId]);
+    await client.query(
+      `DELETE FROM notifications WHERE type = 'story_mention' AND reference_id = $1`,
+      [storyId]
+    );
+    await client.query('DELETE FROM stories WHERE id = $1', [storyId]);
+    await client.query('COMMIT');
+
+    const localUrls = [story.media_url, story.music_url]
+      .filter((url) => typeof url === 'string' && url.startsWith('/uploads/stories/'));
+
+    for (const localUrl of new Set(localUrls)) {
+      const filePath = path.join(uploadDir, path.basename(localUrl));
+      fs.unlink(filePath, (unlinkError) => {
+        if (unlinkError && unlinkError.code !== 'ENOENT') {
+          console.error('Error eliminando archivo de historia:', unlinkError.message);
+        }
+      });
+    }
+
+    return res.json({ success: true, deleted_story_id: storyId });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error eliminando historia:', error.message);
+    return res.status(500).json({ error: 'No se pudo eliminar la historia.' });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * Registrar vista
  */
-router.post('/:id/view', async (req, res) => {
+router.post('/:id/view', requireStoryAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { viewer_id } = req.body;
@@ -335,6 +552,14 @@ router.get('/:id/views', async (req, res) => {
   try {
     const { id } = req.params;
 
+    const ownedStory = await pool.query(
+      'SELECT 1 FROM stories WHERE id = $1 AND user_id = $2',
+      [id, req.authUser.id]
+    );
+    if (!ownedStory.rows[0]) {
+      return res.status(403).json({ error: 'Solo el autor puede consultar las visualizaciones.' });
+    }
+
     const result = await pool.query(
       `
       SELECT
@@ -361,7 +586,7 @@ router.get('/:id/views', async (req, res) => {
 /**
  * Reaccionar a historia
  */
-router.post('/:id/react', async (req, res) => {
+router.post('/:id/react', requireStoryAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id, reaction_type } = req.body;
@@ -430,7 +655,7 @@ router.post('/:id/react', async (req, res) => {
 /**
  * Ver reacciones de una historia
  */
-router.get('/:id/reactions', async (req, res) => {
+router.get('/:id/reactions', requireStoryAccess, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -475,7 +700,7 @@ router.get('/:id/reactions', async (req, res) => {
 /**
  * Comentar historia
  */
-router.post('/:id/comments', async (req, res) => {
+router.post('/:id/comments', requireStoryAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { user_id, comment } = req.body;
@@ -503,7 +728,7 @@ router.post('/:id/comments', async (req, res) => {
 /**
  * Obtener comentarios de historia
  */
-router.get('/:id/comments', async (req, res) => {
+router.get('/:id/comments', requireStoryAccess, async (req, res) => {
   try {
     const { id } = req.params;
 

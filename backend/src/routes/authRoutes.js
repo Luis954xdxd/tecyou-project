@@ -216,6 +216,7 @@ router.post('/login', async (req, res) => {
     return res.json({
       message: 'Inicio de sesión exitoso.',
       user: sanitizeUser(user),
+      token: issueSessionToken(user),
     });
   } catch (err) {
     console.error('Error en POST /login:', err.message);

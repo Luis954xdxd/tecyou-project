@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '../constants/api';
+import { SESSION_TOKEN_KEY } from '../utils/authenticatedFetch';
 
 const SESSION_KEY = 'tec_you_user';
 
@@ -53,6 +54,7 @@ export function useAuth() {
       }
 
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
+      await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
       setUser(data.user);
       return { success: true };
 
@@ -102,6 +104,7 @@ export function useAuth() {
   const logout = async () => {
     try {
       await AsyncStorage.removeItem(SESSION_KEY);
+      await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
     } catch (err) {
       console.error('Error cerrando sesión:', err);
     }

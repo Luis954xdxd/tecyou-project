@@ -1,5 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const {
+  requireSession,
+  requireAcademicRole,
+  bindAuthenticatedActor,
+} = require('../middleware/adminAuth');
+router.use(requireSession);
 const pool = require('../db');
 const {
   getUserAchievements,
@@ -155,7 +161,11 @@ router.get('/definitions/frames/all', async (req, res) => {
 // ASIGNAR INSIGNIA MANUALMENTE
 // SOLO MAESTROS
 // ===============================
-router.post('/badges/assign', async (req, res) => {
+router.post(
+  '/badges/assign',
+  requireAcademicRole('teacher'),
+  bindAuthenticatedActor('assigned_by_user_id'),
+  async (req, res) => {
   try {
     const {
       target_user_id,
@@ -192,6 +202,7 @@ router.post('/badges/assign', async (req, res) => {
       message: error.message || 'No se pudo asignar la insignia.',
     });
   }
-});
+  }
+);
 
 module.exports = router;

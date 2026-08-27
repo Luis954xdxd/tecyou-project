@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { requireSession } = require('../middleware/adminAuth');
+router.use(requireSession);
 
 const {
   generateRecognitionText,

@@ -48,7 +48,13 @@ const readSessionToken = (token = '') => {
 const requireSession = async (req, res, next) => {
   try {
     const authorization = req.headers.authorization || '';
-    const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    const bearerToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    // EventSource no permite configurar Authorization. Se admite el token en
+    // query exclusivamente para el canal SSE y se evita para el resto de la API.
+    const sseToken = req.path.startsWith('/events/')
+      ? String(req.query.access_token || '')
+      : '';
+    const token = bearerToken || sseToken;
     const session = readSessionToken(token);
 
     if (!session) {
@@ -93,8 +99,33 @@ const requireSystemRole = (...allowedRoles) => (req, res, next) => {
   return next();
 };
 
+const requireAcademicRole = (...allowedRoles) => (req, res, next) => {
+  if (!req.authUser || !allowedRoles.includes(req.authUser.role)) {
+    return res.status(403).json({ error: 'Tu rol academico no permite realizar esta accion.' });
+  }
+  return next();
+};
+
+const requireSelfParam = (paramName = 'id') => (req, res, next) => {
+  if (Number(req.params[paramName]) !== Number(req.authUser?.id)) {
+    return res.status(403).json({ error: 'No puedes realizar esta accion sobre otra cuenta.' });
+  }
+  return next();
+};
+
+const bindAuthenticatedActor = (...fieldNames) => (req, res, next) => {
+  req.body = req.body || {};
+  fieldNames.forEach((fieldName) => {
+    req.body[fieldName] = req.authUser.id;
+  });
+  return next();
+};
+
 module.exports = {
   issueSessionToken,
   requireSession,
   requireSystemRole,
+  requireAcademicRole,
+  requireSelfParam,
+  bindAuthenticatedActor,
 };

@@ -16,6 +16,7 @@ import Avatar from '../../components/Avatar';
 import { colors } from '../../constants/colors';
 import { fontSize, spacing, radius, fontWeight, shadow } from '../../constants/theme';
 import { resolveImageUrl } from '../utils/getInitials';
+import { authenticatedFetch } from '../../utils/authenticatedFetch';
 
 export default function ExploreScreen() {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ export default function ExploreScreen() {
     try {
       const url = `${API_BASE}/api/users/all?currentUserId=${user?.id}`;
       console.log("📡 Fetching:", url);
-      const res = await fetch(url);
+      const res = await authenticatedFetch(url);
       const text = await res.text();
       console.log("📥 Respuesta:", text.substring(0, 300));
       const data = JSON.parse(text);  // parsear manualmente para mejor error
@@ -59,7 +60,7 @@ export default function ExploreScreen() {
     const isFollowing = followingMap[targetId];
     setFollowingMap(prev => ({ ...prev, [targetId]: !isFollowing }));
     try {
-      await fetch(`${API_BASE}/api/users/${targetId}/follow`, {
+      await authenticatedFetch(`${API_BASE}/api/users/${targetId}/follow`, {
         method: isFollowing ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ follower_id: user?.id }),

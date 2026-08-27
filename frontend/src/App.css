@@ -9621,7 +9621,68 @@ body.dark .create-story-close-btn {
 }
 
 .story-progress-fill.active {
-  animation: storyProgress 5s linear forwards;
+  animation: storyProgress var(--story-progress-duration, 30s) linear forwards;
+}
+
+.fb-story-viewer-overlay.is-paused .story-progress-fill.active {
+  animation-play-state: paused;
+}
+
+.story-card.has-unseen .story-avatar-ring {
+  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+}
+
+.story-card.is-seen .story-avatar-ring {
+  background: #6b7280 !important;
+}
+
+.fb-story-card {
+  position: relative;
+}
+
+.fb-story-tap-zone {
+  position: absolute;
+  top: 78px;
+  bottom: 86px;
+  width: 32%;
+  z-index: 4;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.fb-story-tap-zone.previous {
+  left: 0;
+}
+
+.fb-story-tap-zone.following {
+  right: 0;
+}
+
+.fb-story-viewer-overlay.is-paused .fb-story-card::after {
+  content: 'Pausa';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .fb-story-nav {
+    display: none;
+  }
+
+  .fb-story-tap-zone {
+    width: 38%;
+  }
 }
 
 @keyframes storyProgress {
@@ -16879,6 +16940,7 @@ body,
 
 .fb-story-bottom-actions .story-comment-form {
   flex: 1;
+  position: relative;
 }
 
 .fb-story-bottom-actions .story-comment-form input {
@@ -16886,6 +16948,34 @@ body,
   background: transparent;
   border: 2px solid white;
   color: white;
+  width: 100%;
+  padding-right: 52px;
+}
+
+.story-comment-send-btn {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  cursor: pointer;
+}
+
+.story-comment-send-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.story-comment-send-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .fb-story-bottom-actions .story-viewer-reactions {
@@ -17668,6 +17758,169 @@ body,
   cursor: pointer;
 }
 .fb-story-report-btn:hover { background: #c7352d; }
+.fb-story-report-btn.is-delete {
+  background: rgba(185, 28, 28, 0.86);
+}
+
+/* Story activity drawer: centered by default, details only when requested. */
+.fb-story-viewer-overlay {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.fb-story-viewer-overlay.has-insights {
+  grid-template-columns: 360px minmax(0, 1fr) !important;
+}
+
+.fb-story-close-floating {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+}
+
+.fb-story-insights {
+  min-width: 0;
+  height: 100vh;
+  padding-top: 72px;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.fb-story-insights-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fb-story-insights-heading h2,
+.fb-story-insights-heading p {
+  margin: 0;
+}
+
+.fb-story-insights-heading p {
+  margin-top: 4px;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.fb-story-insights-heading button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #3a3b3c;
+  cursor: pointer;
+}
+
+.fb-story-insights-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.fb-story-insights-summary > div {
+  display: grid;
+  gap: 3px;
+  padding: 12px 6px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.fb-story-insights-summary strong {
+  font-size: 20px;
+}
+
+.fb-story-insights-summary small {
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.fb-story-comment-row {
+  align-items: flex-start !important;
+}
+
+.fb-story-comment-row small {
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+}
+
+.fb-story-owner-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fb-story-owner-actions .fb-story-report-btn {
+  margin-left: 0;
+}
+
+.fb-story-report-btn.is-insights:hover,
+.fb-story-report-btn.is-insights.active {
+  background: #2563eb;
+}
+
+@media (max-width: 820px) {
+  .fb-story-viewer-overlay.has-insights {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .fb-story-viewer-overlay.has-insights .fb-story-stage {
+    display: none;
+  }
+
+  .fb-story-insights {
+    width: 100%;
+    height: 100vh;
+    border-right: 0;
+  }
+}
+.fb-story-report-btn.is-delete:hover {
+  background: #991b1b;
+}
+.story-tag-field { position: relative; }
+.story-tag-suggestions {
+  display: grid;
+  max-height: 230px;
+  overflow-y: auto;
+  border: 1px solid #d8dee9;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+.story-tag-suggestions button {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid #edf0f5;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.story-tag-suggestions button:hover { background: #f5f7fb; }
+.story-tag-suggestions small { color: #667085; }
+.story-tagged-users { display: flex; flex-wrap: wrap; gap: 7px; }
+.story-tagged-users button {
+  border: 1px solid #b9cdf8;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eef4ff;
+  color: #174ea6;
+  cursor: pointer;
+}
+.fb-story-mentions {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #dbeafe;
+}
 .tec-chat-bubble { position: relative; }
 .tec-chat-report-message {
   border: 0;
@@ -18657,6 +18910,57 @@ body.comments-modal-open .comment-inline-notice {
   body.comments-modal-open .comment-form { grid-row: 5 !important; }
 }
 
+/* Etiquetas de historias: contraste consistente en ambos temas. */
+.App.dark .story-tag-suggestions {
+  background: #111827 !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.42) !important;
+}
+
+.App.dark .story-tag-suggestions button {
+  background: #111827 !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .story-tag-suggestions button:hover,
+.App.dark .story-tag-suggestions button:focus-visible {
+  background: #1e293b !important;
+}
+
+.App.dark .story-tag-suggestions strong {
+  color: #f8fafc !important;
+}
+
+.App.dark .story-tag-suggestions small {
+  color: #94a3b8 !important;
+}
+
+.App.dark .story-tagged-users button {
+  background: rgba(37, 99, 235, 0.2) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+  color: #bfdbfe !important;
+}
+
+.App:not(.dark) .story-tag-suggestions {
+  background: #ffffff !important;
+  border-color: #d8dee9 !important;
+}
+
+.App:not(.dark) .story-tag-suggestions button {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.App:not(.dark) .story-tag-suggestions button:hover,
+.App:not(.dark) .story-tag-suggestions button:focus-visible {
+  background: #f1f5f9 !important;
+}
+
+.App:not(.dark) .story-tag-suggestions small {
+  color: #64748b !important;
+}
+
 /* =========================================================
    FINAL PASS: story framing, synced lyrics and safer comments close
 ========================================================= */
@@ -19023,14 +19327,45 @@ body.comments-modal-open .instagram-comments-close-floating {
 
 .fb-story-bottom-actions .story-comment-form {
   width: 100% !important;
+  position: relative !important;
 }
 
 .fb-story-bottom-actions .story-comment-form input {
   width: 100% !important;
   min-height: 44px !important;
-  padding: 0 16px !important;
+  padding: 0 54px 0 16px !important;
   border: 1px solid rgba(226, 232, 240, 0.38) !important;
   background: rgba(15, 23, 42, 0.78) !important;
+}
+
+.fb-story-bottom-actions .story-comment-send-btn,
+.fb-story-bottom-actions .story-comment-send-btn:hover,
+.fb-story-bottom-actions .story-comment-send-btn:active,
+.fb-story-bottom-actions .story-comment-send-btn:focus {
+  position: absolute !important;
+  top: 50% !important;
+  right: 6px !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  line-height: 0 !important;
+  border-radius: 50% !important;
+  transform: translateY(-50%) !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+.fb-story-bottom-actions .story-comment-send-btn svg {
+  display: block;
+  margin: 0;
+  transform: none !important;
 }
 
 .fb-story-bottom-actions .story-viewer-reactions {

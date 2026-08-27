@@ -40,6 +40,18 @@ if (existingSessionToken) {
   axios.defaults.headers.common.Authorization = `Bearer ${existingSessionToken}`;
 }
 
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/api/auth/')) {
+      clearUserSession();
+      delete axios.defaults.headers.common.Authorization;
+      if (window.location.pathname !== '/login') window.location.assign('/login');
+    }
+    return Promise.reject(error);
+  }
+);
+
 function LucideIcon({ name, size = 22 }) {
   const common = {
     width: size,
@@ -221,7 +233,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   return localStorage.getItem('hideAvatarFrames') === 'true';
 });
 
-  const [user, setUser] = useState(() => getUserSession());
+  const [user, setUser] = useState(() => getSessionToken() ? getUserSession() : null);
   const [recognitions, setRecognitions] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -301,6 +313,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
     isOpen: false,
     stories: [],
     currentIndex: 0,
+    groupIndex: -1,
   });
 
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
@@ -598,19 +611,27 @@ const handleToggleAvatarFrames = () => {
     }
   };
 
-  const openStoryViewer = async (userStories, index = 0) => {
-    const allStorySequence = groupedStories.flatMap((group) => group.stories || []);
-    const selectedStory = userStories[index];
-    const globalIndex = allStorySequence.findIndex(
-      (story) => Number(story.id) === Number(selectedStory?.id)
+  const markStoryAsViewed = (storyId) => {
+    setStories((currentStories) =>
+      currentStories.map((story) =>
+        Number(story.id) === Number(storyId) ? { ...story, has_viewed: true } : story
+      )
     );
-    const storiesToShow = allStorySequence.length ? allStorySequence : userStories;
-    const startIndex = globalIndex >= 0 ? globalIndex : index;
+  };
+
+  const openStoryViewer = async (userStories, index = 0) => {
+    const storiesToShow = Array.isArray(userStories) ? userStories : [];
+    const startIndex = Math.min(Math.max(index, 0), Math.max(storiesToShow.length - 1, 0));
+    const selectedStory = storiesToShow[startIndex];
+    const groupIndex = groupedStories.findIndex((group) =>
+      group.stories.some((story) => Number(story.id) === Number(selectedStory?.id))
+    );
 
     setStoryViewer({
       isOpen: true,
       stories: storiesToShow,
       currentIndex: startIndex,
+      groupIndex,
     });
 
     const story = storiesToShow[startIndex];
@@ -621,6 +642,7 @@ const handleToggleAvatarFrames = () => {
         viewer_id: user.id,
       });
 
+      markStoryAsViewed(story.id);
       await fetchStoryViews(story.id);
       await fetchStoryReactions(story.id);
       await fetchStoryComments(story.id);
@@ -634,6 +656,7 @@ const handleToggleAvatarFrames = () => {
       isOpen: false,
       stories: [],
       currentIndex: 0,
+      groupIndex: -1,
     });
   };
 
@@ -642,17 +665,28 @@ const handleToggleAvatarFrames = () => {
 
     const nextIndex = storyViewer.currentIndex + 1;
 
+    let nextStoryItem = storyViewer.stories[nextIndex];
+
     if (nextIndex >= storyViewer.stories.length) {
-      closeStoryViewer();
-      return;
+      const nextGroupIndex = storyViewer.groupIndex + 1;
+      const nextGroup = groupedStories[nextGroupIndex];
+      if (!nextGroup?.stories?.length) {
+        closeStoryViewer();
+        return;
+      }
+      nextStoryItem = nextGroup.stories[0];
+      setStoryViewer({
+        isOpen: true,
+        stories: nextGroup.stories,
+        currentIndex: 0,
+        groupIndex: nextGroupIndex,
+      });
+    } else {
+      setStoryViewer((prev) => ({
+        ...prev,
+        currentIndex: nextIndex,
+      }));
     }
-
-    const nextStoryItem = storyViewer.stories[nextIndex];
-
-    setStoryViewer((prev) => ({
-      ...prev,
-      currentIndex: nextIndex,
-    }));
 
     if (user?.id && nextStoryItem) {
       try {
@@ -660,6 +694,7 @@ const handleToggleAvatarFrames = () => {
           viewer_id: user.id,
         });
 
+        markStoryAsViewed(nextStoryItem.id);
         await fetchStoryViews(nextStoryItem.id);
         await fetchStoryReactions(nextStoryItem.id);
         await fetchStoryComments(nextStoryItem.id);
@@ -670,15 +705,27 @@ const handleToggleAvatarFrames = () => {
   };
 
   const prevStory = async () => {
-    if (storyViewer.currentIndex <= 0) return;
+    let prevIndex = storyViewer.currentIndex - 1;
+    let prevStoryItem = storyViewer.stories[prevIndex];
 
-    const prevIndex = storyViewer.currentIndex - 1;
-    const prevStoryItem = storyViewer.stories[prevIndex];
-
-    setStoryViewer((prev) => ({
-      ...prev,
-      currentIndex: prevIndex,
-    }));
+    if (prevIndex < 0) {
+      const prevGroupIndex = storyViewer.groupIndex - 1;
+      const prevGroup = groupedStories[prevGroupIndex];
+      if (!prevGroup?.stories?.length) return;
+      prevIndex = prevGroup.stories.length - 1;
+      prevStoryItem = prevGroup.stories[prevIndex];
+      setStoryViewer({
+        isOpen: true,
+        stories: prevGroup.stories,
+        currentIndex: prevIndex,
+        groupIndex: prevGroupIndex,
+      });
+    } else {
+      setStoryViewer((prev) => ({
+        ...prev,
+        currentIndex: prevIndex,
+      }));
+    }
 
     if (user?.id && prevStoryItem) {
       try {
@@ -686,6 +733,7 @@ const handleToggleAvatarFrames = () => {
           viewer_id: user.id,
         });
 
+        markStoryAsViewed(prevStoryItem.id);
         await fetchStoryViews(prevStoryItem.id);
         await fetchStoryReactions(prevStoryItem.id);
         await fetchStoryComments(prevStoryItem.id);
@@ -715,7 +763,18 @@ const handleToggleAvatarFrames = () => {
       });
     });
 
-    return Object.values(groups);
+    return Object.values(groups)
+      .map((group) => ({
+        ...group,
+        stories: group.stories.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        ),
+      }))
+      .sort((a, b) => {
+        const latestA = Math.max(...a.stories.map((story) => new Date(story.created_at).getTime()));
+        const latestB = Math.max(...b.stories.map((story) => new Date(story.created_at).getTime()));
+        return latestB - latestA;
+      });
   }, [stories]);
 
   const storyUserIds = useMemo(
@@ -761,6 +820,59 @@ const handleToggleAvatarFrames = () => {
       console.error('ERROR RESPONSE:', error.response?.data);
 
       alert(error.response?.data?.error || 'No se pudo subir la historia.');
+    }
+  };
+
+  const openStoryFromNotification = async (storyId) => {
+    try {
+      const response = await axios.get(`${API_BASE}/api/stories/${storyId}`);
+      await openStoryViewer([response.data], 0);
+    } catch (error) {
+      console.error('Error abriendo historia desde notificacion:', error);
+      setAppToast({
+        type: 'error',
+        message: error.response?.data?.error || 'La historia ya no esta disponible.',
+      });
+    }
+  };
+
+  const handleDeleteStory = async (storyId) => {
+    try {
+      await axios.delete(`${API_BASE}/api/stories/${storyId}`);
+
+      setStories((prev) => prev.filter((story) => Number(story.id) !== Number(storyId)));
+      setStoryCommentsMap((prev) => {
+        const next = { ...prev };
+        delete next[storyId];
+        return next;
+      });
+      setStoryReactionsMap((prev) => {
+        const next = { ...prev };
+        delete next[storyId];
+        return next;
+      });
+      setStoryViewsMap((prev) => {
+        const next = { ...prev };
+        delete next[storyId];
+        return next;
+      });
+      setStoryViewer((prev) => {
+        const remaining = prev.stories.filter((story) => Number(story.id) !== Number(storyId));
+        if (remaining.length === 0) {
+          return { isOpen: false, stories: [], currentIndex: 0 };
+        }
+        return {
+          ...prev,
+          stories: remaining,
+          currentIndex: Math.min(prev.currentIndex, remaining.length - 1),
+        };
+      });
+      setAppToast({ type: 'success', message: 'Historia eliminada correctamente.' });
+    } catch (error) {
+      console.error('Error al eliminar historia:', error);
+      const message = error.response?.data?.error || 'No se pudo eliminar la historia.';
+      setAppToast({ type: 'error', message });
+      throw error;
     }
   };
 
@@ -1142,7 +1254,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
     fetchChatConversations();
 
-    const events = new EventSource(`${API_BASE}/api/chat/events/${user.id}`);
+    const token = getSessionToken();
+    const events = new EventSource(
+      `${API_BASE}/api/chat/events/${user.id}?access_token=${encodeURIComponent(token)}`
+    );
 
     events.addEventListener('presence_snapshot', (event) => {
       const snapshot = JSON.parse(event.data || '[]');
@@ -2397,7 +2512,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             >
             {'\uD83D\uDC65'}
             </button>
-            <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} />
+            <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} onOpenStory={openStoryFromNotification} />
 
             <ProfileDropdown
               user={user}
@@ -2654,7 +2769,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               onlineUsers={onlineUsers}
             />
 
-            <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} />
+            <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} onOpenStory={openStoryFromNotification} />
             <ActivityPanel userId={user?.id} />
           </aside>
         </section>
@@ -3598,6 +3713,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         onPrev={prevStory}
         onReact={handleStoryReaction}
         onComment={handleStoryComment}
+        onDelete={handleDeleteStory}
         comments={storyCommentsMap}
         reactions={storyReactionsMap}
         views={storyViewsMap}
