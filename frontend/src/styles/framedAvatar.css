@@ -592,3 +592,49 @@
     0 10px 24px rgba(15, 23, 42, 0.22),
     0 0 0 4px rgba(99, 102, 241, 0.12) !important;
 }
+
+/* =========================================================
+   STORY RING FINAL: solo contorno azul/morado, sin pintar foto
+========================================================= */
+
+.framed-avatar.has-story-ring::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  width: calc(var(--story-ring-size, 100%) - 16px);
+  height: calc(var(--story-ring-size, 100%) - 16px);
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    #38bdf8,
+    #2563eb,
+    #7c3aed,
+    #a855f7,
+    #38bdf8
+  );
+  animation: tecStoryRingSpin 3.2s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.32));
+  pointer-events: none;
+}
+
+.framed-avatar.has-story-ring::after {
+  display: none !important;
+}
+
+.framed-avatar.has-story-ring .framed-avatar-circle {
+  z-index: 2;
+  border: 3px solid #020617 !important;
+  box-shadow: 0 0 0 3px #020617 !important;
+}
+
+.framed-avatar.size-nav { --story-ring-size: 64px; }
+.framed-avatar.size-feed { --story-ring-size: 74px; }
+.framed-avatar.size-directory { --story-ring-size: 82px; }
+.framed-avatar.size-activity { --story-ring-size: 70px; }
+.framed-avatar.size-mini { --story-ring-size: 52px; }
+.framed-avatar.size-public { --story-ring-size: 164px; }
+.framed-avatar.size-profile { --story-ring-size: 196px; }
+
+@keyframes tecStoryRingSpin {
+  to { transform: rotate(360deg); }
+}

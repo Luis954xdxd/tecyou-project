@@ -19,9 +19,18 @@ function StoryViewer({
   const [commentText, setCommentText] = useState('');
   const [showStoryReport, setShowStoryReport] = useState(false);
   const [reportNotice, setReportNotice] = useState('');
+  const [activeLyricIndex, setActiveLyricIndex] = useState(0);
+  const [audioDurationMs, setAudioDurationMs] = useState(0);
   const audioRef = useRef(null);
   const videoTimerRef = useRef(null);
   const currentStory = storyViewer?.stories?.[storyViewer.currentIndex];
+  const lyricLines = useMemo(() => (
+    (currentStory?.music_lyrics || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, 8)
+  ), [currentStory?.music_lyrics]);
 
   const reactionMeta = useMemo(
     () => ({
@@ -52,6 +61,10 @@ function StoryViewer({
 
     const handleLoadedMetadata = async () => {
       try {
+        const availableDuration = Number.isFinite(audio.duration)
+          ? Math.max((audio.duration - startAt) * 1000, 0)
+          : 0;
+        setAudioDurationMs(availableDuration);
         audio.currentTime = startAt;
         await audio.play();
       } catch (error) {
@@ -64,6 +77,7 @@ function StoryViewer({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.pause();
       audio.currentTime = 0;
+      setAudioDurationMs(0);
     };
   }, [currentStory]);
 
@@ -72,6 +86,18 @@ function StoryViewer({
       if (videoTimerRef.current) clearTimeout(videoTimerRef.current);
     };
   }, [currentStory]);
+
+  useEffect(() => {
+    setActiveLyricIndex(0);
+    if (lyricLines.length <= 1) return undefined;
+    const storyDurationMs = Number(currentStory?.duration_seconds || 30) * 1000;
+    const syncDurationMs = audioDurationMs || storyDurationMs;
+    const lineDurationMs = Math.min(Math.max(syncDurationMs / lyricLines.length, 1200), 4200);
+    const timer = setInterval(() => {
+      setActiveLyricIndex((prev) => (prev + 1) % lyricLines.length);
+    }, lineDurationMs);
+    return () => clearInterval(timer);
+  }, [audioDurationMs, currentStory?.duration_seconds, currentStory?.id, lyricLines.length]);
 
   if (!storyViewer?.isOpen || !currentStory) return null;
 
@@ -82,6 +108,17 @@ function StoryViewer({
 
   const mediaSrc = resolveUrl(currentStory.media_url);
   const audioSrc = resolveUrl(currentStory.music_url);
+  const mediaStyle = {
+    '--story-media-fit': currentStory.media_fit || 'cover',
+    '--story-media-position': `${Number(currentStory.media_position_x ?? 50)}% ${Number(currentStory.media_position_y ?? 50)}%`,
+  };
+  const lyricsStyle = {
+    '--lyrics-x': `${Number(currentStory.lyrics_position_x ?? 50)}%`,
+    '--lyrics-y': `${Number(currentStory.lyrics_position_y ?? 76)}%`,
+  };
+  const visibleLyrics = lyricLines
+    .map((line, index) => ({ line, index }))
+    .filter(({ index }) => Math.abs(index - activeLyricIndex) <= 1);
   const authorName = currentStory.display_name || currentStory.fullname || 'Usuario';
   const authorAvatar = resolveUrl(currentStory.profile_image_url);
   const storyComments = comments?.[currentStory.id] || [];
@@ -219,13 +256,23 @@ function StoryViewer({
               autoPlay
               controls
               className="story-viewer-video"
+              style={mediaStyle}
               onLoadedMetadata={handleVideoMetadata}
               onEnded={handleVideoEnded}
             />
           ) : (
-            <img src={mediaSrc} alt="Historia" className="story-viewer-image" />
+            <img src={mediaSrc} alt="Historia" className="story-viewer-image" style={mediaStyle} />
           )}
           {currentStory.caption && <p className="fb-story-caption">{currentStory.caption}</p>}
+          {currentStory.show_lyrics !== false && lyricLines.length > 0 && (
+            <div className="fb-story-lyrics" aria-label="Letra de la cancion" style={lyricsStyle}>
+              {visibleLyrics.map(({ line, index }) => (
+                <span key={`${line}-${index}`} className={index === activeLyricIndex ? 'active' : ''}>
+                  {line}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {audioSrc && <audio ref={audioRef} src={audioSrc} preload="auto" />}

@@ -34,7 +34,7 @@
 .admin-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .admin-metric-card { background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 8px; padding: 19px; display: flex; gap: 14px; align-items: center; }
 .admin-metric-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; }
-.admin-metric-icon.blue { background: #e8f1ff; color: #2563eb; }.admin-metric-icon.violet { background: #eeeafe; color: #6d28d9; }.admin-metric-icon.amber { background: #fff4d6; color: #b45309; }.admin-metric-icon.red { background: #fee9e8; color: #dc2626; }
+.admin-metric-icon.blue { background: #e8f1ff; color: #2563eb; }.admin-metric-icon.violet { background: #eeeafe; color: #6d28d9; }.admin-metric-icon.amber { background: #fff4d6; color: #b45309; }.admin-metric-icon.red { background: #fee9e8; color: #dc2626; }.admin-metric-icon.green { background: #dcfce7; color: #16a34a; }
 .admin-metric-card div { display: flex; flex-direction: column; gap: 3px; }.admin-metric-card small { color: var(--admin-muted); }.admin-metric-card strong { font-size: 27px; }
 .admin-panel-card { margin-top: 24px; background: var(--admin-surface); border: 1px solid var(--admin-border); border-radius: 8px; overflow: hidden; }
 .admin-dashboard-content .admin-panel-card { margin-top: 0; }
@@ -74,3 +74,164 @@
 
 @media (max-width: 1050px) { .admin-metrics { grid-template-columns: repeat(2, 1fr); }.admin-recent-user { grid-template-columns: 42px 1fr 120px; }.admin-recent-user time { display: none; } }
 @media (max-width: 760px) { .admin-app-shell { grid-template-columns: 1fr; }.admin-sidebar { position: static; height: auto; padding: 14px; }.admin-navigation { display: flex; overflow-x: auto; margin-top: 14px; }.admin-navigation button { flex: 0 0 auto; }.admin-sidebar-footer { display: flex; }.admin-main { padding: 0 14px 28px; }.admin-topbar { min-height: 82px; }.admin-account-chip { display: none; }.admin-metrics { grid-template-columns: 1fr; }.admin-users-toolbar { flex-direction: column; }.admin-users-toolbar select { width: 100%; }.admin-recent-user { grid-template-columns: 42px 1fr; }.admin-recent-user .admin-status { display: none; }.admin-reported-content { grid-template-columns: 1fr; }.admin-reported-content img, .admin-reported-content video { max-height: 220px; }.admin-report-actions { justify-content: stretch; }.admin-report-actions button { flex: 1 1 150px; justify-content: center; } }
+
+/* =========================================================
+   FINAL ADMIN POLISH: dark mode contrast and usable filters
+========================================================= */
+
+.admin-users-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(210px, 260px);
+  align-items: center;
+}
+
+.admin-users-toolbar label {
+  min-width: 0;
+}
+
+.admin-users-toolbar > select {
+  width: 100%;
+  flex-basis: auto;
+}
+
+.App.dark .admin-app-shell,
+body.dark .admin-app-shell {
+  --admin-bg: #071120;
+  --admin-surface: #101b2e;
+  --admin-border: #263650;
+  --admin-text: #f8fafc;
+  --admin-muted: #a8b3c7;
+  --admin-primary: #8b8cff;
+  --admin-nav: #08111f;
+  background: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+
+.App.dark .admin-panel-card,
+.App.dark .admin-metric-card,
+.App.dark .admin-account-chip,
+.App.dark .admin-report-card,
+.App.dark .admin-report-help,
+.App.dark .admin-action-modal,
+body.dark .admin-panel-card,
+body.dark .admin-metric-card,
+body.dark .admin-account-chip,
+body.dark .admin-report-card,
+body.dark .admin-report-help,
+body.dark .admin-action-modal {
+  background: #101b2e !important;
+  border-color: #263650 !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .admin-metric-card small,
+.App.dark .admin-section-heading p,
+.App.dark .admin-recent-user small,
+.App.dark .admin-table-user small,
+.App.dark .admin-audit-list p,
+.App.dark .admin-audit-list small,
+.App.dark .admin-audit-list time,
+.App.dark .admin-report-head time,
+.App.dark .admin-report-reason span,
+.App.dark .admin-empty,
+body.dark .admin-metric-card small,
+body.dark .admin-section-heading p,
+body.dark .admin-recent-user small,
+body.dark .admin-table-user small,
+body.dark .admin-audit-list p,
+body.dark .admin-audit-list small,
+body.dark .admin-audit-list time,
+body.dark .admin-report-head time,
+body.dark .admin-report-reason span,
+body.dark .admin-empty {
+  color: #a8b3c7 !important;
+}
+
+.App.dark .admin-users-table th,
+body.dark .admin-users-table th {
+  background: #17243a !important;
+  color: #c7d2e5 !important;
+}
+
+.App.dark .admin-users-table td,
+.App.dark .admin-recent-user,
+.App.dark .admin-section-heading,
+.App.dark .admin-users-toolbar,
+body.dark .admin-users-table td,
+body.dark .admin-recent-user,
+body.dark .admin-section-heading,
+body.dark .admin-users-toolbar {
+  background: #101b2e !important;
+  border-color: #263650 !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .admin-users-toolbar label,
+.App.dark .admin-users-toolbar input,
+.App.dark .admin-users-toolbar select,
+.App.dark .admin-role-select,
+.App.dark .admin-manage-btn,
+.App.dark .admin-report-actions button,
+.App.dark .admin-section-heading button,
+body.dark .admin-users-toolbar label,
+body.dark .admin-users-toolbar input,
+body.dark .admin-users-toolbar select,
+body.dark .admin-role-select,
+body.dark .admin-manage-btn,
+body.dark .admin-report-actions button,
+body.dark .admin-section-heading button {
+  background: #1a273b !important;
+  border-color: #354760 !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .admin-reported-content,
+body.dark .admin-reported-content {
+  background: #17243a !important;
+  border-color: #354760 !important;
+}
+
+.App.dark .admin-report-details,
+body.dark .admin-report-details {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fde68a !important;
+}
+
+.App.dark .admin-report-resolution,
+body.dark .admin-report-resolution {
+  background: rgba(59, 130, 246, 0.14) !important;
+  color: #bfdbfe !important;
+}
+
+.App.dark .admin-account-chip img,
+body.dark .admin-account-chip img {
+  border: 2px solid rgba(139, 140, 255, 0.55);
+}
+
+@media (max-width: 760px) {
+  .admin-users-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-error-action {
+  margin-left: auto !important;
+  min-height: 32px !important;
+  border: 1px solid rgba(185, 28, 28, 0.2) !important;
+  border-radius: 999px !important;
+  padding: 0 12px !important;
+  background: #ffffff !important;
+  color: #991b1b !important;
+  font-weight: 900 !important;
+}
+
+.admin-error .admin-error-action + button {
+  margin-left: 4px !important;
+}
+
+.App.dark .admin-error-action,
+body.dark .admin-error-action {
+  background: rgba(127, 29, 29, 0.34) !important;
+  border-color: rgba(248, 113, 113, 0.32) !important;
+  color: #fecaca !important;
+}

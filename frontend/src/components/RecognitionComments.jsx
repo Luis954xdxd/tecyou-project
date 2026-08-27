@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
+import { Flag, Heart, Send, Trash2, X } from 'lucide-react';
 import ReportDialog from './ReportDialog';
 
 const API_BASE = 'http://localhost:5000';
@@ -13,6 +14,7 @@ function RecognitionComments({
   onOpenProfile,
   onCommentAdded,
   onCommentDeleted,
+  onCommentsSynced,
 }) {
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState('');
@@ -35,6 +37,8 @@ function RecognitionComments({
   const [deletingComments, setDeletingComments] = useState({});
   const [reportingComment, setReportingComment] = useState(null);
   const [reportNotice, setReportNotice] = useState('');
+  const [commentNotice, setCommentNotice] = useState('');
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
   const [mentionSuggestions, setMentionSuggestions] = useState([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
@@ -42,7 +46,7 @@ function RecognitionComments({
     type: 'comment',
     commentId: null,
   });
-  const [mentionQuery, setMentionQuery] = useState('');
+  const [, setMentionQuery] = useState('');
 
   const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -80,7 +84,9 @@ function RecognitionComments({
       const response = await axios.get(
         `${API_BASE}/api/recognitions/${recognitionId}/comments?userId=${currentUserId}`
       );
-      setComments(response.data);
+      const nextComments = Array.isArray(response.data) ? response.data : [];
+      setComments(nextComments);
+      onCommentsSynced?.(recognitionId, countCommentTree(nextComments));
     } catch (error) {
       console.error('Error al obtener comentarios:', error);
     } finally {
@@ -93,6 +99,28 @@ function RecognitionComments({
       fetchComments();
     }
   }, [showComments, recognitionId]);
+
+  const recognitionMedia = useMemo(() => {
+    if (!Array.isArray(recognition?.media)) return [];
+    return recognition.media
+      .filter((item) => item?.media_url)
+      .map((item) => ({ ...item, fullUrl: resolveExternalImageUrl?.(item.media_url) || resolveImageUrl(item.media_url) }));
+  }, [recognition?.media, resolveExternalImageUrl]);
+
+  const activeMedia = recognitionMedia[Math.min(activeMediaIndex, Math.max(recognitionMedia.length - 1, 0))];
+
+  useEffect(() => {
+    setActiveMediaIndex(0);
+  }, [recognitionId]);
+
+  function countCommentTree(items = []) {
+    return items.reduce((total, item) => total + 1 + countCommentTree(item.replies || []), 0);
+  }
+
+  const goToMedia = (nextIndex) => {
+    if (recognitionMedia.length <= 1) return;
+    setActiveMediaIndex((nextIndex + recognitionMedia.length) % recognitionMedia.length);
+  };
 
 
   useEffect(() => {
@@ -257,7 +285,8 @@ function RecognitionComments({
       onCommentAdded?.(recognitionId);
     } catch (error) {
       console.error('Error al enviar comentario:', error);
-      alert(error.response?.data?.error || 'No se pudo enviar el comentario.');
+      setCommentNotice(error.response?.data?.error || 'No se pudo enviar el comentario.');
+      setTimeout(() => setCommentNotice(''), 3500);
     } finally {
       setSendingComment(false);
     }
@@ -293,7 +322,8 @@ function RecognitionComments({
       onCommentAdded?.(recognitionId);
     } catch (error) {
       console.error('Error al responder comentario:', error);
-      alert(error.response?.data?.error || 'No se pudo enviar la respuesta.');
+      setCommentNotice(error.response?.data?.error || 'No se pudo enviar la respuesta.');
+      setTimeout(() => setCommentNotice(''), 3500);
     } finally {
       setReplyLoadingMap((prev) => ({
         ...prev,
@@ -312,7 +342,8 @@ function RecognitionComments({
       await fetchComments();
     } catch (error) {
       console.error('Error al dar like al comentario:', error);
-      alert(error.response?.data?.error || 'No se pudo actualizar el like.');
+      setCommentNotice(error.response?.data?.error || 'No se pudo actualizar el like.');
+      setTimeout(() => setCommentNotice(''), 3500);
     } finally {
       setLikingComments((prev) => ({ ...prev, [commentId]: false }));
     }
@@ -330,7 +361,8 @@ function RecognitionComments({
       onCommentDeleted?.(recognitionId, Number(response.data?.deleted_count || 1));
     } catch (error) {
       console.error('Error al eliminar comentario:', error);
-      alert(error.response?.data?.error || 'No se pudo eliminar el comentario.');
+      setCommentNotice(error.response?.data?.error || 'No se pudo eliminar el comentario.');
+      setTimeout(() => setCommentNotice(''), 3500);
     } finally {
       setDeletingComments((prev) => ({ ...prev, [commentId]: false }));
     }
@@ -455,7 +487,7 @@ function RecognitionComments({
                   onClick={() => handleDeleteComment(item.id)}
                   disabled={Boolean(deletingComments[item.id])}
                 >
-                  {deletingComments[item.id] ? 'Eliminando...' : 'Eliminar'}
+                  {deletingComments[item.id] ? 'Eliminando...' : <><Trash2 size={14} /> Eliminar</>}
                 </button>
               )}
               {Number(item.user_id) !== Number(currentUserId) && (
@@ -464,7 +496,7 @@ function RecognitionComments({
                   className="comment-report-action"
                   onClick={() => setReportingComment(item)}
                 >
-                  Reportar
+                  <Flag size={14} /> Reportar
                 </button>
               )}
             </div>
@@ -477,7 +509,7 @@ function RecognitionComments({
             disabled={Boolean(likingComments[item.id])}
             title="Me gusta"
           >
-            <span>{item.liked_by_current_user ? '♥' : '♡'}</span>
+            <span><Heart size={19} fill={item.liked_by_current_user ? 'currentColor' : 'none'} /></span>
             <strong>{Number(item.like_count || 0)}</strong>
           </button>
         </div>
@@ -531,33 +563,64 @@ function RecognitionComments({
   return (
     <div className="comments-block">
       <div className="comments-topbar">
-        <button
-          type="button"
-          className="comments-toggle-btn"
-          onClick={() => setShowComments((prev) => !prev)}
-        >
-          {showComments ? 'Ocultar comentarios' : `Ver comentarios (${comments.length})`}
+          <button
+            type="button"
+            className="comments-toggle-btn"
+            onClick={() => setShowComments((prev) => !prev)}
+            aria-label="Abrir comentarios"
+          >
+          {showComments ? 'Ocultar comentarios' : `Ver comentarios (${Number(recognition?.comment_count || 0)})`}
         </button>
       </div>
 
       {showComments && createPortal(
         <div className="instagram-comments-overlay" onClick={() => setShowComments(false)}>
         <div className="comments-panel instagram-comments-panel" onClick={(event) => event.stopPropagation()}>
-          <button
-            type="button"
-            className="instagram-comments-close-floating"
-            onClick={() => setShowComments(false)}
-            aria-label="Cerrar comentarios"
-          >
-            {'\u00D7'}
-          </button>
+          <section className="instagram-comments-post-preview">
+            {activeMedia ? (
+              <div className="instagram-comments-media">
+                {activeMedia.media_type === 'video' ? (
+                  <video src={activeMedia.fullUrl} controls />
+                ) : (
+                  <img src={activeMedia.fullUrl} alt="Contenido de la publicacion" />
+                )}
+                {recognitionMedia.length > 1 && (
+                  <>
+                    <button type="button" className="instagram-comments-media-nav prev" onClick={() => goToMedia(activeMediaIndex - 1)} aria-label="Medio anterior">
+                      {'\u2039'}
+                    </button>
+                    <button type="button" className="instagram-comments-media-nav next" onClick={() => goToMedia(activeMediaIndex + 1)} aria-label="Siguiente medio">
+                      {'\u203A'}
+                    </button>
+                    <div className="instagram-comments-media-dots">
+                      {recognitionMedia.map((item, index) => (
+                        <button
+                          key={item.id || index}
+                          type="button"
+                          className={index === activeMediaIndex ? 'active' : ''}
+                          onClick={() => goToMedia(index)}
+                          aria-label={`Ver medio ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="instagram-comments-text-preview">
+                <strong>{recognition?.sender_name}</strong>
+                <p>{recognition?.message}</p>
+              </div>
+            )}
+          </section>
           <div className="instagram-comments-header">
             <span />
             <strong>Comentarios</strong>
-            <button type="button" onClick={() => setShowComments(false)} aria-label="Cerrar comentarios">
-              {'\u00D7'}
+            <button type="button" className="instagram-comments-close-header" onClick={() => setShowComments(false)} aria-label="Cerrar comentarios">
+              <X size={20} />
             </button>
           </div>
+          {commentNotice && <div className="comment-inline-notice">{commentNotice}</div>}
           <div className="instagram-comments-caption">
             <strong>{recognition?.sender_name}</strong>
             <span>{recognition?.message}</span>
@@ -583,7 +646,7 @@ function RecognitionComments({
             {mentionTarget.type === 'comment' && renderMentionDropdown()}
 
             <button type="submit" className="comment-submit-btn" disabled={sendingComment}>
-              {sendingComment ? 'Comentando...' : 'Comentar'}
+              {sendingComment ? 'Comentando...' : <><Send size={17} /> Comentar</>}
             </button>
           </form>
         </div>

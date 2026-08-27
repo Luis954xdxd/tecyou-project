@@ -66,6 +66,16 @@ const resolveMediaType = (mimetype) => {
   return mimetype.startsWith('video') ? 'video' : 'image';
 };
 
+const ensureStoryPresentationColumns = async () => {
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_lyrics TEXT`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS media_fit VARCHAR(20) DEFAULT 'cover'`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS media_position_x INTEGER DEFAULT 50`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS media_position_y INTEGER DEFAULT 50`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS show_lyrics BOOLEAN DEFAULT TRUE`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lyrics_position_x INTEGER DEFAULT 50`);
+  await pool.query(`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lyrics_position_y INTEGER DEFAULT 76`);
+};
+
 /**
  * Crear historia
  */
@@ -81,13 +91,22 @@ router.post(
         user_id,
         caption,
         music_name,
+        music_lyrics,
+        show_lyrics,
+        lyrics_position_x,
+        lyrics_position_y,
         music_external_url,
         music_start_seconds,
         duration_seconds,
         visibility_type,
         selected_users,
         excluded_users,
+        media_fit,
+        media_position_x,
+        media_position_y,
       } = req.body;
+
+      await ensureStoryPresentationColumns();
 
       if (!user_id) {
         return res.status(400).json({ error: 'Falta user_id.' });
@@ -124,6 +143,12 @@ router.post(
       }
 
       const finalDuration = Math.min(Math.max(parsedDuration, 1), maxDuration);
+      const finalMediaFit = ['cover', 'contain'].includes(media_fit) ? media_fit : 'cover';
+      const finalPositionX = Math.min(Math.max(Number(media_position_x || 50), 0), 100);
+      const finalPositionY = Math.min(Math.max(Number(media_position_y || 50), 0), 100);
+      const finalShowLyrics = show_lyrics === 'false' || show_lyrics === false ? false : true;
+      const finalLyricsPositionX = Math.min(Math.max(Number(lyrics_position_x || 50), 8), 92);
+      const finalLyricsPositionY = Math.min(Math.max(Number(lyrics_position_y || 76), 18), 88);
       const mediaUrl = `/uploads/stories/${storyMediaFile.filename}`;
       const audioUrl = storyAudioFile
         ? `/uploads/stories/${storyAudioFile.filename}`
@@ -137,15 +162,22 @@ router.post(
           media_type,
           caption,
           music_name,
+          music_lyrics,
+          show_lyrics,
+          lyrics_position_x,
+          lyrics_position_y,
           music_url,
           music_start_seconds,
           duration_seconds,
           visibility_type,
+          media_fit,
+          media_position_x,
+          media_position_y,
           created_at,
           expires_at
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9,
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
           NOW(),
           NOW() + INTERVAL '24 hours'
         )
@@ -157,10 +189,17 @@ router.post(
           mediaType,
           caption || '',
           music_name || null,
+          music_lyrics || null,
+          finalShowLyrics,
+          finalLyricsPositionX,
+          finalLyricsPositionY,
           audioUrl,
           Number(music_start_seconds || 0),
           finalDuration,
           finalVisibility,
+          finalMediaFit,
+          finalPositionX,
+          finalPositionY,
         ]
       );
 

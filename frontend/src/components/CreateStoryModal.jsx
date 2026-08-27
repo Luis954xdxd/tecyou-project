@@ -16,6 +16,10 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [audioFile, setAudioFile] = useState(null);
   const [musicName, setMusicName] = useState('');
   const [musicSearch, setMusicSearch] = useState('');
+  const [musicLyrics, setMusicLyrics] = useState('');
+  const [showLyrics, setShowLyrics] = useState(true);
+  const [lyricsPositionX, setLyricsPositionX] = useState(50);
+  const [lyricsPositionY, setLyricsPositionY] = useState(76);
   const [musicResults, setMusicResults] = useState([]);
   const [musicLoading, setMusicLoading] = useState(false);
   const [selectedMusicPreview, setSelectedMusicPreview] = useState('');
@@ -23,6 +27,10 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const [visibilityType, setVisibilityType] = useState('public');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [excludedUsers, setExcludedUsers] = useState([]);
+  const [mediaFit, setMediaFit] = useState('cover');
+  const [mediaPositionX, setMediaPositionX] = useState(50);
+  const [mediaPositionY, setMediaPositionY] = useState(50);
+  const [formError, setFormError] = useState('');
   const mediaInputRef = useRef(null);
 
   const mediaPreview = useMemo(
@@ -78,12 +86,20 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     setAudioFile(null);
     setMusicName('');
     setMusicSearch('');
+    setMusicLyrics('');
+    setShowLyrics(true);
+    setLyricsPositionX(50);
+    setLyricsPositionY(76);
     setMusicResults([]);
     setSelectedMusicPreview('');
     setDurationSeconds(30);
     setVisibilityType('public');
     setSelectedUsers([]);
     setExcludedUsers([]);
+    setMediaFit('cover');
+    setMediaPositionX(50);
+    setMediaPositionY(50);
+    setFormError('');
   };
 
   const handleClose = () => {
@@ -95,6 +111,10 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     const file = event.target.files?.[0] || null;
     setMediaFile(file);
     if (!file) return;
+    setFormError('');
+    setMediaFit('cover');
+    setMediaPositionX(50);
+    setMediaPositionY(50);
     if (file.type.startsWith('image/')) setDurationSeconds(30);
     if (file.type.startsWith('video/')) setDurationSeconds(60);
   };
@@ -122,7 +142,7 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!mediaFile) {
-      alert('Debes seleccionar una imagen o video.');
+      setFormError('Debes seleccionar una imagen o video para compartir tu historia.');
       return;
     }
 
@@ -135,12 +155,19 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
     data.append('storyMedia', mediaFile);
     data.append('caption', caption);
     data.append('music_name', musicName);
+    data.append('music_lyrics', musicLyrics);
+    data.append('show_lyrics', showLyrics);
+    data.append('lyrics_position_x', lyricsPositionX);
+    data.append('lyrics_position_y', lyricsPositionY);
     data.append('music_external_url', selectedMusicPreview);
     data.append('music_start_seconds', 0);
     data.append('duration_seconds', finalDuration);
     data.append('visibility_type', visibilityType === 'following' ? 'only_selected' : visibilityType);
     data.append('selected_users', JSON.stringify(selectedUsers));
     data.append('excluded_users', JSON.stringify(excludedUsers));
+    data.append('media_fit', mediaFit);
+    data.append('media_position_x', mediaPositionX);
+    data.append('media_position_y', mediaPositionY);
 
     if (audioFile) data.append('storyAudio', audioFile);
 
@@ -223,6 +250,32 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             {selectedMusicPreview && (
               <audio controls src={selectedMusicPreview} className="story-music-preview-audio" />
             )}
+            <textarea
+              className="story-lyrics-input"
+              value={musicLyrics}
+              onChange={(event) => setMusicLyrics(event.target.value)}
+              placeholder="Letra opcional. Para letra automática hace falta conectar una API de letras sincronizadas."
+            />
+            <label className="story-lyrics-toggle">
+              <input
+                type="checkbox"
+                checked={showLyrics}
+                onChange={(event) => setShowLyrics(event.target.checked)}
+              />
+              <span>Mostrar letra en la historia</span>
+            </label>
+            {showLyrics && (
+              <div className="story-lyrics-position-controls">
+                <label>
+                  <small>Posicion horizontal de letra</small>
+                  <input type="range" min="8" max="92" value={lyricsPositionX} onChange={(event) => setLyricsPositionX(Number(event.target.value))} />
+                </label>
+                <label>
+                  <small>Posicion vertical de letra</small>
+                  <input type="range" min="18" max="88" value={lyricsPositionY} onChange={(event) => setLyricsPositionY(Number(event.target.value))} />
+                </label>
+              </div>
+            )}
             <label className="story-local-audio">
               Subir audio local
               <input type="file" accept="audio/*" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} />
@@ -276,9 +329,32 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
             </div>
           )}
 
+          {mediaFile && (
+            <div className="story-studio-field story-crop-controls">
+              <span>Encuadre de historia</span>
+              <div className="story-fit-toggle">
+                <button type="button" className={mediaFit === 'cover' ? 'active' : ''} onClick={() => setMediaFit('cover')}>
+                  Llenar
+                </button>
+                <button type="button" className={mediaFit === 'contain' ? 'active' : ''} onClick={() => setMediaFit('contain')}>
+                  Completa
+                </button>
+              </div>
+              <label>
+                <small>Enfoque horizontal</small>
+                <input type="range" min="0" max="100" value={mediaPositionX} onChange={(event) => setMediaPositionX(Number(event.target.value))} />
+              </label>
+              <label>
+                <small>Enfoque vertical</small>
+                <input type="range" min="0" max="100" value={mediaPositionY} onChange={(event) => setMediaPositionY(Number(event.target.value))} />
+              </label>
+            </div>
+          )}
+
           <button type="submit" className="create-story-submit-btn story-studio-submit">
             Compartir en historia
           </button>
+          {formError && <p className="story-studio-error">{formError}</p>}
         </aside>
 
         <section className="story-studio-preview">
@@ -286,9 +362,23 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
           <div className="story-phone-preview">
             {mediaPreview ? (
               mediaFile?.type.startsWith('video/') ? (
-                <video src={mediaPreview} controls />
+                <video
+                  src={mediaPreview}
+                  controls
+                  style={{
+                    '--story-media-fit': mediaFit,
+                    '--story-media-position': `${mediaPositionX}% ${mediaPositionY}%`,
+                  }}
+                />
               ) : (
-                <img src={mediaPreview} alt="Vista previa de historia" />
+                <img
+                  src={mediaPreview}
+                  alt="Vista previa de historia"
+                  style={{
+                    '--story-media-fit': mediaFit,
+                    '--story-media-position': `${mediaPositionX}% ${mediaPositionY}%`,
+                  }}
+                />
               )
             ) : (
               <div className="story-preview-empty">
@@ -297,6 +387,17 @@ function CreateStoryModal({ isOpen, onClose, onSubmit, users }) {
               </div>
             )}
             {caption && <p className="story-preview-caption">{caption}</p>}
+            {showLyrics && musicLyrics && (
+              <p
+                className="story-preview-lyrics"
+                style={{
+                  '--lyrics-x': `${lyricsPositionX}%`,
+                  '--lyrics-y': `${lyricsPositionY}%`,
+                }}
+              >
+                {musicLyrics.split('\n').filter(Boolean)[0]}
+              </p>
+            )}
             {musicName && <span className="story-preview-music">{'\u266B'} {musicName}</span>}
           </div>
           {audioPreview && <audio controls src={audioPreview} />}

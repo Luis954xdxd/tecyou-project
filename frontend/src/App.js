@@ -288,6 +288,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [isMessengerExpanded, setIsMessengerExpanded] = useState(false);
   const [chatImageViewer, setChatImageViewer] = useState(null);
   const [showChatExtras, setShowChatExtras] = useState(false);
+  const [chatTypingUsers, setChatTypingUsers] = useState({});
   const [recordingAudio, setRecordingAudio] = useState(false);
   const [mediaSlideByRecognition, setMediaSlideByRecognition] = useState({});
 
@@ -325,6 +326,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const chatFileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const typingTimerRef = useRef(null);
 
   const reactionOptions = [
     { key: 'like', label: 'Me gusta', emoji: '\uD83D\uDC4D' },
@@ -930,9 +932,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       }
 
       await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      alert('Enlace copiado al portapapeles.');
+      setAppToast({ type: 'success', message: 'Enlace copiado al portapapeles.' });
     } catch (error) {
       console.error('Error al compartir reconocimiento:', error);
+      setAppToast({ type: 'error', message: 'No se pudo compartir el reconocimiento.' });
     }
   };
 
@@ -1013,7 +1016,30 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
   };
 
   const appendChatText = (text) => {
-    setChatDraft((prev) => `${prev}${text}`);
+    const nextText = `${chatDraft}${text}`;
+    setChatDraft(nextText);
+    sendTypingStatus(true);
+  };
+
+  const sendTypingStatus = async (isTyping) => {
+    if (!user?.id || !activeChat?.id || activeChat.isPendingDirect) return;
+    try {
+      await axios.post(`${API_BASE}/api/chat/conversations/${activeChat.id}/typing`, {
+        user_id: user.id,
+        is_typing: isTyping,
+      });
+    } catch (error) {
+      console.warn('No se pudo enviar estado de escritura:', error.message);
+    }
+  };
+
+  const handleChatDraftChange = (event) => {
+    setChatDraft(event.target.value);
+    sendTypingStatus(true);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      sendTypingStatus(false);
+    }, 1400);
   };
 
   const getChatFilePreview = (file) => {
@@ -1077,6 +1103,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
       const nextConversationId = response.data?.conversation_id;
       setChatDraft('');
+      sendTypingStatus(false);
       setChatFiles([]);
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
 
@@ -1106,6 +1133,8 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
   useEffect(() => {
     activeChatRef.current = activeChat;
+    setChatTypingUsers({});
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
   }, [activeChat]);
 
   useEffect(() => {
@@ -1134,13 +1163,27 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     events.addEventListener('message', (event) => {
       const message = JSON.parse(event.data || '{}');
       if (!message.id) return;
+      const currentChatId = activeChatRef.current?.id;
       setChatMessages((prev) => {
-        const currentChatId = activeChatRef.current?.id;
         if (Number(message.conversation_id) !== Number(currentChatId)) return prev;
         if (prev.some((item) => Number(item.id) === Number(message.id))) return prev;
         return [...prev, message];
       });
+      if (Number(message.conversation_id) === Number(currentChatId) && Number(message.sender_id) !== Number(user.id)) {
+        axios.patch(`${API_BASE}/api/chat/conversations/${message.conversation_id}/read`, {
+          user_id: user.id,
+        }).catch((error) => console.warn('No se pudo marcar el chat como leido:', error.message));
+      }
       fetchChatConversations();
+    });
+
+    events.addEventListener('typing', (event) => {
+      const item = JSON.parse(event.data || '{}');
+      if (!item.conversation_id || !item.user_id) return;
+      setChatTypingUsers((prev) => ({
+        ...prev,
+        [item.conversation_id]: item.is_typing ? item.user_id : null,
+      }));
     });
 
     events.addEventListener('notification', () => {
@@ -1486,7 +1529,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       await fetchRecognitionReactions(recId);
     } catch (err) {
       console.error('Error al guardar reacci\u00f3n:', err);
-      alert(err.response?.data?.error || 'No se pudo guardar la reacci\u00f3n.');
+      setAppToast({ type: 'error', message: err.response?.data?.error || 'No se pudo guardar la reacci\u00f3n.' });
     } finally {
       setReactingIds((prev) => ({ ...prev, [recId]: false }));
     }
@@ -1582,7 +1625,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       await refreshRecognitionReactions(recognitionId);
     } catch (err) {
       console.error('Error al reaccionar:', err);
-      alert(err.response?.data?.error || 'No se pudo reaccionar.');
+      setAppToast({ type: 'error', message: err.response?.data?.error || 'No se pudo reaccionar.' });
     } finally {
       setReactingIds((prev) => ({ ...prev, [recognitionId]: false }));
     }
@@ -2275,6 +2318,15 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 )
               );
             }}
+            onCommentsSynced={(recognitionId, nextCount) => {
+              setRecognitions((prev) =>
+                prev.map((item) =>
+                  Number(item.id) === Number(recognitionId)
+                    ? { ...item, comment_count: Number(nextCount || 0) }
+                    : item
+                )
+              );
+            }}
           />
         </div>
       </article>
@@ -2945,6 +2997,15 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                       )}
                     </div>
 
+                    {activeChat?.id && chatTypingUsers[activeChat.id] && (
+                      <div className="tec-chat-typing-indicator">
+                        <span />
+                        <span />
+                        <span />
+                        <small>{activeChat.display_name || 'El usuario'} esta escribiendo...</small>
+                      </div>
+                    )}
+
                     {chatFiles.length > 0 && (
                       <div className="tec-chat-attachments">
                         {chatFiles.map((file) => {
@@ -3025,7 +3086,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                       <input
                         placeholder="Escribe un mensaje..."
                         value={chatDraft}
-                        onChange={(e) => setChatDraft(e.target.value)}
+                        onChange={handleChatDraftChange}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();

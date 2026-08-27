@@ -68,6 +68,7 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
   const [saving, setSaving] = useState(false);
   const [reportAction, setReportAction] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const api = useMemo(() => axios.create({
     baseURL: `${API_BASE}/api/admin`,
@@ -75,7 +76,16 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
   }), []);
 
   const handleApiError = useCallback((requestError, fallback) => {
-    if (requestError.response?.status === 401 || requestError.response?.status === 403) {
+    if (requestError.response?.status === 401) {
+      setSessionExpired(true);
+      setOverview(null);
+      setUsers([]);
+      setReports([]);
+      setAuditLogs([]);
+      setError(requestError.response?.data?.error || 'Sesion invalida o vencida.');
+      return;
+    }
+    if (requestError.response?.status === 403) {
       setError(requestError.response?.data?.error || 'Tu sesion no tiene acceso administrativo.');
       return;
     }
@@ -124,13 +134,12 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
       setLoading(true);
       setError('');
       if (activeSection === 'overview') await loadOverview();
-      if (activeSection === 'users') await loadUsers();
       if (activeSection === 'audit') await loadAudit();
       if (activeSection === 'reports') await loadReports();
       setLoading(false);
     };
     load();
-  }, [activeSection, loadAudit, loadOverview, loadReports, loadUsers]);
+  }, [activeSection, loadAudit, loadOverview, loadReports]);
 
   useEffect(() => {
     if (activeSection !== 'users') return undefined;
@@ -220,6 +229,10 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
     { label: 'Reconocimientos', value: totals.recognitions || 0, icon: GraduationCap, tone: 'violet' },
     { label: 'Reportes pendientes', value: totals.pending_reports || 0, icon: FileWarning, tone: 'amber' },
     { label: 'Cuentas suspendidas', value: totals.suspended_users || 0, icon: Ban, tone: 'red' },
+    { label: 'Activos 24h', value: totals.active_users_24h || 0, icon: Activity, tone: 'green' },
+    { label: 'Publicaciones semana', value: totals.weekly_recognitions || 0, icon: ClipboardList, tone: 'blue' },
+    { label: 'Reportes resueltos', value: totals.resolved_reports || 0, icon: CheckCircle2, tone: 'green' },
+    { label: 'Categoria destacada', value: totals.top_category || 'Sin datos', icon: GraduationCap, tone: 'violet' },
   ];
 
   return (
@@ -270,7 +283,13 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
         </header>
 
         {notice && <div className="admin-notice"><CheckCircle2 size={18} /> {notice}</div>}
-        {error && <div className="admin-error"><FileWarning size={18} /> {error}<button onClick={() => setError('')}><X size={16} /></button></div>}
+        {error && (
+          <div className="admin-error">
+            <FileWarning size={18} /> {error}
+            {sessionExpired && <button type="button" className="admin-error-action" onClick={onLogout}>Iniciar sesion</button>}
+            <button onClick={() => setError('')}><X size={16} /></button>
+          </div>
+        )}
         {loading && <div className="admin-loading">Cargando informacion...</div>}
 
         {!loading && activeSection === 'overview' && (

@@ -631,3 +631,68 @@
   text-overflow: unset !important;
   font-size: 15px !important;
 }
+
+/* Aro final para historias: azul/morado, animado y solo en el borde */
+.story-avatar-ring,
+.story-ring {
+  position: relative !important;
+  width: 58px !important;
+  height: 58px !important;
+  padding: 3px !important;
+  border-radius: 999px !important;
+  background: conic-gradient(from 0deg, #38bdf8, #2563eb, #7c3aed, #a855f7, #38bdf8) !important;
+  animation: tecStoryRingSpin 3s linear infinite !important;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.92), 0 0 18px rgba(99, 102, 241, 0.34) !important;
+}
+
+.story-avatar-image,
+.story-avatar-fallback,
+.story-preview-image,
+.story-preview-video {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 3px solid #0b1220 !important;
+  background: #0b1220 !important;
+}
+
+.story-studio-error {
+  margin: 0 !important;
+  padding: 11px 12px !important;
+  border-radius: 14px !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+  border: 1px solid rgba(248, 113, 113, 0.28) !important;
+  color: #fecaca !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.story-lyrics-input {
+  min-height: 88px !important;
+  resize: vertical !important;
+  margin-top: 10px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(148, 163, 184, 0.22) !important;
+  background: rgba(15, 23, 42, 0.72) !important;
+  color: #f8fafc !important;
+  padding: 12px 14px !important;
+}
+
+.story-preview-lyrics {
+  position: absolute !important;
+  left: 50% !important;
+  bottom: 58px !important;
+  width: min(86%, 300px) !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  padding: 10px 12px !important;
+  border-radius: 16px !important;
+  background: rgba(15, 23, 42, 0.58) !important;
+  color: #ffffff !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  text-shadow: 0 2px 12px rgba(59, 130, 246, 0.42) !important;
+}

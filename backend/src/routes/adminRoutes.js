@@ -69,7 +69,7 @@ router.use(requireSystemRole(...ADMIN_ROLES));
 
 router.get('/overview', async (req, res) => {
   try {
-    const [users, recognitions, reports, suspended, recent] = await Promise.all([
+    const [users, recognitions, reports, suspended, recent, activeUsers, weeklyPosts, resolvedReports, topCategory] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS total FROM users`),
       pool.query(`SELECT COUNT(*)::int AS total FROM recognitions`),
       pool.query(`SELECT COUNT(*)::int AS total FROM content_reports WHERE status = 'pending'`),
@@ -81,6 +81,17 @@ router.get('/overview', async (req, res) => {
         ORDER BY COALESCE(last_login_at, created_at) DESC
         LIMIT 6
       `),
+      pool.query(`SELECT COUNT(*)::int AS total FROM users WHERE last_login_at >= NOW() - INTERVAL '24 hours'`),
+      pool.query(`SELECT COUNT(*)::int AS total FROM recognitions WHERE created_at >= NOW() - INTERVAL '7 days'`),
+      pool.query(`SELECT COUNT(*)::int AS total FROM content_reports WHERE status = 'resolved'`),
+      pool.query(`
+        SELECT category, COUNT(*)::int AS total
+        FROM recognitions
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY category
+        ORDER BY total DESC
+        LIMIT 1
+      `),
     ]);
 
     res.json({
@@ -89,6 +100,10 @@ router.get('/overview', async (req, res) => {
         recognitions: recognitions.rows[0].total,
         pending_reports: reports.rows[0].total,
         suspended_users: suspended.rows[0].total,
+        active_users_24h: activeUsers.rows[0].total,
+        weekly_recognitions: weeklyPosts.rows[0].total,
+        resolved_reports: resolvedReports.rows[0].total,
+        top_category: topCategory.rows[0]?.category || 'Sin datos',
       },
       recent_users: recent.rows,
     });

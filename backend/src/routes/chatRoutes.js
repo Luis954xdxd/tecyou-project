@@ -445,4 +445,29 @@ router.patch('/conversations/:conversationId/read', async (req, res) => {
   res.json({ success: true });
 });
 
+router.post('/conversations/:conversationId/typing', async (req, res) => {
+  await ready;
+  const { conversationId } = req.params;
+  const { user_id, is_typing } = req.body;
+
+  const allowed = await pool.query(
+    'SELECT 1 FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
+    [conversationId, user_id]
+  );
+  if (!allowed.rows[0]) return res.status(403).json({ error: 'No tienes acceso a este chat.' });
+
+  const participants = await getConversationParticipants(conversationId);
+  participants
+    .filter((participantId) => Number(participantId) !== Number(user_id))
+    .forEach((participantId) => {
+      sendToUser(participantId, 'typing', {
+        conversation_id: Number(conversationId),
+        user_id: Number(user_id),
+        is_typing: Boolean(is_typing),
+      });
+    });
+
+  res.json({ success: true });
+});
+
 module.exports = router;
