@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { applyAvatarFallback } from '../utils/avatarFallback';
 import {
   Activity,
   ArrowLeft,
@@ -274,7 +275,7 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
           </div>
           <div className="admin-account-chip">
             {currentUser.profile_image_url ? (
-              <img src={avatarUrl(currentUser.profile_image_url)} alt={currentUser.display_name || currentUser.fullname} />
+              <img src={avatarUrl(currentUser.profile_image_url)} alt={currentUser.display_name || currentUser.fullname} onError={(event) => applyAvatarFallback(event, currentUser.display_name || currentUser.fullname)} />
             ) : (
               <span>{(currentUser.display_name || currentUser.fullname || 'A').charAt(0)}</span>
             )}
@@ -307,7 +308,7 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
               <div className="admin-recent-list">
                 {(overview?.recent_users || []).map((item) => (
                   <div className="admin-recent-user" key={item.id}>
-                    {item.profile_image_url ? <img src={avatarUrl(item.profile_image_url)} alt="" /> : <span>{(item.display_name || item.fullname).charAt(0)}</span>}
+                    {item.profile_image_url ? <img src={avatarUrl(item.profile_image_url)} alt="" onError={(event) => applyAvatarFallback(event, item.display_name || item.fullname)} /> : <span>{(item.display_name || item.fullname).charAt(0)}</span>}
                     <div><strong>{item.display_name || item.fullname}</strong><small>{item.email}</small></div>
                     <span className={`admin-status ${item.account_status}`}>{statusLabels[item.account_status] || 'Activo'}</span>
                     <time>{formatDate(item.last_login_at || item.created_at)}</time>
@@ -336,7 +337,7 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
                 <tbody>
                   {users.map((item) => (
                     <tr key={item.id}>
-                      <td><div className="admin-table-user">{item.profile_image_url ? <img src={avatarUrl(item.profile_image_url)} alt="" /> : <span>{(item.display_name || item.fullname).charAt(0)}</span>}<div><strong>{item.display_name || item.fullname}</strong><small>{item.email}</small></div></div></td>
+                      <td><div className="admin-table-user">{item.profile_image_url ? <img src={avatarUrl(item.profile_image_url)} alt="" onError={(event) => applyAvatarFallback(event, item.display_name || item.fullname)} /> : <span>{(item.display_name || item.fullname).charAt(0)}</span>}<div><strong>{item.display_name || item.fullname}</strong><small>{item.email}</small></div></div></td>
                       <td>{item.role === 'teacher' ? 'Docente' : item.role === 'staff' ? 'Personal' : 'Estudiante'}</td>
                       <td>
                         {currentUser.system_role === 'super_admin' ? (

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { Flag, Heart, Send, Trash2, X } from 'lucide-react';
+import { Flag, Heart, Send, Trash2 } from 'lucide-react';
 import ReportDialog from './ReportDialog';
+import { applyAvatarFallback } from '../utils/avatarFallback';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -72,7 +73,7 @@ function RecognitionComments({
     if (!name) return 'TSJ';
     return name
       .split(' ')
-      .slice(0, 2)
+      .slice(0, 1)
       .map((word) => word[0])
       .join('')
       .toUpperCase();
@@ -389,6 +390,7 @@ function RecognitionComments({
                     src={resolveImageUrl(user.profile_image_url)}
                     alt={user.display_name || user.fullname}
                     className="mention-suggestion-avatar-image"
+                    onError={(event) => applyAvatarFallback(event, user.display_name || user.fullname)}
                   />
                 ) : (
                   <div className="mention-suggestion-avatar-fallback">
@@ -427,6 +429,7 @@ function RecognitionComments({
                 src={resolveImageUrl(item.profile_image_url)}
                 alt={item.user_name}
                 className="comment-avatar-image"
+                onError={(event) => applyAvatarFallback(event, item.user_name)}
               />
             ) : (
               <div className="comment-avatar-fallback">
@@ -435,7 +438,7 @@ function RecognitionComments({
             )}
             <div className="comment-profile-card">
               {item.profile_image_url ? (
-                <img src={resolveImageUrl(item.profile_image_url)} alt={item.user_name} />
+                <img src={resolveImageUrl(item.profile_image_url)} alt={item.user_name} onError={(event) => applyAvatarFallback(event, item.user_name)} />
               ) : (
                 <span>{getInitials(item.user_name)}</span>
               )}
@@ -574,8 +577,17 @@ function RecognitionComments({
       </div>
 
       {showComments && createPortal(
-        <div className="instagram-comments-overlay" onClick={() => setShowComments(false)}>
+        <div className="instagram-comments-overlay">
         <div className="comments-panel instagram-comments-panel" onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            className="comments-explicit-close"
+            onClick={() => setShowComments(false)}
+            aria-label="Cerrar comentarios"
+            title="Cerrar"
+          >
+            ×
+          </button>
           <section className="instagram-comments-post-preview">
             {activeMedia ? (
               <div className="instagram-comments-media">
@@ -616,9 +628,7 @@ function RecognitionComments({
           <div className="instagram-comments-header">
             <span />
             <strong>Comentarios</strong>
-            <button type="button" className="instagram-comments-close-header" onClick={() => setShowComments(false)} aria-label="Cerrar comentarios">
-              <X size={20} />
-            </button>
+            <span />
           </div>
           {commentNotice && <div className="comment-inline-notice">{commentNotice}</div>}
           <div className="instagram-comments-caption">

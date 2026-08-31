@@ -170,21 +170,16 @@ function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
                 className={`notification-item ${item.is_read ? 'read' : 'unread'}`}
               >
                 <div className="notification-avatar">
-                  {item.actor_profile_image ? (
+                  <div className="notification-avatar-fallback">
+                    {(item.actor_name || 'U').trim().charAt(0).toUpperCase()}
+                  </div>
+                  {item.actor_profile_image && (
                     <img
                       src={resolveImageUrl(item.actor_profile_image)}
                       alt={item.actor_name}
                       className="notification-avatar-image"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
                     />
-                  ) : (
-                    <div className="notification-avatar-fallback">
-                      {(item.actor_name || 'TSJ')
-                        .split(' ')
-                        .slice(0, 2)
-                        .map((word) => word[0])
-                        .join('')
-                        .toUpperCase()}
-                    </div>
                   )}
                 </div>
 

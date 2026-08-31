@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { applyAvatarFallback } from '../utils/avatarFallback';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -173,12 +174,13 @@ export default function ReactionBar({
                       src={resolveImageUrl(person.profile_image_url)}
                       alt={person.user_name}
                       className="reaction-user-avatar"
+                      onError={(event) => applyAvatarFallback(event, person.user_name)}
                     />
                   ) : (
                     <div className="reaction-user-avatar-fallback">
                       {(person.user_name || 'TSJ')
                         .split(' ')
-                        .slice(0, 2)
+                        .slice(0, 1)
                         .map((word) => word[0])
                         .join('')
                         .toUpperCase()}

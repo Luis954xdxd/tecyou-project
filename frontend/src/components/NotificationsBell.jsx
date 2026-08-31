@@ -213,21 +213,16 @@ function NotificationsBell({ userId, onOpenProfile, onOpenStory }) {
                   className={`notifications-bell-item ${item.is_read ? 'read' : 'unread'}`}
                 >
                   <div className="notifications-bell-avatar">
-                    {item.actor_profile_image ? (
-                      <img
+                    <div className="notifications-bell-avatar-fallback">
+                      {(item.actor_name || 'U').trim().charAt(0).toUpperCase()}
+                    </div>
+                    {item.actor_profile_image && (
+                    <img
                         src={resolveImageUrl(item.actor_profile_image)}
                         alt={item.actor_name}
                         className="notifications-bell-avatar-image"
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
                       />
-                    ) : (
-                      <div className="notifications-bell-avatar-fallback">
-                        {(item.actor_name || 'TSJ')
-                          .split(' ')
-                          .slice(0, 2)
-                          .map((word) => word[0])
-                          .join('')
-                          .toUpperCase()}
-                      </div>
                     )}
                   </div>
 

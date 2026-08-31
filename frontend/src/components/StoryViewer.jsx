@@ -4,6 +4,15 @@ import ReportDialog from './ReportDialog';
 
 const API_BASE = 'http://localhost:5000';
 
+function StoryPersonAvatar({ src, name }) {
+  return (
+    <i className="fb-story-person-avatar" aria-hidden="true">
+      <span>{String(name || 'U').trim().charAt(0).toUpperCase()}</span>
+      {src && <img src={src} alt="" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
+    </i>
+  );
+}
+
 function StoryViewer({
   storyViewer,
   onClose,
@@ -262,7 +271,7 @@ function StoryViewer({
           </button>
         </div>
         <div className="fb-story-sidebar-author">
-          {authorAvatar ? <img src={authorAvatar} alt={authorName} /> : <span>{authorName[0]}</span>}
+          <StoryPersonAvatar src={authorAvatar} name={authorName} />
           <div>
             <strong>{authorName}</strong>
             <small>{formatTimeAgo(currentStory.created_at)}</small>
@@ -282,7 +291,7 @@ function StoryViewer({
             const name = viewer.display_name || viewer.fullname || 'Usuario';
             return (
               <div key={viewer.viewer_id} className="fb-story-person-row">
-                {avatar ? <img src={avatar} alt={name} /> : <span>{name[0]}</span>}
+                <StoryPersonAvatar src={avatar} name={name} />
                 <strong>{name}</strong>
               </div>
             );
@@ -315,7 +324,7 @@ function StoryViewer({
             const name = item.display_name || item.fullname || 'Usuario';
             return (
               <div key={item.id} className="fb-story-person-row fb-story-comment-row">
-                {avatar ? <img src={avatar} alt={name} /> : <span>{name[0]}</span>}
+                <StoryPersonAvatar src={avatar} name={name} />
                 <div>
                   <strong>{name}</strong>
                   <small>{item.comment}</small>
@@ -346,7 +355,7 @@ function StoryViewer({
         </div>
 
         <div className="fb-story-top-meta">
-          {authorAvatar ? <img src={authorAvatar} alt={authorName} /> : <span>{authorName[0]}</span>}
+          <StoryPersonAvatar src={authorAvatar} name={authorName} />
           <strong>{authorName}</strong>
           <small>{formatTimeAgo(currentStory.created_at)}</small>
           {currentStory.music_name && <em>{'\u266B'} {currentStory.music_name}</em>}

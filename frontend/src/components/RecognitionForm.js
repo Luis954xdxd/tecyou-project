@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { applyAvatarFallback } from '../utils/avatarFallback';
 
 const API_BASE = 'http://localhost:5000';
 
@@ -369,12 +370,13 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
                         src={resolveImageUrl(user.profile_image_url)}
                         alt={user.display_name}
                         className="user-search-avatar-image"
+                        onError={(event) => applyAvatarFallback(event, user.display_name || user.fullname)}
                       />
                     ) : (
                       <div className="user-search-avatar-fallback">
                         {(user.display_name || user.fullname || 'TSJ')
                           .split(' ')
-                          .slice(0, 2)
+                          .slice(0, 1)
                           .map((word) => word[0])
                           .join('')
                           .toUpperCase()}
@@ -418,12 +420,13 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
                   src={resolveImageUrl(selectedUser.profile_image_url)}
                   alt={selectedUser.display_name}
                   className="selected-user-avatar"
+                  onError={(event) => applyAvatarFallback(event, selectedUser.display_name || selectedUser.fullname)}
                 />
               ) : (
                 <div className="selected-user-avatar-fallback">
                   {(selectedUser.display_name || selectedUser.fullname || 'TSJ')
                     .split(' ')
-                    .slice(0, 2)
+                    .slice(0, 1)
                     .map((word) => word[0])
                     .join('')
                     .toUpperCase()}

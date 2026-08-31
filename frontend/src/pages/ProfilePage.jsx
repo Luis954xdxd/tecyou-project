@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { applyAvatarFallback } from '../utils/avatarFallback';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import { renderTextWithHashtags } from '../textFormatters';
@@ -468,10 +469,8 @@ useEffect(() => {
   const followersCount = Number(viewedProfile?.followers_count || 0);
 
   const initials = (displayName || 'TSJ')
-    .split(' ')
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join('')
+    .trim()
+    .charAt(0)
     .toUpperCase();
 
 
@@ -575,7 +574,7 @@ useEffect(() => {
             <div className={`profile-twitter-avatar-wrap stylized-frame-wrap ${hasActiveStory ? 'has-story-ring' : ''}`}>
   <div className="profile-twitter-avatar-base">
     {profileImage ? (
-      <img src={profileImage} alt="Perfil" className="profile-twitter-avatar" />
+      <img src={profileImage} alt="Perfil" className="profile-twitter-avatar" onError={(event) => applyAvatarFallback(event, displayName)} />
     ) : (
       <div className="profile-twitter-avatar-fallback">{initials}</div>
     )}
@@ -950,7 +949,7 @@ useEffect(() => {
                       <article key={`${rec.repost_id}-${rec.id}`} className="profile-repost-card profile-repost-social-card">
                         <div className="profile-repost-byline">
                           {profileImage ? (
-                            <img src={profileImage} alt={viewedProfile?.display_name || 'Perfil'} />
+                            <img src={profileImage} alt={viewedProfile?.display_name || 'Perfil'} onError={(event) => applyAvatarFallback(event, displayName)} />
                           ) : (
                             <span>{initials}</span>
                           )}
@@ -963,12 +962,12 @@ useEffect(() => {
                         <div className="profile-repost-original social-post-card">
                           <div className="profile-repost-original-header">
                             {rec.sender_profile_image ? (
-                              <img src={resolveImageUrl(rec.sender_profile_image)} alt={rec.sender_name} />
+                              <img src={resolveImageUrl(rec.sender_profile_image)} alt={rec.sender_name} onError={(event) => applyAvatarFallback(event, rec.sender_name)} />
                             ) : (
                               <span>
                                 {(rec.sender_name || 'TSJ')
                                   .split(' ')
-                                  .slice(0, 2)
+                                  .slice(0, 1)
                                   .map((word) => word[0])
                                   .join('')
                                   .toUpperCase()}

@@ -71,15 +71,22 @@ function StoriesBar({
         title="1 clic: crear historia | 2 clics: ver historia"
       >
         <div className="story-card-media own">
+          <span className="story-card-media-fallback">
+            {(currentUser?.display_name || currentUser?.fullname || 'U').trim().charAt(0).toUpperCase()}
+          </span>
           {myStoriesGroup?.stories?.at(-1)?.media_url ? (
             myStoriesGroup.stories.at(-1).media_type === 'video' ? (
-              <video src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} muted />
+              <video src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} muted onError={(event) => { event.currentTarget.style.display = 'none'; }} />
             ) : (
-              <img src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} alt="Tu historia" />
+              <img src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} alt="Tu historia" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
             )
           ) : currentUser?.profile_image_url ? (
-            <img src={resolveImageUrl(currentUser.profile_image_url)} alt="Tu historia" />
-          ) : null}
+            <img src={resolveImageUrl(currentUser.profile_image_url)} alt="Tu historia" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+          ) : (
+            <span className="own-story-avatar-fallback">
+              {(currentUser?.display_name || currentUser?.fullname || 'U').trim().charAt(0).toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="story-add-plus">+</div>
         <span className="story-name">Crear historia</span>
@@ -108,10 +115,11 @@ function StoriesBar({
               onClick={() => onOpenStory(group.stories, startIndex)}
             >
               <div className="story-card-media">
+                <span className="story-card-media-fallback">{displayName.charAt(0).toUpperCase()}</span>
                 {coverStory?.media_type === 'video' ? (
-                  <video src={resolveImageUrl(coverStory.media_url)} muted />
+                  <video src={resolveImageUrl(coverStory.media_url)} muted onError={(event) => { event.currentTarget.style.display = 'none'; }} />
                 ) : coverStory?.media_url ? (
-                  <img src={resolveImageUrl(coverStory.media_url)} alt={displayName} />
+                  <img src={resolveImageUrl(coverStory.media_url)} alt={displayName} onError={(event) => { event.currentTarget.style.display = 'none'; }} />
                 ) : null}
               </div>
               <div className="story-avatar-ring" aria-label={hasUnseen ? 'Historia nueva' : 'Historia vista'}>
@@ -120,12 +128,17 @@ function StoriesBar({
                     src={avatar}
                     alt={displayName}
                     className="story-avatar-image"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                      if (event.currentTarget.nextElementSibling) {
+                        event.currentTarget.nextElementSibling.style.display = 'grid';
+                      }
+                    }}
                   />
-                ) : (
-                  <div className="story-avatar-fallback">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                ) : null}
+                <div className="story-avatar-fallback" style={{ display: avatar ? 'none' : 'grid' }}>
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
               </div>
 
               <span className="story-name">{displayName}</span>

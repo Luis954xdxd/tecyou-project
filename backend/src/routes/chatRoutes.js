@@ -54,8 +54,26 @@ const upload = multer({
   },
 });
 
+const groupImageUpload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('La imagen del grupo debe ser PNG, JPG o WEBP.'));
+    }
+  },
+  limits: { files: 1, fileSize: 5 * 1024 * 1024 },
+});
+
 const ensureTables = async () => {
   await pool.query(`
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS account_status VARCHAR(30) DEFAULT 'active';
+
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS moderation_status VARCHAR(30) DEFAULT 'visible';
+
     ALTER TABLE notifications
       DROP CONSTRAINT IF EXISTS notifications_type_check;
 
@@ -104,6 +122,16 @@ const ensureTables = async () => {
       moderation_status VARCHAR(30) DEFAULT 'visible',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE chat_conversations
+      ADD COLUMN IF NOT EXISTS group_image_url TEXT;
+
+    CREATE TABLE IF NOT EXISTS chat_message_mentions (
+      message_id INTEGER NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+      mentioned_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id, mentioned_user_id)
+    );
   `);
 };
 
@@ -146,6 +174,44 @@ const getConversationParticipants = async (conversationId) => {
   return result.rows.map((row) => Number(row.user_id));
 };
 
+const parseIdArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveMessageMentions = async ({ messageId, conversationId, senderId, rawIds }) => {
+  const requestedIds = Array.from(new Set(
+    parseIdArray(rawIds)
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0 && id !== Number(senderId))
+  ));
+  if (requestedIds.length === 0) return [];
+
+  const valid = await pool.query(
+    `SELECT cp.user_id
+     FROM chat_participants cp
+     WHERE cp.conversation_id = $1
+       AND cp.user_id = ANY($2::int[])`,
+    [conversationId, requestedIds]
+  );
+  const validIds = valid.rows.map((row) => Number(row.user_id));
+  for (const mentionedUserId of validIds) {
+    await pool.query(
+      `INSERT INTO chat_message_mentions (message_id, mentioned_user_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [messageId, mentionedUserId]
+    );
+  }
+  return validIds;
+};
+
 const buildMessagePayload = async (messageId) => {
   const result = await pool.query(
     `SELECT
@@ -158,7 +224,16 @@ const buildMessagePayload = async (messageId) => {
        m.media_mime,
        m.created_at,
        COALESCE(u.display_name, u.fullname) AS sender_name,
-       u.profile_image_url AS sender_profile_image
+       u.profile_image_url AS sender_profile_image,
+       COALESCE((
+         SELECT json_agg(json_build_object(
+           'id', mentioned.id,
+           'display_name', COALESCE(mentioned.display_name, mentioned.fullname)
+         ))
+         FROM chat_message_mentions cmm
+         JOIN users mentioned ON mentioned.id = cmm.mentioned_user_id
+         WHERE cmm.message_id = m.id
+       ), '[]'::json) AS mentioned_users
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
      WHERE m.id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'`,
@@ -174,6 +249,8 @@ const createMessage = async ({ conversationId, senderId, content, file }) => {
       ? 'image'
       : file.mimetype.startsWith('audio/')
       ? 'audio'
+      : file.mimetype.startsWith('video/')
+      ? 'video'
       : 'file'
     : 'text';
 
@@ -200,17 +277,34 @@ const createMessage = async ({ conversationId, senderId, content, file }) => {
   return buildMessagePayload(inserted.rows[0].id);
 };
 
-const notifyParticipants = async ({ conversationId, senderId, message }) => {
+const notifyParticipants = async ({ conversationId, senderId, message, mentionedUserIds = [] }) => {
   const participants = await getConversationParticipants(conversationId);
   const recipients = participants.filter((id) => Number(id) !== Number(senderId));
+  const mentionedSet = new Set(mentionedUserIds.map(Number));
 
   for (const recipientId of recipients) {
+    const wasMentioned = mentionedSet.has(Number(recipientId));
     const notification = await pool.query(
       `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
        VALUES ($1, $2, 'chat_message', 'Nuevo mensaje', $3, $4)
        RETURNING *`,
-      [recipientId, senderId, message.content || 'Te enviaron un archivo.', message.id]
+      [
+        recipientId,
+        senderId,
+        wasMentioned ? `Te mencionaron en un grupo: ${message.content || ''}` : (message.content || 'Te enviaron un archivo.'),
+        message.id,
+      ]
     );
+
+    if (wasMentioned) {
+      await pool.query(
+        `UPDATE notifications
+         SET title = 'Te mencionaron en un grupo'
+         WHERE id = $1`,
+        [notification.rows[0].id]
+      );
+      notification.rows[0].title = 'Te mencionaron en un grupo';
+    }
 
     sendToUser(recipientId, 'notification', notification.rows[0]);
   }
@@ -246,6 +340,41 @@ router.get('/presence', (req, res) => {
   res.json(getPresenceSnapshot());
 });
 
+router.get('/group-candidates', async (req, res) => {
+  await ready;
+  const query = String(req.query.q || '').trim();
+  const values = [req.authUser.id];
+  let searchClause = '';
+  if (query) {
+    values.push(`%${query}%`);
+    searchClause = `
+      AND (
+        COALESCE(u.display_name, u.fullname) ILIKE $2
+        OR u.fullname ILIKE $2
+        OR u.email ILIKE $2
+      )`;
+  }
+
+  const result = await pool.query(
+    `SELECT
+       u.id,
+       u.fullname,
+       COALESCE(u.display_name, u.fullname) AS display_name,
+       u.email,
+       u.profile_image_url
+     FROM users u
+     WHERE u.id <> $1
+       AND COALESCE(u.account_status, 'active') = 'active'
+       AND COALESCE(u.moderation_status, 'visible') = 'visible'
+       ${searchClause}
+     ORDER BY COALESCE(u.display_name, u.fullname) ASC
+     LIMIT 500`,
+    values
+  );
+
+  res.json(result.rows);
+});
+
 router.get('/conversations/:userId', async (req, res) => {
   await ready;
   const userId = req.authUser.id;
@@ -255,6 +384,7 @@ router.get('/conversations/:userId', async (req, res) => {
        c.id,
        c.is_group,
        c.name,
+       c.group_image_url,
        c.updated_at,
        cp.last_read_at,
        lm.id AS last_message_id,
@@ -262,9 +392,12 @@ router.get('/conversations/:userId', async (req, res) => {
        lm.message_type AS last_message_type,
        lm.created_at AS last_message_at,
        lm.sender_id AS last_sender_id,
-       COALESCE(other_user.display_name, other_user.fullname, c.name) AS display_name,
-       other_user.id AS other_user_id,
-       other_user.profile_image_url AS other_profile_image,
+       CASE
+         WHEN c.is_group THEN c.name
+         ELSE COALESCE(other_user.display_name, other_user.fullname)
+       END AS display_name,
+       CASE WHEN c.is_group THEN NULL ELSE other_user.id END AS other_user_id,
+       CASE WHEN c.is_group THEN c.group_image_url ELSE other_user.profile_image_url END AS other_profile_image,
        afd.code AS other_frame_code,
        unread.total AS unread_count
      FROM chat_participants cp
@@ -327,7 +460,16 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
        m.media_mime,
        m.created_at,
        COALESCE(u.display_name, u.fullname) AS sender_name,
-       u.profile_image_url AS sender_profile_image
+       u.profile_image_url AS sender_profile_image,
+       COALESCE((
+         SELECT json_agg(json_build_object(
+           'id', mentioned.id,
+           'display_name', COALESCE(mentioned.display_name, mentioned.fullname)
+         ))
+         FROM chat_message_mentions cmm
+         JOIN users mentioned ON mentioned.id = cmm.mentioned_user_id
+         WHERE cmm.message_id = m.id
+       ), '[]'::json) AS mentioned_users
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
      WHERE m.conversation_id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'
@@ -339,6 +481,177 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
   res.json(result.rows);
 });
 
+router.get('/conversations/:conversationId/participants', async (req, res) => {
+  await ready;
+  const { conversationId } = req.params;
+  const allowed = await pool.query(
+    'SELECT 1 FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
+    [conversationId, req.authUser.id]
+  );
+  if (!allowed.rows[0]) return res.status(403).json({ error: 'No tienes acceso a este grupo.' });
+
+  const result = await pool.query(
+    `SELECT
+       u.id,
+       u.fullname,
+       COALESCE(u.display_name, u.fullname) AS display_name,
+       u.email,
+       u.profile_image_url,
+       cp.joined_at,
+       (u.id = c.created_by) AS is_admin
+     FROM chat_participants cp
+     JOIN chat_conversations c ON c.id = cp.conversation_id
+     JOIN users u ON u.id = cp.user_id
+     WHERE cp.conversation_id = $1
+     ORDER BY COALESCE(u.display_name, u.fullname) ASC`,
+    [conversationId]
+  );
+  res.json(result.rows);
+});
+
+router.post('/conversations/:conversationId/participants', async (req, res) => {
+  await ready;
+  const conversationId = Number(req.params.conversationId);
+  const requestedIds = Array.from(new Set(
+    parseIdArray(req.body.participant_ids)
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0)
+  ));
+
+  const group = await pool.query(
+    `SELECT id, name, created_by FROM chat_conversations
+     WHERE id = $1 AND is_group = TRUE`,
+    [conversationId]
+  );
+  if (!group.rows[0]) return res.status(404).json({ error: 'El grupo no existe.' });
+  if (Number(group.rows[0].created_by) !== Number(req.authUser.id)) {
+    return res.status(403).json({ error: 'Solo el administrador puede invitar integrantes.' });
+  }
+  if (requestedIds.length === 0) {
+    return res.status(400).json({ error: 'Selecciona al menos una persona.' });
+  }
+
+  const currentCount = await pool.query(
+    'SELECT COUNT(*)::int AS total FROM chat_participants WHERE conversation_id = $1',
+    [conversationId]
+  );
+  const existing = await pool.query(
+    `SELECT user_id FROM chat_participants
+     WHERE conversation_id = $1 AND user_id = ANY($2::int[])`,
+    [conversationId, requestedIds]
+  );
+  const existingSet = new Set(existing.rows.map((row) => Number(row.user_id)));
+  const newIds = requestedIds.filter((id) => !existingSet.has(id));
+  if (Number(currentCount.rows[0].total) + newIds.length > 200) {
+    return res.status(400).json({ error: 'El grupo no puede superar 200 integrantes.' });
+  }
+
+  const validUsers = await pool.query(
+    `SELECT id FROM users
+     WHERE id = ANY($1::int[])
+       AND COALESCE(account_status, 'active') = 'active'
+       AND COALESCE(moderation_status, 'visible') = 'visible'`,
+    [newIds]
+  );
+  if (validUsers.rows.length !== newIds.length) {
+    return res.status(400).json({ error: 'Uno o más usuarios no están disponibles.' });
+  }
+
+  for (const row of validUsers.rows) {
+    await pool.query(
+      `INSERT INTO chat_participants (conversation_id, user_id)
+       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [conversationId, row.id]
+    );
+    const notification = await pool.query(
+      `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+       VALUES ($1, $2, 'chat_message', 'Te agregaron a un grupo', $3, $4)
+       RETURNING *`,
+      [row.id, req.authUser.id, `Ahora formas parte de ${group.rows[0].name}.`, conversationId]
+    );
+    sendToUser(row.id, 'notification', notification.rows[0]);
+    sendToUser(row.id, 'conversation', { id: conversationId });
+  }
+
+  const participants = await getConversationParticipants(conversationId);
+  participants.forEach((participantId) => sendToUser(participantId, 'conversation', { id: conversationId }));
+  return res.json({ success: true, added: validUsers.rows.length });
+});
+
+router.delete('/conversations/:conversationId/participants/:participantId', async (req, res) => {
+  await ready;
+  const conversationId = Number(req.params.conversationId);
+  const participantId = Number(req.params.participantId);
+  const group = await pool.query(
+    `SELECT id, created_by FROM chat_conversations
+     WHERE id = $1 AND is_group = TRUE`,
+    [conversationId]
+  );
+  if (!group.rows[0]) return res.status(404).json({ error: 'El grupo no existe.' });
+  if (Number(group.rows[0].created_by) !== Number(req.authUser.id)) {
+    return res.status(403).json({ error: 'Solo el administrador puede eliminar integrantes.' });
+  }
+  if (participantId === Number(req.authUser.id)) {
+    return res.status(400).json({ error: 'Usa la opcion Salir del grupo.' });
+  }
+
+  const removed = await pool.query(
+    `DELETE FROM chat_participants
+     WHERE conversation_id = $1 AND user_id = $2
+     RETURNING user_id`,
+    [conversationId, participantId]
+  );
+  if (!removed.rows[0]) return res.status(404).json({ error: 'La persona no pertenece al grupo.' });
+  sendToUser(participantId, 'conversation_removed', { conversation_id: conversationId });
+  const remaining = await getConversationParticipants(conversationId);
+  remaining.forEach((id) => sendToUser(id, 'conversation', { id: conversationId }));
+  return res.json({ success: true });
+});
+
+router.post('/conversations/:conversationId/leave', async (req, res) => {
+  await ready;
+  const conversationId = Number(req.params.conversationId);
+  const userId = Number(req.authUser.id);
+  const group = await pool.query(
+    `SELECT id, created_by FROM chat_conversations
+     WHERE id = $1 AND is_group = TRUE`,
+    [conversationId]
+  );
+  if (!group.rows[0]) return res.status(404).json({ error: 'El grupo no existe.' });
+
+  const membership = await pool.query(
+    'SELECT 1 FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
+    [conversationId, userId]
+  );
+  if (!membership.rows[0]) return res.status(404).json({ error: 'No perteneces a este grupo.' });
+
+  await pool.query(
+    'DELETE FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
+    [conversationId, userId]
+  );
+
+  if (Number(group.rows[0].created_by) === userId) {
+    const successor = await pool.query(
+      `SELECT user_id FROM chat_participants
+       WHERE conversation_id = $1 ORDER BY joined_at ASC, user_id ASC LIMIT 1`,
+      [conversationId]
+    );
+    if (successor.rows[0]) {
+      await pool.query(
+        'UPDATE chat_conversations SET created_by = $1 WHERE id = $2',
+        [successor.rows[0].user_id, conversationId]
+      );
+    } else {
+      await pool.query('DELETE FROM chat_conversations WHERE id = $1', [conversationId]);
+    }
+  }
+
+  sendToUser(userId, 'conversation_removed', { conversation_id: conversationId });
+  const remaining = await getConversationParticipants(conversationId);
+  remaining.forEach((id) => sendToUser(id, 'conversation', { id: conversationId }));
+  return res.json({ success: true });
+});
+
 router.post(
   '/direct/:targetUserId/messages',
   upload.array('attachments', 5),
@@ -346,7 +659,7 @@ router.post(
   async (req, res) => {
   await ready;
   const { targetUserId } = req.params;
-  const { sender_id, content } = req.body;
+  const { sender_id, content, mentioned_user_ids } = req.body;
 
   if (!sender_id || !targetUserId) {
     return res.status(400).json({ error: 'sender_id y targetUserId son obligatorios.' });
@@ -367,8 +680,15 @@ router.post(
       content: file ? content : content,
       file,
     });
-    messages.push(message);
-    await notifyParticipants({ conversationId, senderId: sender_id, message });
+    const mentionedUserIds = await saveMessageMentions({
+      messageId: message.id,
+      conversationId,
+      senderId: sender_id,
+      rawIds: mentioned_user_ids,
+    });
+    const enrichedMessage = await buildMessagePayload(message.id);
+    messages.push(enrichedMessage);
+    await notifyParticipants({ conversationId, senderId: sender_id, message: enrichedMessage, mentionedUserIds });
   }
 
   res.json({ conversation_id: conversationId, messages });
@@ -382,7 +702,7 @@ router.post(
   async (req, res) => {
   await ready;
   const { conversationId } = req.params;
-  const { sender_id, content } = req.body;
+  const { sender_id, content, mentioned_user_ids } = req.body;
 
   const allowed = await pool.query(
     'SELECT 1 FROM chat_participants WHERE conversation_id = $1 AND user_id = $2',
@@ -404,45 +724,110 @@ router.post(
       content,
       file,
     });
-    messages.push(message);
-    await notifyParticipants({ conversationId, senderId: sender_id, message });
+    const mentionedUserIds = await saveMessageMentions({
+      messageId: message.id,
+      conversationId,
+      senderId: sender_id,
+      rawIds: mentioned_user_ids,
+    });
+    const enrichedMessage = await buildMessagePayload(message.id);
+    messages.push(enrichedMessage);
+    await notifyParticipants({ conversationId, senderId: sender_id, message: enrichedMessage, mentionedUserIds });
   }
 
   res.json({ conversation_id: Number(conversationId), messages });
   }
 );
 
-router.post('/groups', async (req, res) => {
+router.post(
+  '/groups',
+  groupImageUpload.single('groupImage'),
+  bindAuthenticatedActor('created_by'),
+  async (req, res) => {
   await ready;
-  const { name, created_by, participant_ids = [] } = req.body;
+  const { name, created_by } = req.body;
+  const participantIds = Array.from(new Set(
+    parseIdArray(req.body.participant_ids)
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0 && id !== Number(created_by))
+  ));
+  const cleanName = String(name || '').trim();
 
-  if (!name || !created_by) {
-    return res.status(400).json({ error: 'name y created_by son obligatorios.' });
+  if (!cleanName || !created_by) {
+    return res.status(400).json({ error: 'El nombre del grupo es obligatorio.' });
+  }
+  if (cleanName.length > 120) {
+    return res.status(400).json({ error: 'El nombre no puede superar 120 caracteres.' });
+  }
+  if (participantIds.length === 0) {
+    return res.status(400).json({ error: 'Selecciona al menos una persona.' });
+  }
+  if (participantIds.length > 199) {
+    return res.status(400).json({ error: 'El grupo no puede superar 200 integrantes.' });
   }
 
-  const participants = Array.from(
-    new Set([Number(created_by), ...participant_ids.map((id) => Number(id))].filter(Boolean))
+  const validUsers = await pool.query(
+    `SELECT id FROM users
+     WHERE id = ANY($1::int[])
+       AND COALESCE(account_status, 'active') = 'active'
+       AND COALESCE(moderation_status, 'visible') = 'visible'`,
+    [participantIds]
   );
+  if (validUsers.rows.length !== participantIds.length) {
+    return res.status(400).json({ error: 'Uno o más participantes no están disponibles.' });
+  }
 
-  const created = await pool.query(
-    `INSERT INTO chat_conversations (is_group, name, created_by)
-     VALUES (TRUE, $1, $2)
-     RETURNING *`,
-    [name.trim(), created_by]
-  );
-
-  for (const participantId of participants) {
-    await pool.query(
-      `INSERT INTO chat_participants (conversation_id, user_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [created.rows[0].id, participantId]
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const groupImageUrl = req.file ? `/uploads/chat/${req.file.filename}` : null;
+    const created = await client.query(
+      `INSERT INTO chat_conversations (is_group, name, created_by, group_image_url)
+       VALUES (TRUE, $1, $2, $3)
+       RETURNING *`,
+      [cleanName, created_by, groupImageUrl]
     );
-  }
 
-  broadcast('conversation', created.rows[0]);
-  res.json(created.rows[0]);
-});
+    const participants = [Number(created_by), ...validUsers.rows.map((row) => Number(row.id))];
+    for (const participantId of participants) {
+      await client.query(
+        `INSERT INTO chat_participants (conversation_id, user_id)
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+        [created.rows[0].id, participantId]
+      );
+    }
+    await client.query('COMMIT');
+
+    const response = {
+      ...created.rows[0],
+      display_name: created.rows[0].name,
+      other_profile_image: created.rows[0].group_image_url,
+      participant_count: participants.length,
+    };
+    for (const participantId of participants.filter((id) => Number(id) !== Number(created_by))) {
+      const notification = await pool.query(
+        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+         VALUES ($1, $2, 'chat_message', 'Te agregaron a un grupo', $3, $4)
+         RETURNING *`,
+        [participantId, created_by, `Ahora formas parte de ${cleanName}.`, created.rows[0].id]
+      );
+      sendToUser(participantId, 'notification', notification.rows[0]);
+    }
+    participants.forEach((participantId) => sendToUser(participantId, 'conversation', response));
+    return res.status(201).json(response);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (req.file) {
+      fs.unlink(path.join(uploadDir, req.file.filename), () => {});
+    }
+    console.error('Error creando grupo:', error);
+    return res.status(500).json({ error: 'No se pudo crear el grupo.' });
+  } finally {
+    client.release();
+  }
+  }
+);
 
 router.patch('/conversations/:conversationId/read', async (req, res) => {
   await ready;

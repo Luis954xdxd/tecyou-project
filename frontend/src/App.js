@@ -21,6 +21,7 @@ import UsersPage from './pages/UsersPage';
 import AdminPage from './pages/AdminPage';
 import './styles/auth.css';
 import { clearUserSession, getSessionToken, getUserSession, saveSessionToken, saveUserSession } from './utils/authStorage';
+import { applyAvatarFallback } from './utils/avatarFallback';
 import RecognitionPage from './pages/RecognitionPage';
 import { renderTextWithHashtags } from './textFormatters';
 import StoriesBar from './components/StoriesBar';
@@ -297,11 +298,29 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [chatLoading, setChatLoading] = useState(false);
   const [sendingChat, setSendingChat] = useState(false);
   const [chatError, setChatError] = useState('');
+  const [refreshingMessenger, setRefreshingMessenger] = useState(false);
   const [isMessengerExpanded, setIsMessengerExpanded] = useState(false);
   const [chatImageViewer, setChatImageViewer] = useState(null);
   const [showChatExtras, setShowChatExtras] = useState(false);
   const [chatTypingUsers, setChatTypingUsers] = useState({});
   const [recordingAudio, setRecordingAudio] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupCreatorStep, setGroupCreatorStep] = useState(1);
+  const [groupCandidates, setGroupCandidates] = useState([]);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [selectedGroupUserIds, setSelectedGroupUserIds] = useState([]);
+  const [groupName, setGroupName] = useState('');
+  const [groupImage, setGroupImage] = useState(null);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [groupError, setGroupError] = useState('');
+  const [chatParticipants, setChatParticipants] = useState([]);
+  const [chatMentions, setChatMentions] = useState([]);
+  const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [showGroupInvitePicker, setShowGroupInvitePicker] = useState(false);
+  const [groupInviteSearch, setGroupInviteSearch] = useState('');
+  const [selectedInviteIds, setSelectedInviteIds] = useState([]);
+  const [groupActionLoading, setGroupActionLoading] = useState(false);
+  const [groupActionError, setGroupActionError] = useState('');
   const [mediaSlideByRecognition, setMediaSlideByRecognition] = useState({});
 
   const [favoriteIds, setFavoriteIds] = useState({});
@@ -1118,9 +1137,206 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     setChatMessages([]);
   };
 
+  const fetchChatParticipants = async (conversationId) => {
+    const response = await axios.get(`${API_BASE}/api/chat/conversations/${conversationId}/participants`);
+    const participants = Array.isArray(response.data) ? response.data : [];
+    setChatParticipants(participants);
+    return participants;
+  };
+
+  const handleExploreWall = () => {
+    setSelectedCategory('Todas');
+    setSearchTerm('');
+    setHashtagFilter('');
+    setSortBy('recent');
+    window.requestAnimationFrame(() => {
+      document.getElementById('feed-section')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
+  const refreshMessenger = async () => {
+    if (!user?.id || refreshingMessenger) return;
+    try {
+      setRefreshingMessenger(true);
+      setChatError('');
+      const tasks = [fetchChatConversations()];
+
+      if (activeChat?.id && !activeChat.isPendingDirect) {
+        tasks.push(fetchChatMessages(activeChat.id));
+        if (activeChat.is_group) tasks.push(fetchChatParticipants(activeChat.id));
+      }
+
+      tasks.push(
+        axios.get(`${API_BASE}/api/chat/presence`).then((response) => {
+          const snapshot = Array.isArray(response.data) ? response.data : [];
+          setOnlineUsers(snapshot.reduce((accumulator, item) => {
+            accumulator[item.userId] = item;
+            return accumulator;
+          }, {}));
+        })
+      );
+
+      await Promise.all(tasks);
+    } catch (error) {
+      console.error('Error al actualizar Messenger:', error);
+      setChatError(error.response?.data?.error || 'No se pudo actualizar Messenger.');
+    } finally {
+      setRefreshingMessenger(false);
+    }
+  };
+
   const openConversation = async (conversation) => {
     setActiveChat(conversation);
+    setChatMentions([]);
+    if (conversation.is_group) {
+      try {
+        await fetchChatParticipants(conversation.id);
+      } catch (error) {
+        console.error('Error al cargar integrantes:', error);
+        setChatParticipants([]);
+      }
+    } else setChatParticipants([]);
     await fetchChatMessages(conversation.id);
+  };
+
+  const openGroupInfo = async () => {
+    if (!activeChat?.is_group || !activeChat.id) return;
+    setGroupActionError('');
+    setShowGroupInvitePicker(false);
+    setSelectedInviteIds([]);
+    setShowGroupInfoModal(true);
+    try {
+      await Promise.all([
+        fetchChatParticipants(activeChat.id),
+        groupCandidates.length === 0
+          ? axios.get(`${API_BASE}/api/chat/group-candidates`).then((response) => {
+              setGroupCandidates(Array.isArray(response.data) ? response.data : []);
+            })
+          : Promise.resolve(),
+      ]);
+    } catch (error) {
+      setGroupActionError(error.response?.data?.error || 'No se pudo cargar la informacion del grupo.');
+    }
+  };
+
+  const inviteUsersToGroup = async () => {
+    if (!activeChat?.id || selectedInviteIds.length === 0) return;
+    try {
+      setGroupActionLoading(true);
+      setGroupActionError('');
+      await axios.post(`${API_BASE}/api/chat/conversations/${activeChat.id}/participants`, {
+        participant_ids: selectedInviteIds,
+      });
+      await fetchChatParticipants(activeChat.id);
+      setSelectedInviteIds([]);
+      setShowGroupInvitePicker(false);
+      fetchChatConversations();
+    } catch (error) {
+      setGroupActionError(error.response?.data?.error || 'No se pudieron agregar los integrantes.');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const removeUserFromGroup = async (participant) => {
+    if (!activeChat?.id || !window.confirm(`¿Eliminar a ${participant.display_name} del grupo?`)) return;
+    try {
+      setGroupActionLoading(true);
+      setGroupActionError('');
+      await axios.delete(
+        `${API_BASE}/api/chat/conversations/${activeChat.id}/participants/${participant.id}`
+      );
+      await fetchChatParticipants(activeChat.id);
+      fetchChatConversations();
+    } catch (error) {
+      setGroupActionError(error.response?.data?.error || 'No se pudo eliminar al integrante.');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const leaveChatGroup = async () => {
+    if (!activeChat?.id || !window.confirm('¿Seguro que quieres salir de este grupo?')) return;
+    try {
+      setGroupActionLoading(true);
+      setGroupActionError('');
+      await axios.post(`${API_BASE}/api/chat/conversations/${activeChat.id}/leave`);
+      setShowGroupInfoModal(false);
+      setActiveChat(null);
+      setChatMessages([]);
+      setChatParticipants([]);
+      await fetchChatConversations();
+    } catch (error) {
+      setGroupActionError(error.response?.data?.error || 'No se pudo salir del grupo.');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const openCreateGroup = async () => {
+    setGroupCreatorStep(1);
+    setGroupSearch('');
+    setSelectedGroupUserIds([]);
+    setGroupName('');
+    setGroupImage(null);
+    setGroupError('');
+    setShowCreateGroupModal(true);
+    try {
+      const response = await axios.get(`${API_BASE}/api/chat/group-candidates`);
+      setGroupCandidates(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      setGroupCandidates([]);
+      setGroupError(error.response?.data?.error || 'No se pudieron cargar los usuarios.');
+    }
+  };
+
+  const toggleGroupCandidate = (candidateId) => {
+    const numericId = Number(candidateId);
+    setGroupError('');
+    setSelectedGroupUserIds((previous) => {
+      if (previous.includes(numericId)) return previous.filter((id) => id !== numericId);
+      if (previous.length >= 199) {
+        setGroupError('El grupo puede tener como maximo 200 integrantes, incluyendote.');
+        return previous;
+      }
+      return [...previous, numericId];
+    });
+  };
+
+  const createChatGroup = async () => {
+    const cleanName = groupName.trim();
+    if (!cleanName) {
+      setGroupError('Escribe un nombre para el grupo.');
+      return;
+    }
+    try {
+      setCreatingGroup(true);
+      setGroupError('');
+      const payload = new FormData();
+      payload.append('name', cleanName);
+      payload.append('participant_ids', JSON.stringify(selectedGroupUserIds));
+      if (groupImage) payload.append('groupImage', groupImage);
+      const response = await axios.post(`${API_BASE}/api/chat/groups`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const createdGroup = { ...response.data, is_group: true };
+      setShowCreateGroupModal(false);
+      setActiveChat(createdGroup);
+      setChatMessages([]);
+      setChatMentions([]);
+      setChatParticipants([
+        { id: user.id, display_name: user.display_name || user.fullname, profile_image_url: user.profile_image_url },
+        ...groupCandidates.filter((candidate) => selectedGroupUserIds.includes(Number(candidate.id))),
+      ]);
+      await fetchChatConversations();
+    } catch (error) {
+      setGroupError(error.response?.data?.error || 'No se pudo crear el grupo.');
+    } finally {
+      setCreatingGroup(false);
+    }
   };
 
   const handleChatFilesChange = (event) => {
@@ -1146,12 +1362,38 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
   };
 
   const handleChatDraftChange = (event) => {
-    setChatDraft(event.target.value);
+    const nextValue = event.target.value;
+    setChatDraft(nextValue);
+    setChatMentions((previous) => previous.filter((person) =>
+      nextValue.toLocaleLowerCase('es').includes(`@${person.display_name}`.toLocaleLowerCase('es'))
+    ));
     sendTypingStatus(true);
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
       sendTypingStatus(false);
     }, 1400);
+  };
+
+  const selectChatMention = (person) => {
+    setChatDraft((previous) => previous.replace(/@[\p{L}\p{N}_. -]*$/u, `@${person.display_name} `));
+    setChatMentions((previous) => (
+      previous.some((item) => Number(item.id) === Number(person.id)) ? previous : [...previous, person]
+    ));
+  };
+
+  const renderChatMessageContent = (message) => {
+    const content = String(message.content || '');
+    const mentionedNames = (message.mentioned_users || [])
+      .map((person) => person?.display_name)
+      .filter(Boolean);
+    if (mentionedNames.length === 0) return content;
+    const escapedNames = mentionedNames.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const parts = content.split(new RegExp(`(@(?:${escapedNames.join('|')}))`, 'gi'));
+    return parts.map((part, index) => (
+      mentionedNames.some((name) => part.toLocaleLowerCase('es') === `@${name}`.toLocaleLowerCase('es'))
+        ? <strong className="tec-chat-mention" key={`${part}-${index}`}>{part}</strong>
+        : part
+    ));
   };
 
   const getChatFilePreview = (file) => {
@@ -1203,6 +1445,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       const payload = new FormData();
       payload.append('sender_id', user.id);
       payload.append('content', chatDraft.trim());
+      payload.append('mentioned_user_ids', JSON.stringify(chatMentions.map((person) => person.id)));
       chatFiles.forEach((file) => payload.append('attachments', file));
 
       const url = activeChat.isPendingDirect
@@ -1215,6 +1458,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
       const nextConversationId = response.data?.conversation_id;
       setChatDraft('');
+      setChatMentions([]);
       sendTypingStatus(false);
       setChatFiles([]);
       if (chatFileInputRef.current) chatFileInputRef.current.value = '';
@@ -1248,6 +1492,55 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     setChatTypingUsers({});
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
   }, [activeChat]);
+
+  useEffect(() => {
+    const groupModalOpen = showCreateGroupModal || showGroupInfoModal;
+    const messengerOpen = showMessengerPanel;
+    if (!groupModalOpen && !messengerOpen) return undefined;
+    const allowedScrollSelector = groupModalOpen
+      ? '.tec-group-candidate-list, .tec-group-member-list, .tec-group-modal'
+      : '.tec-chat-preview-list, .tec-chat-messages, .tec-chat-info-panel';
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.classList.add('tec-group-scroll-locked');
+
+    const preventOutsideModalScroll = (event) => {
+      const scrollContainer = event.target.closest?.(allowedScrollSelector);
+      if (!scrollContainer) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.type === 'wheel') {
+        const canScrollVertically = scrollContainer.scrollHeight > scrollContainer.clientHeight;
+        const atTop = scrollContainer.scrollTop <= 0;
+        const atBottom = Math.ceil(scrollContainer.scrollTop + scrollContainer.clientHeight) >= scrollContainer.scrollHeight;
+        if (!canScrollVertically || (event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) {
+          event.preventDefault();
+        }
+      }
+    };
+    const preventOutsideModalKeys = (event) => {
+      if (!['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) return;
+      if (!event.target.closest?.(allowedScrollSelector)) event.preventDefault();
+    };
+
+    document.addEventListener('wheel', preventOutsideModalScroll, { passive: false, capture: true });
+    document.addEventListener('touchmove', preventOutsideModalScroll, { passive: false, capture: true });
+    document.addEventListener('keydown', preventOutsideModalKeys, true);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.classList.remove('tec-group-scroll-locked');
+      document.removeEventListener('wheel', preventOutsideModalScroll, true);
+      document.removeEventListener('touchmove', preventOutsideModalScroll, true);
+      document.removeEventListener('keydown', preventOutsideModalKeys, true);
+    };
+  }, [showCreateGroupModal, showGroupInfoModal, showMessengerPanel]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1288,6 +1581,21 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         axios.patch(`${API_BASE}/api/chat/conversations/${message.conversation_id}/read`, {
           user_id: user.id,
         }).catch((error) => console.warn('No se pudo marcar el chat como leido:', error.message));
+      }
+      fetchChatConversations();
+    });
+
+    events.addEventListener('conversation', () => {
+      fetchChatConversations();
+    });
+
+    events.addEventListener('conversation_removed', (event) => {
+      const item = JSON.parse(event.data || '{}');
+      if (Number(activeChatRef.current?.id) === Number(item.conversation_id)) {
+        setActiveChat(null);
+        setChatMessages([]);
+        setChatParticipants([]);
+        setShowGroupInfoModal(false);
       }
       fetchChatConversations();
     });
@@ -1421,7 +1729,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     if (!name) return 'TSJ';
     return name
       .split(' ')
-      .slice(0, 2)
+      .slice(0, 1)
       .map((word) => word[0])
       .join('')
       .toUpperCase();
@@ -1927,12 +2235,13 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                   src={resolveImageUrl(person.profile_image_url)}
                   alt={person.user_name}
                   className="reaction-user-avatar"
+                  onError={(event) => applyAvatarFallback(event, person.user_name)}
                 />
               ) : (
                 <div className="reaction-user-avatar-fallback">
                   {(person.user_name || 'TSJ')
                     .split(' ')
-                    .slice(0, 2)
+                    .slice(0, 1)
                     .map((word) => word[0])
                     .join('')
                     .toUpperCase()}
@@ -2447,6 +2756,36 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       </article>
     );
   };
+  const normalizedGroupSearch = groupSearch.trim().toLocaleLowerCase('es');
+  const filteredGroupCandidates = groupCandidates.filter((candidate) => {
+    if (!normalizedGroupSearch) return true;
+    return [candidate.display_name, candidate.fullname, candidate.email]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase('es').includes(normalizedGroupSearch));
+  });
+  const chatMentionMatch = activeChat?.is_group
+    ? chatDraft.match(/@[\p{L}\p{N}_. -]*$/u)
+    : null;
+  const chatMentionQuery = chatMentionMatch
+    ? chatMentionMatch[0].slice(1).trim().toLocaleLowerCase('es')
+    : '';
+  const chatMentionSuggestions = chatMentionMatch
+    ? chatParticipants
+        .filter((person) => Number(person.id) !== Number(user?.id))
+        .filter((person) => !chatMentionQuery || String(person.display_name || person.fullname || '')
+          .toLocaleLowerCase('es').includes(chatMentionQuery))
+        .slice(0, 6)
+    : [];
+  const currentGroupAdmin = chatParticipants.find((participant) => participant.is_admin);
+  const currentUserIsGroupAdmin = Number(currentGroupAdmin?.id) === Number(user?.id);
+  const participantIdSet = new Set(chatParticipants.map((participant) => Number(participant.id)));
+  const normalizedInviteSearch = groupInviteSearch.trim().toLocaleLowerCase('es');
+  const availableGroupInviteCandidates = groupCandidates
+    .filter((candidate) => !participantIdSet.has(Number(candidate.id)))
+    .filter((candidate) => !normalizedInviteSearch || [candidate.display_name, candidate.fullname, candidate.email]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase('es').includes(normalizedInviteSearch)));
+
   const dashboardView = user ? (
     <>
       <header className="main-nav">
@@ -2529,6 +2868,14 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               onToggleAvatarFrames={handleToggleAvatarFrames}
               hasStory={storyUserIds.has(Number(user?.id))}
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={handleProfileImageChange}
+              className="hidden-file-input"
+              aria-label="Seleccionar foto de perfil"
+            />
           </div>
         </div>
       </header>
@@ -2559,7 +2906,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               <span className="social-rail-icon"><LucideIcon name="square" size={18} /></span>
               Crear historia
             </button>
-            <button type="button" className="social-rail-item" onClick={() => setHashtagFilter('')}>
+            <button type="button" className="social-rail-item" onClick={handleExploreWall}>
               <span className="social-rail-icon">#</span>
               Explorar muro
             </button>
@@ -2966,20 +3313,29 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               <div className="tec-panel-header-actions">
                 <button
                   type="button"
+                  className="tec-panel-control-btn"
                   onClick={() => setIsMessengerExpanded((prev) => !prev)}
                   title={isMessengerExpanded ? 'Reducir' : 'Ampliar'}
+                  aria-label={isMessengerExpanded ? 'Reducir chat' : 'Ampliar chat'}
                 >
                   <LucideIcon name={isMessengerExpanded ? 'shrink' : 'expand'} size={20} />
                 </button>
-                <button type="button" onClick={() => setShowMessengerPanel(false)}><LucideIcon name="x" size={20} /></button>
+                <button
+                  type="button"
+                  className="tec-panel-control-btn tec-panel-close-btn"
+                  onClick={() => setShowMessengerPanel(false)}
+                  title="Cerrar"
+                  aria-label="Cerrar chat"
+                >
+                  <LucideIcon name="x" size={20} />
+                </button>
               </div>
             </div>
             <div className="tec-messenger-toolbar">
-              <button type="button" onClick={fetchChatConversations}>Actualizar</button>
-              <button type="button">Crear grupo</button>
-              <button type="button" onClick={() => setShowChatExtras((prev) => !prev)}>
-                Emojis/GIFs
+              <button type="button" onClick={refreshMessenger} disabled={refreshingMessenger}>
+                {refreshingMessenger ? 'Actualizando...' : 'Actualizar'}
               </button>
+              <button type="button" onClick={openCreateGroup}>Crear grupo</button>
             </div>
 
             <div className="tec-messenger-layout">
@@ -3000,13 +3356,17 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                       onClick={() => openConversation(conversation)}
                     >
                       <span className={`tec-chat-avatar ${storyUserIds.has(Number(conversation.other_user_id)) ? 'has-story-ring' : ''}`}>
-                        {conversation.other_profile_image ? (
+                        <span className="tec-chat-avatar-fallback">
+                          {(conversation.display_name || 'T')[0]}
+                        </span>
+                        {conversation.other_profile_image && (
                           <img
                             src={resolveImageUrl(conversation.other_profile_image)}
                             alt={conversation.display_name || 'Chat'}
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                            }}
                           />
-                        ) : (
-                          (conversation.display_name || 'T')[0]
                         )}
                       </span>
                       <div>
@@ -3035,21 +3395,32 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                     <div className="tec-chat-window-header">
                       <div className="tec-chat-title-user">
                         <span className={`tec-chat-avatar header ${storyUserIds.has(Number(activeChat.other_user_id)) ? 'has-story-ring' : ''}`}>
-                          {activeChat.other_profile_image ? (
+                          <span className="tec-chat-avatar-fallback">
+                            {(activeChat.display_name || 'T')[0]}
+                          </span>
+                          {activeChat.other_profile_image && (
                             <img
                               src={resolveImageUrl(activeChat.other_profile_image)}
                               alt={activeChat.display_name || 'Chat'}
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
                             />
-                          ) : (
-                            (activeChat.display_name || 'T')[0]
                           )}
                         </span>
-                        <div>
+                        <button
+                          type="button"
+                          className={`tec-chat-heading-copy ${activeChat.is_group ? 'clickable' : ''}`}
+                          onClick={activeChat.is_group ? openGroupInfo : undefined}
+                          title={activeChat.is_group ? 'Ver informacion del grupo' : undefined}
+                        >
                           <strong>{activeChat.display_name || 'Chat Tec You'}</strong>
                           <small>
-                            {formatPresenceText(onlineUsers[activeChat.other_user_id])}
+                            {activeChat.is_group
+                              ? `${chatParticipants.length || activeChat.participant_count || 0} integrantes`
+                              : formatPresenceText(onlineUsers[activeChat.other_user_id])}
                           </small>
-                        </div>
+                        </button>
                       </div>
                       <div className="tec-chat-call-actions">
                         <button type="button" title="Llamada de voz"><LucideIcon name="phone" size={18} /></button>
@@ -3071,7 +3442,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                               Number(message.sender_id) === Number(user?.id) ? 'mine' : 'theirs'
                             }`}
                           >
-                            {message.content && <p>{message.content}</p>}
+                            {activeChat.is_group && Number(message.sender_id) !== Number(user?.id) && (
+                              <small className="tec-chat-sender-name">{message.sender_name || 'Integrante'}</small>
+                            )}
+                            {message.content && <p>{renderChatMessageContent(message)}</p>}
                             {message.media_url && message.message_type === 'image' && (
                               <button
                                 type="button"
@@ -3088,6 +3462,9 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                             )}
                             {message.media_url && message.message_type === 'audio' && (
                               <audio controls src={resolveImageUrl(message.media_url)} />
+                            )}
+                            {message.media_url && message.message_type === 'video' && (
+                              <video controls preload="metadata" src={resolveImageUrl(message.media_url)} />
                             )}
                             {message.media_url && message.message_type === 'file' && (
                               <a href={resolveImageUrl(message.media_url)} target="_blank" rel="noreferrer">
@@ -3131,6 +3508,8 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                                 <img src={preview} alt={file.name} />
                               ) : file.type.startsWith('audio/') ? (
                                 <audio controls src={preview} />
+                              ) : file.type.startsWith('video/') ? (
+                                <video controls preload="metadata" src={preview} />
                               ) : (
                                 file.name
                               )}
@@ -3225,13 +3604,30 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               {isMessengerExpanded && (
                 <aside className="tec-chat-info-panel">
                   <span className="tec-chat-avatar profile">
-                    {activeChat?.other_profile_image ? (
+                    <span className="tec-chat-avatar-fallback">
+                      {(activeChat?.display_name || 'T')[0]}
+                    </span>
+                    {activeChat?.other_profile_image && (
                       <img
                         src={resolveImageUrl(activeChat.other_profile_image)}
                         alt={activeChat.display_name || 'Chat'}
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                        }}
                       />
-                    ) : (
-                      (activeChat?.display_name || 'T')[0]
+                    )}
+
+                    {chatMentionSuggestions.length > 0 && (
+                      <div className="tec-chat-mention-suggestions">
+                        {chatMentionSuggestions.map((person) => (
+                          <button key={person.id} type="button" onClick={() => selectChatMention(person)}>
+                            <span className="tec-chat-avatar-fallback">
+                              {(person.display_name || person.fullname || 'U')[0]}
+                            </span>
+                            <span>{person.display_name || person.fullname}</span>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </span>
                   <h3>{activeChat?.display_name || 'Selecciona un chat'}</h3>
@@ -3252,6 +3648,267 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 </aside>
               )}
             </div>
+          </section>
+        </div>
+      )}
+
+      {showCreateGroupModal && (
+        <div className="tec-group-modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
+          <section className="tec-group-modal" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <button
+                type="button"
+                className="tec-group-icon-button"
+                onClick={() => groupCreatorStep === 2 ? setGroupCreatorStep(1) : setShowCreateGroupModal(false)}
+                aria-label={groupCreatorStep === 2 ? 'Volver' : 'Cerrar'}
+              >
+                {groupCreatorStep === 2 ? '\u2190' : '\u00d7'}
+              </button>
+              <div>
+                <h3>{groupCreatorStep === 1 ? 'Agregar integrantes' : 'Nuevo grupo'}</h3>
+                <small>{selectedGroupUserIds.length + 1} de 200 integrantes</small>
+              </div>
+            </header>
+
+            {groupCreatorStep === 1 ? (
+              <>
+                <input
+                  className="tec-group-search"
+                  type="search"
+                  placeholder="Buscar por nombre o correo..."
+                  value={groupSearch}
+                  onChange={(event) => setGroupSearch(event.target.value)}
+                  autoFocus
+                />
+                <div className="tec-group-candidate-list">
+                  {filteredGroupCandidates.length === 0 ? (
+                    <p>No se encontraron usuarios.</p>
+                  ) : filteredGroupCandidates.map((candidate) => {
+                    const selected = selectedGroupUserIds.includes(Number(candidate.id));
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        className={selected ? 'selected' : ''}
+                        onClick={() => toggleGroupCandidate(candidate.id)}
+                      >
+                        <span className="tec-group-candidate-avatar">
+                          <span>{(candidate.display_name || candidate.fullname || 'U')[0]}</span>
+                          {candidate.profile_image_url && (
+                            <img
+                              src={resolveImageUrl(candidate.profile_image_url)}
+                              alt=""
+                              onError={(event) => applyAvatarFallback(event, candidate.display_name || candidate.fullname)}
+                            />
+                          )}
+                        </span>
+                        <span className="tec-group-candidate-copy">
+                          <strong>{candidate.display_name || candidate.fullname}</strong>
+                          <small>{candidate.email}</small>
+                        </span>
+                        <span className="tec-group-check">{selected ? '\u2713' : ''}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="tec-group-primary"
+                  disabled={selectedGroupUserIds.length === 0}
+                  onClick={() => {
+                    setGroupError('');
+                    setGroupCreatorStep(2);
+                  }}
+                >
+                  Listo
+                </button>
+              </>
+            ) : (
+              <div className="tec-group-details">
+                <label className="tec-group-image-picker">
+                  <span className="tec-group-image-preview">
+                    {groupImage ? (
+                      <img src={URL.createObjectURL(groupImage)} alt="Vista previa del grupo" />
+                    ) : (
+                      <LucideIcon name="image" size={28} />
+                    )}
+                  </span>
+                  <span>Agregar imagen <small>(opcional)</small></span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => setGroupImage(event.target.files?.[0] || null)}
+                  />
+                </label>
+                <label className="tec-group-name-field">
+                  <span>Nombre del grupo</span>
+                  <input
+                    value={groupName}
+                    maxLength={120}
+                    placeholder="Escribe un nombre"
+                    onChange={(event) => setGroupName(event.target.value)}
+                    autoFocus
+                  />
+                  <small>{groupName.length}/120</small>
+                </label>
+                <button
+                  type="button"
+                  className="tec-group-primary"
+                  disabled={creatingGroup || !groupName.trim()}
+                  onClick={createChatGroup}
+                >
+                  {creatingGroup ? 'Creando...' : 'Listo'}
+                </button>
+              </div>
+            )}
+            {groupError && <p className="tec-group-error">{groupError}</p>}
+          </section>
+        </div>
+      )}
+
+      {showGroupInfoModal && activeChat?.is_group && (
+        <div className="tec-group-modal-overlay" onClick={() => setShowGroupInfoModal(false)}>
+          <section className="tec-group-modal tec-group-info-modal" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <button
+                type="button"
+                className="tec-group-icon-button"
+                onClick={() => showGroupInvitePicker
+                  ? (setShowGroupInvitePicker(false), setSelectedInviteIds([]))
+                  : setShowGroupInfoModal(false)}
+                aria-label={showGroupInvitePicker ? 'Volver' : 'Cerrar'}
+              >
+                {showGroupInvitePicker ? '\u2190' : '\u00d7'}
+              </button>
+              <div>
+                <h3>{showGroupInvitePicker ? 'Invitar personas' : activeChat.display_name}</h3>
+                <small>{chatParticipants.length} integrantes</small>
+              </div>
+            </header>
+
+            {showGroupInvitePicker ? (
+              <>
+                <input
+                  className="tec-group-search"
+                  type="search"
+                  placeholder="Buscar personas..."
+                  value={groupInviteSearch}
+                  onChange={(event) => setGroupInviteSearch(event.target.value)}
+                  autoFocus
+                />
+                <div className="tec-group-candidate-list">
+                  {availableGroupInviteCandidates.length === 0 ? (
+                    <p>No hay personas disponibles.</p>
+                  ) : availableGroupInviteCandidates.map((candidate) => {
+                    const selected = selectedInviteIds.includes(Number(candidate.id));
+                    const availableSlots = 200 - chatParticipants.length;
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        className={selected ? 'selected' : ''}
+                        onClick={() => setSelectedInviteIds((previous) => {
+                          const candidateId = Number(candidate.id);
+                          if (previous.includes(candidateId)) return previous.filter((id) => id !== candidateId);
+                          if (previous.length >= availableSlots) {
+                            setGroupActionError('El grupo no puede superar 200 integrantes.');
+                            return previous;
+                          }
+                          setGroupActionError('');
+                          return [...previous, candidateId];
+                        })}
+                      >
+                        <span className="tec-group-candidate-avatar">
+                          <span>{(candidate.display_name || candidate.fullname || 'U')[0]}</span>
+                          {candidate.profile_image_url && (
+                            <img
+                              src={resolveImageUrl(candidate.profile_image_url)}
+                              alt=""
+                              onError={(event) => applyAvatarFallback(event, candidate.display_name || candidate.fullname)}
+                            />
+                          )}
+                        </span>
+                        <span className="tec-group-candidate-copy">
+                          <strong>{candidate.display_name || candidate.fullname}</strong>
+                          <small>{candidate.email}</small>
+                        </span>
+                        <span className="tec-group-check">{selected ? '\u2713' : ''}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="tec-group-primary"
+                  disabled={selectedInviteIds.length === 0 || groupActionLoading}
+                  onClick={inviteUsersToGroup}
+                >
+                  {groupActionLoading ? 'Agregando...' : `Agregar (${selectedInviteIds.length})`}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="tec-group-admin-card">
+                  <small>Administrador</small>
+                  <strong>{currentGroupAdmin?.display_name || 'Sin administrador'}</strong>
+                </div>
+                <div className="tec-group-member-list">
+                  {chatParticipants.map((participant) => (
+                    <div key={participant.id} className="tec-group-member-row">
+                      <span className="tec-group-candidate-avatar">
+                        <span>{(participant.display_name || 'U')[0]}</span>
+                        {participant.profile_image_url && (
+                          <img
+                            src={resolveImageUrl(participant.profile_image_url)}
+                            alt=""
+                            onError={(event) => applyAvatarFallback(event, participant.display_name)}
+                          />
+                        )}
+                      </span>
+                      <span className="tec-group-candidate-copy">
+                        <strong>{participant.display_name}</strong>
+                        <small>
+                          {participant.is_admin ? 'Administrador' : Number(participant.id) === Number(user?.id) ? 'Tu' : 'Integrante'}
+                        </small>
+                      </span>
+                      {currentUserIsGroupAdmin && !participant.is_admin && (
+                        <button
+                          type="button"
+                          className="tec-group-remove-member"
+                          disabled={groupActionLoading}
+                          onClick={() => removeUserFromGroup(participant)}
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {currentUserIsGroupAdmin && (
+                  <button
+                    type="button"
+                    className="tec-group-secondary"
+                    disabled={chatParticipants.length >= 200}
+                    onClick={() => {
+                      setGroupInviteSearch('');
+                      setGroupActionError('');
+                      setShowGroupInvitePicker(true);
+                    }}
+                  >
+                    Invitar a mas gente
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="tec-group-leave"
+                  disabled={groupActionLoading}
+                  onClick={leaveChatGroup}
+                >
+                  Salir del grupo
+                </button>
+              </>
+            )}
+            {groupActionError && <p className="tec-group-error">{groupActionError}</p>}
           </section>
         </div>
       )}
@@ -3468,6 +4125,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                     src={profileImage}
                     alt="Perfil"
                     className="premium-profile-avatar-image"
+                    onError={(event) => applyAvatarFallback(event, displayName || user?.fullname)}
                   />
                 ) : (
                   <div className="premium-profile-avatar-fallback">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import copperFrame from '../assets/frames/copper-frame.png';
 import silverFrame from '../assets/frames/silver-frame.png';
@@ -32,13 +32,7 @@ function getFrameAsset(frameCode) {
 }
 
 function getInitials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
+  return String(name).trim().charAt(0).toUpperCase() || 'U';
 }
 
 function FramedAvatar({
@@ -51,6 +45,11 @@ function FramedAvatar({
   showPreview = false,
 }) {
   const finalImage = resolveImageUrl(imageUrl);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [finalImage]);
 
   // ARREGLO AQUÍ:
   // Primero obtenemos el marco.
@@ -71,11 +70,12 @@ function FramedAvatar({
           !hasFrame ? 'framed-avatar-circle-no-frame' : ''
         }`}
       >
-        {finalImage ? (
+        {finalImage && !imageFailed ? (
           <img
             src={finalImage}
             alt={name || 'Avatar'}
             className="framed-avatar-image"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="framed-avatar-fallback">
@@ -95,8 +95,8 @@ function FramedAvatar({
       {showPreview && (
         <div className="avatar-hover-card">
           <div className="avatar-hover-card-top">
-            {finalImage ? (
-              <img src={finalImage} alt={name || 'Avatar'} />
+            {finalImage && !imageFailed ? (
+              <img src={finalImage} alt={name || 'Avatar'} onError={() => setImageFailed(true)} />
             ) : (
               <span>{getInitials(name || 'TSJ')}</span>
             )}
