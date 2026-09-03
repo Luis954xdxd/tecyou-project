@@ -92,6 +92,7 @@ const requireStoryAccess = async (req, res, next) => {
 };
 
 const ensureStoryMentionSchema = async () => {
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(20) NOT NULL DEFAULT 'public'`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS story_mentions (
       story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
@@ -106,7 +107,8 @@ const ensureStoryMentionSchema = async () => {
       CHECK (type IN (
         'new_follower', 'recognition_received', 'reaction_received',
         'comment_received', 'comment_reply_received', 'mention_received',
-        'story_mention', 'favorite_received', 'chat_message', 'report_updated'
+        'story_mention', 'favorite_received', 'chat_message', 'report_updated',
+        'institutional_challenge'
       ))
   `);
 };
@@ -380,6 +382,18 @@ router.get('/feed/:userId', async (req, res) => {
       JOIN users u ON u.id = s.user_id
       WHERE s.expires_at > NOW()
         AND COALESCE(s.moderation_status, 'visible') = 'visible'
+        AND (
+          s.user_id = $1
+          OR COALESCE(u.profile_visibility, 'public') = 'public'
+          OR (
+            u.profile_visibility = 'restricted'
+            AND EXISTS (
+              SELECT 1 FROM user_follows privacy_connection
+              WHERE (privacy_connection.follower_id = $1 AND privacy_connection.following_id = s.user_id)
+                 OR (privacy_connection.follower_id = s.user_id AND privacy_connection.following_id = $1)
+            )
+          )
+        )
         AND (
           s.user_id = $1
           OR s.visibility_type = 'public'

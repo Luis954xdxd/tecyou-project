@@ -13,6 +13,7 @@ const progressRoutes = require('./routes/progressRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const challengeRoutes = require('./routes/challengeRoutes');
 const { startModerationService } = require('./services/moderationProcess');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/progress', progressRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/challenges', challengeRoutes);
 
 // Prueba de vida del servidor
 app.get('/', (req, res) => {

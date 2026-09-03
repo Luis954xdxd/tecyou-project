@@ -60,6 +60,7 @@ const upload = multer({
 });
 
 const ensureRepostTable = async () => {
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(20) NOT NULL DEFAULT 'public'`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS recognition_reposts (
       id SERIAL PRIMARY KEY,
@@ -70,6 +71,21 @@ const ensureRepostTable = async () => {
       UNIQUE(user_id, recognition_id)
     )
   `);
+};
+
+const canViewUserContent = async (ownerId, viewerId) => {
+  const result = await pool.query(
+    `SELECT 1 FROM users u WHERE u.id = $1 AND (
+       u.id = $2 OR COALESCE(u.profile_visibility, 'public') = 'public'
+       OR (u.profile_visibility = 'restricted' AND EXISTS (
+         SELECT 1 FROM user_follows connection
+         WHERE (connection.follower_id = $2 AND connection.following_id = u.id)
+            OR (connection.follower_id = u.id AND connection.following_id = $2)
+       ))
+     )`,
+    [ownerId, viewerId]
+  );
+  return result.rows.length > 0;
 };
 
 const ensureCommentLikesTable = async () => {
@@ -456,6 +472,18 @@ router.get('/feed', async (req, res) => {
   LEFT JOIN recognition_comments rc ON r.id = rc.recognition_id AND COALESCE(rc.moderation_status, 'visible') = 'visible'
   LEFT JOIN recognition_reposts rr ON r.id = rr.recognition_id
   WHERE COALESCE(r.moderation_status, 'visible') = 'visible'
+    AND (
+      r.sender_id = $1::int
+      OR COALESCE(s.profile_visibility, 'public') = 'public'
+      OR (
+        s.profile_visibility = 'restricted'
+        AND EXISTS (
+          SELECT 1 FROM user_follows privacy_connection
+          WHERE (privacy_connection.follower_id = $1::int AND privacy_connection.following_id = r.sender_id)
+             OR (privacy_connection.follower_id = r.sender_id AND privacy_connection.following_id = $1::int)
+        )
+      )
+    )
     AND (
       $1::int IS NULL
       OR r.sender_id = $1::int
@@ -1311,6 +1339,7 @@ router.get('/reposts/:userId', async (req, res) => {
   try {
     await ensureRepostTable();
     const { userId } = req.params;
+    if (!(await canViewUserContent(userId, req.authUser.id))) return res.json([]);
 
     const reposts = await pool.query(
       `SELECT
@@ -1357,6 +1386,7 @@ router.get('/reposts/:userId', async (req, res) => {
 // ===============================
 router.get('/:id/detail', async (req, res) => {
   try {
+    await ensureRepostTable();
     const { id } = req.params;
 
     const recognition = await pool.query(
@@ -1384,9 +1414,18 @@ router.get('/:id/detail', async (req, res) => {
       JOIN users rec ON r.receiver_id = rec.id
       LEFT JOIN recognition_media rm ON r.id = rm.recognition_id
       WHERE r.id = $1 AND COALESCE(r.moderation_status, 'visible') = 'visible'
+        AND (
+          r.sender_id = $2
+          OR COALESCE(s.profile_visibility, 'public') = 'public'
+          OR (s.profile_visibility = 'restricted' AND EXISTS (
+            SELECT 1 FROM user_follows connection
+            WHERE (connection.follower_id = $2 AND connection.following_id = r.sender_id)
+               OR (connection.follower_id = r.sender_id AND connection.following_id = $2)
+          ))
+        )
       GROUP BY r.id, s.id, rec.id
       `,
-      [id]
+      [id, req.authUser.id]
     );
 
     if (recognition.rows.length === 0) {

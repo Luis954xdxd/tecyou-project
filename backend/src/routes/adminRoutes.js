@@ -23,7 +23,8 @@ const ensureAdminSchema = async () => {
       CHECK (type IN (
         'new_follower', 'recognition_received', 'reaction_received',
         'comment_received', 'comment_reply_received', 'mention_received',
-        'story_mention', 'favorite_received', 'chat_message', 'report_updated'
+        'story_mention', 'favorite_received', 'chat_message', 'report_updated',
+        'institutional_challenge'
       ))
   `);
   await pool.query(`

@@ -17,6 +17,7 @@ function RegisterPage({ onRegisterSuccess }) {
     email: '',
     password: '',
     confirmPassword: '',
+    profile_visibility: 'public',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -82,6 +83,7 @@ function RegisterPage({ onRegisterSuccess }) {
         email: form.email,
         password: form.password,
         confirmPassword: form.confirmPassword,
+        profile_visibility: form.profile_visibility,
       });
       setSuccessMsg(response.data.message || '¡Cuenta creada! Redirigiendo al login...');
 
@@ -216,6 +218,25 @@ function RegisterPage({ onRegisterSuccess }) {
               <div className={passwordChecks.match ? 'ok' : 'pending'}>
                 Confirmación de contraseña correcta
               </div>
+            </div>
+
+            <div className="auth-input-group auth-visibility-field">
+              <label htmlFor="register-profile-visibility">Tipo de perfil</label>
+              <select
+                id="register-profile-visibility"
+                name="profile_visibility"
+                value={form.profile_visibility}
+                onChange={handleChange}
+              >
+                <option value="public">Pública</option>
+                <option value="private">Privada</option>
+                <option value="restricted">Restringida</option>
+              </select>
+              <small className="auth-helper-text">
+                {form.profile_visibility === 'public' && 'Todos pueden ver lo que publicas.'}
+                {form.profile_visibility === 'private' && 'Solo tú puedes ver lo que publicaste.'}
+                {form.profile_visibility === 'restricted' && 'Solo tus seguidores y las personas que sigues pueden verlo.'}
+              </small>
             </div>
 
             {error ? <p className="auth-error-msg">{error}</p> : null}

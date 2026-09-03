@@ -32,6 +32,7 @@ import FramedAvatar from './components/FramedAvatar';
 import AchievementUnlockToast from './components/AchievementUnlockToast';
 import ReactionBar from './components/ReactionBar';
 import ReportDialog from './components/ReportDialog';
+import InstitutionalChallenges from './components/InstitutionalChallenges';
 
 import TecAgentChatbot from './components/TecAgentChatbot';
 
@@ -254,6 +255,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [profileTags, setProfileTags] = useState(['Comunidad TSJ', 'Reconocimiento positivo']);
   const [birthDate, setBirthDate] = useState('');
   const [locationText, setLocationText] = useState('');
+  const [profileVisibility, setProfileVisibility] = useState('public');
   const [isVerified, setIsVerified] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -263,6 +265,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [draftProfileTags, setDraftProfileTags] = useState('');
   const [draftBirthDate, setDraftBirthDate] = useState('');
   const [draftLocationText, setDraftLocationText] = useState('');
+  const [draftProfileVisibility, setDraftProfileVisibility] = useState('public');
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
@@ -290,6 +293,7 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
   const [reportingChatMessage, setReportingChatMessage] = useState(null);
   const [showSocialMenu, setShowSocialMenu] = useState(false);
   const [showMessengerPanel, setShowMessengerPanel] = useState(false);
+  const [messageBadgeDismissed, setMessageBadgeDismissed] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
   const [chatConversations, setChatConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
@@ -919,6 +923,7 @@ const handleToggleAvatarFrames = () => {
 
       setBirthDate(profile.birth_date || '');
       setLocationText(profile.location || '');
+      setProfileVisibility(profile.profile_visibility || 'public');
       setIsVerified(Boolean(profile.is_verified));
       setFollowersCount(Number(profile.followers_count || 0));
       setFollowingCount(Number(profile.following_count || 0));
@@ -980,6 +985,7 @@ const handleToggleAvatarFrames = () => {
       );
       setBirthDate(fullProfile.birth_date || '');
       setLocationText(fullProfile.location || '');
+      setProfileVisibility(fullProfile.profile_visibility || 'public');
       setIsVerified(Boolean(fullProfile.is_verified));
       setFollowersCount(Number(fullProfile.followers_count || 0));
       setFollowingCount(Number(fullProfile.following_count || 0));
@@ -1087,8 +1093,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           )
         : [];
       setChatConversations(sorted);
+      return sorted;
     } catch (error) {
       console.error('Error al cargar conversaciones:', error);
+      return [];
     }
   };
 
@@ -1107,6 +1115,11 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     if (!presence?.lastSeen) return 'Disponible para mensajes';
     return `Activo ${formatChatTime(presence.lastSeen)}`;
   };
+
+  const unreadChatCount = chatConversations.reduce(
+    (total, conversation) => total + Number(conversation.unread_count || 0),
+    0
+  );
 
   const fetchChatMessages = async (conversationId) => {
     if (!user?.id || !conversationId) return;
@@ -1205,6 +1218,44 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       }
     } else setChatParticipants([]);
     await fetchChatMessages(conversation.id);
+  };
+
+  const openGroupFromNotification = async (conversationId) => {
+    if (!conversationId) return;
+
+    setShowMessengerPanel(true);
+    setShowSocialMenu(false);
+    setChatError('');
+
+    const conversations = await fetchChatConversations();
+    const group = conversations.find(
+      (conversation) =>
+        Number(conversation.id) === Number(conversationId) &&
+        Boolean(conversation.is_group)
+    );
+
+    if (!group) {
+      setChatError('El grupo ya no está disponible.');
+      return;
+    }
+
+    await openConversation(group);
+  };
+
+  const openChatFromNotification = async (conversationId) => {
+    if (!conversationId) return;
+    setShowMessengerPanel(true);
+    setShowSocialMenu(false);
+    setChatError('');
+    const conversations = await fetchChatConversations();
+    const conversation = conversations.find(
+      (item) => Number(item.id) === Number(conversationId)
+    );
+    if (!conversation) {
+      setChatError('La conversación ya no está disponible.');
+      return;
+    }
+    await openConversation(conversation);
   };
 
   const openGroupInfo = async () => {
@@ -1521,6 +1572,96 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
   }, [activeChat]);
 
   useEffect(() => {
+    if (showMessengerPanel) setMessageBadgeDismissed(true);
+  }, [showMessengerPanel]);
+
+  useEffect(() => {
+    if (!showRecognitionComposer) return undefined;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const preventOutsideComposerScroll = (event) => {
+      if (!event.target.closest?.('.recognition-composer-modal')) {
+        event.preventDefault();
+      }
+    };
+
+    const preventOutsideComposerKeys = (event) => {
+      const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+      if (
+        scrollKeys.includes(event.key) &&
+        !event.target.closest?.('.recognition-composer-modal')
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('wheel', preventOutsideComposerScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener('touchmove', preventOutsideComposerScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener('keydown', preventOutsideComposerKeys, true);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.removeEventListener('wheel', preventOutsideComposerScroll, true);
+      document.removeEventListener('touchmove', preventOutsideComposerScroll, true);
+      document.removeEventListener('keydown', preventOutsideComposerKeys, true);
+    };
+  }, [showRecognitionComposer]);
+
+  useEffect(() => {
+    if (!showSocialMenu) return undefined;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    const preventOutsideMenuScroll = (event) => {
+      if (!event.target.closest?.('.tec-social-menu-panel')) {
+        event.preventDefault();
+      }
+    };
+
+    const preventOutsideMenuKeys = (event) => {
+      const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+      if (
+        scrollKeys.includes(event.key) &&
+        !event.target.closest?.('.tec-social-menu-panel')
+      ) {
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener('wheel', preventOutsideMenuScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener('touchmove', preventOutsideMenuScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener('keydown', preventOutsideMenuKeys, true);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.removeEventListener('wheel', preventOutsideMenuScroll, true);
+      document.removeEventListener('touchmove', preventOutsideMenuScroll, true);
+      document.removeEventListener('keydown', preventOutsideMenuKeys, true);
+    };
+  }, [showSocialMenu]);
+
+  useEffect(() => {
     const groupModalOpen = showCreateGroupModal || showGroupInfoModal;
     const messengerOpen = showMessengerPanel;
     if (!groupModalOpen && !messengerOpen) return undefined;
@@ -1603,6 +1744,12 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       const message = JSON.parse(event.data || '{}');
       if (!message.id) return;
       const currentChatId = activeChatRef.current?.id;
+      if (
+        Number(message.sender_id) !== Number(user.id) &&
+        Number(message.conversation_id) !== Number(currentChatId)
+      ) {
+        setMessageBadgeDismissed(false);
+      }
       setChatMessages((prev) => {
         if (Number(message.conversation_id) !== Number(currentChatId)) return prev;
         if (prev.some((item) => Number(item.id) === Number(message.id))) return prev;
@@ -2208,6 +2355,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     setDraftProfileTags(profileTags.join(', '));
     setDraftBirthDate(birthDate || '');
     setDraftLocationText(locationText || '');
+    setDraftProfileVisibility(profileVisibility || 'public');
     setShowEditProfileModal(true);
   };
 
@@ -2229,6 +2377,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         tags: cleanedTags.length ? cleanedTags : ['Comunidad TSJ'],
         birth_date: draftBirthDate || null,
         location: draftLocationText.trim(),
+        profile_visibility: draftProfileVisibility,
       };
 
       const response = await axios.put(`${API_BASE}/api/users/profile/${user.id}`, payload);
@@ -2241,6 +2390,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
           ? updatedProfile.tags
           : ['Comunidad TSJ']
       );
+      setProfileVisibility(updatedProfile.profile_visibility || 'public');
       setBirthDate(updatedProfile.birth_date || '');
       setLocationText(updatedProfile.location || '');
       setIsVerified(Boolean(updatedProfile.is_verified));
@@ -2878,14 +3028,22 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               type="button"
               className={`nav-social-action-btn ${showMessengerPanel ? 'active' : ''}`}
               onClick={() => {
-                setShowMessengerPanel((prev) => !prev);
+                setShowMessengerPanel((prev) => {
+                  const willOpen = !prev;
+                  if (willOpen) setMessageBadgeDismissed(true);
+                  return willOpen;
+                });
                 setShowSocialMenu(false);
               }}
               title="Mensajes"
               aria-label="Abrir mensajes"
             >
               <span className="nav-social-action-icon"><LucideIcon name="message" size={20} /></span>
-              <span className="nav-social-badge">1</span>
+              {!messageBadgeDismissed && unreadChatCount > 0 && (
+                <span className="nav-social-badge">
+                  {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                </span>
+              )}
             </button>
             <button
             type="button"
@@ -2896,7 +3054,13 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             >
             {'\uD83D\uDC65'}
             </button>
-            <NotificationsBell userId={user?.id} onOpenProfile={openUserProfile} onOpenStory={openStoryFromNotification} />
+            <NotificationsBell
+              userId={user?.id}
+              onOpenProfile={openUserProfile}
+              onOpenStory={openStoryFromNotification}
+              onOpenGroup={openGroupFromNotification}
+              onOpenChat={openChatFromNotification}
+            />
 
             <ProfileDropdown
               user={user}
@@ -2907,6 +3071,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               fileInputRef={fileInputRef}
               onLogout={handleLogout}
               onGoToProfile={() => navigate('/perfil')}
+              onGoToAdmin={() => navigate('/admin')}
               darkMode={darkMode}
               onToggleDark={() => setDarkMode((prev) => !prev)}
               hideAvatarFrames={hideAvatarFrames}
@@ -3011,9 +3176,6 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 }}
               >
                 {'\u00bf'}A qui{'\u00e9'}n quieres reconocer hoy, {(displayName || user?.fullname || 'compa').split(' ')[0]}?
-              </button>
-              <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
-                <LucideIcon name="image" size={18} />
               </button>
               <button type="button" className="social-composer-action" onClick={() => setShowRecognitionComposer(true)}>
                 <LucideIcon name="sparkle" size={18} />
@@ -3132,6 +3294,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             )}
 
             <div className="feed-container social-feed-list">
+              <InstitutionalChallenges onCompleted={fetchFeed} />
               {loadingFeed ? (
                 <div className="loading-state">
                   <div className="loading-spinner"></div>
@@ -3161,7 +3324,13 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
               onlineUsers={onlineUsers}
             />
 
-            <NotificationsPanel userId={user?.id} onOpenProfile={openUserProfile} onOpenStory={openStoryFromNotification} />
+            <NotificationsPanel
+              userId={user?.id}
+              onOpenProfile={openUserProfile}
+              onOpenStory={openStoryFromNotification}
+              onOpenGroup={openGroupFromNotification}
+              onOpenChat={openChatFromNotification}
+            />
             <ActivityPanel userId={user?.id} />
           </aside>
         </section>
@@ -4272,6 +4441,25 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                   placeholder={'Ej. Comunidad TSJ, Liderazgo, Innovaci\u00f3n'}
                 />
                 <small className="field-hint">Separa cada tag con coma.</small>
+              </div>
+
+              <div className="input-group-custom profile-visibility-field">
+                <label htmlFor="profile-visibility">Tipo de perfil</label>
+                <select
+                  id="profile-visibility"
+                  className="form-control"
+                  value={draftProfileVisibility}
+                  onChange={(e) => setDraftProfileVisibility(e.target.value)}
+                >
+                  <option value="public">Pública</option>
+                  <option value="private">Privada</option>
+                  <option value="restricted">Restringida</option>
+                </select>
+                <small className="field-hint">
+                  {draftProfileVisibility === 'public' && 'Todos pueden ver lo que publicas.'}
+                  {draftProfileVisibility === 'private' && 'Solo tú puedes ver lo que publicaste.'}
+                  {draftProfileVisibility === 'restricted' && 'Solo tus seguidores y personas que sigues pueden verlo.'}
+                </small>
               </div>
 
               <input

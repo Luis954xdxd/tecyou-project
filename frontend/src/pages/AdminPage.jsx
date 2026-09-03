@@ -78,6 +78,16 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
   const [reportAction, setReportAction] = useState(null);
   const [resolutionNote, setResolutionNote] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [challengeForm, setChallengeForm] = useState({ content: '', points: '', file: null });
+  const [publishingChallenge, setPublishingChallenge] = useState(false);
+  const challengePreviewUrl = useMemo(
+    () => challengeForm.file ? URL.createObjectURL(challengeForm.file) : '',
+    [challengeForm.file]
+  );
+
+  useEffect(() => () => {
+    if (challengePreviewUrl) URL.revokeObjectURL(challengePreviewUrl);
+  }, [challengePreviewUrl]);
 
   const api = useMemo(() => axios.create({
     baseURL: `${API_BASE}/api/admin`,
@@ -211,6 +221,29 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
     }
   };
 
+  const publishChallenge = async (event) => {
+    event.preventDefault();
+    setPublishingChallenge(true);
+    setError('');
+    try {
+      const data = new FormData();
+      data.append('content', challengeForm.content);
+      data.append('points', challengeForm.points);
+      if (challengeForm.file) data.append('challengeMedia', challengeForm.file);
+      await axios.post(`${API_BASE}/api/challenges`, data, {
+        headers: { Authorization: `Bearer ${getSessionToken()}` },
+      });
+      setChallengeForm({ content: '', points: '', file: null });
+      event.target.reset();
+      setNotice('Publicación institucional creada correctamente.');
+      setTimeout(() => setNotice(''), 3500);
+    } catch (requestError) {
+      handleApiError(requestError, 'No se pudo crear la publicación institucional.');
+    } finally {
+      setPublishingChallenge(false);
+    }
+  };
+
   const reasonLabels = {
     harassment: 'Acoso, insultos o amenazas',
     inappropriate: 'Contenido inapropiado',
@@ -298,8 +331,16 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
           <button className={activeSection === 'users' ? 'active' : ''} onClick={() => setActiveSection('users')}>
             <Users size={19} /> Usuarios
           </button>
+          {['admin', 'super_admin'].includes(currentUser.system_role) && (
+            <button className={activeSection === 'challenges' ? 'active' : ''} onClick={() => setActiveSection('challenges')}>
+              <GraduationCap size={19} /> Publicar actividades
+            </button>
+          )}
           <button className={activeSection === 'reports' ? 'active' : ''} onClick={() => setActiveSection('reports')}>
-            <ClipboardList size={19} /> Reportes <span className="admin-nav-count">{totals.pending_reports || 0}</span>
+            <ClipboardList size={19} /> Reportes
+            {Number(totals.pending_reports) > 0 && (
+              <span className="admin-nav-count">{totals.pending_reports}</span>
+            )}
           </button>
           {['admin', 'super_admin'].includes(currentUser.system_role) && (
             <button className={activeSection === 'audit' ? 'active' : ''} onClick={() => setActiveSection('audit')}>
@@ -318,7 +359,7 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
         <header className="admin-topbar">
           <div>
             <span className="admin-eyebrow">Panel institucional</span>
-            <h1>{activeSection === 'overview' ? 'Resumen general' : activeSection === 'users' ? 'Gestion de usuarios' : activeSection === 'audit' ? 'Registro de auditoria' : 'Moderacion de reportes'}</h1>
+            <h1>{activeSection === 'overview' ? 'Resumen general' : activeSection === 'users' ? 'Gestion de usuarios' : activeSection === 'challenges' ? 'Publicaciones institucionales' : activeSection === 'audit' ? 'Registro de auditoria' : 'Moderacion de reportes'}</h1>
           </div>
           <div className="admin-account-chip">
             {currentUser.profile_image_url ? (
@@ -370,6 +411,74 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
               {renderBarChart('Categorias mas usadas', 'Categorias con mas reconocimientos.', overview?.charts?.categories)}
             </section>
           </div>
+        )}
+
+        {!loading && activeSection === 'challenges' && ['admin', 'super_admin'].includes(currentUser.system_role) && (
+          <section className="admin-panel-card admin-challenge-panel">
+            <div className="admin-section-heading">
+              <div>
+                <h2>Crear actividad con recompensa</h2>
+                <p>Publica una indicación para la comunidad y define los puntos que obtendrán al completarla.</p>
+              </div>
+            </div>
+            <form className="admin-challenge-form" onSubmit={publishChallenge}>
+              <label className="admin-challenge-field admin-challenge-message-field">
+                <span>Texto de la publicación <small>Obligatorio</small></span>
+                <textarea
+                  required
+                  maxLength={2000}
+                  value={challengeForm.content}
+                  onChange={(event) => setChallengeForm((current) => ({ ...current, content: event.target.value }))}
+                  placeholder="Describe qué debe completar el usuario..."
+                />
+                <small className="admin-challenge-helper">{challengeForm.content.length}/2000 caracteres</small>
+              </label>
+              <div className="admin-challenge-grid">
+              <label className="admin-challenge-field">
+                <span>Puntos por completar <small>Obligatorio</small></span>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value={challengeForm.points}
+                  onChange={(event) => setChallengeForm((current) => ({ ...current, points: event.target.value }))}
+                  placeholder="Ej. 50"
+                />
+                <small className="admin-challenge-helper">Se sumarán una sola vez por usuario.</small>
+              </label>
+              <label className="admin-challenge-upload">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
+                  onChange={(event) => setChallengeForm((current) => ({ ...current, file: event.target.files?.[0] || null }))}
+                />
+                <span className="admin-challenge-upload-icon">＋</span>
+                <span>
+                  <strong>{challengeForm.file ? 'Cambiar archivo' : 'Agregar imagen o video'}</strong>
+                  <small>PNG, JPG, WEBP, MP4, WEBM o MOV · máximo 40 MB</small>
+                </span>
+              </label>
+              </div>
+              {challengeForm.file && (
+                <div className="admin-challenge-preview">
+                  <div className="admin-challenge-preview-heading">
+                    <div><strong>Vista previa</strong><small>{challengeForm.file.name}</small></div>
+                    <button type="button" onClick={() => setChallengeForm((current) => ({ ...current, file: null }))}>Quitar archivo</button>
+                  </div>
+                  {challengeForm.file.type.startsWith('video/')
+                    ? <video src={challengePreviewUrl} controls preload="metadata" />
+                    : <img src={challengePreviewUrl} alt="Vista previa del archivo que se publicará" />}
+                </div>
+              )}
+              <div className="admin-challenge-submit-row">
+                <p>La actividad aparecerá en el muro de toda la comunidad.</p>
+                <button className="admin-challenge-submit" type="submit" disabled={publishingChallenge}>
+                {publishingChallenge ? 'Publicando...' : 'Publicar actividad'}
+                </button>
+              </div>
+            </form>
+          </section>
         )}
 
         {!loading && activeSection === 'users' && (

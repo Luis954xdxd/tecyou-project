@@ -10,6 +10,7 @@ const ensureAccountColumns = async () => {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(30) DEFAULT 'active'`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMP`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(20) NOT NULL DEFAULT 'public'`);
 };
 
 const STUDENT_REGEX = /^za\d+@zapopan\.tecmm\.edu\.mx$/i;
@@ -45,7 +46,8 @@ const sanitizeUser = (userRow) => {
 router.post('/register', async (req, res) => {
   try {
     await ensureAccountColumns();
-    const { email, password, confirmPassword } = req.body;
+    const { email, password, confirmPassword, profile_visibility = 'public' } = req.body;
+    const allowedVisibility = ['public', 'private', 'restricted'];
 
     const normalizedEmail = normalizeEmail(email);
 
@@ -73,6 +75,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({
         error: 'La confirmación de contraseña no coincide.',
       });
+    }
+
+    if (!allowedVisibility.includes(profile_visibility)) {
+      return res.status(400).json({ error: 'Selecciona un tipo de perfil valido.' });
     }
 
     const existingUser = await pool.query(
@@ -103,8 +109,9 @@ router.post('/register', async (req, res) => {
              fullname = COALESCE(NULLIF(fullname, ''), $3),
              display_name = COALESCE(NULLIF(display_name, ''), $3),
              bio = COALESCE(bio, $4),
-             tags = COALESCE(tags, $5)
-         WHERE id = $6
+             tags = COALESCE(tags, $5),
+             profile_visibility = $6
+         WHERE id = $7
          RETURNING *`,
         [
           passwordHash,
@@ -112,6 +119,7 @@ router.post('/register', async (req, res) => {
           tempName,
           getDefaultBio(),
           ['Comunidad TSJ', 'Reconocimiento positivo'],
+          profile_visibility,
           user.id,
         ]
       );
@@ -132,9 +140,10 @@ router.post('/register', async (req, res) => {
         bio,
         tags,
         is_verified,
-        password_hash
+        password_hash,
+        profile_visibility
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         tempName,
@@ -145,6 +154,7 @@ router.post('/register', async (req, res) => {
         ['Comunidad TSJ', 'Reconocimiento positivo'],
         false,
         passwordHash,
+        profile_visibility,
       ]
     );
 

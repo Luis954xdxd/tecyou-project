@@ -873,4 +873,12 @@
     font-size: 11px !important;
   }
 }
+.profile-visibility-field select {
+  cursor: pointer;
+}
 
+.profile-visibility-field .field-hint {
+  display: block;
+  margin-top: 8px;
+  line-height: 1.45;
+}

@@ -18,6 +18,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileVisibility, setProfileVisibility] = useState('public');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,6 +46,7 @@ export default function RegisterScreen() {
           email: email.trim().toLowerCase(),
           password,
           confirmPassword,
+          profile_visibility: profileVisibility,
         }),
       });
 
@@ -136,6 +138,27 @@ export default function RegisterScreen() {
               onChangeText={setConfirmPassword}
               secureTextEntry
             />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Tipo de perfil</Text>
+            {[
+              ['public', 'Pública', 'Todos pueden ver lo que publicas.'],
+              ['private', 'Privada', 'Solo tú puedes ver lo que publicaste.'],
+              ['restricted', 'Restringida', 'Solo tus seguidores y personas que sigues pueden verlo.'],
+            ].map(([value, title, description]) => (
+              <TouchableOpacity
+                key={value}
+                style={[styles.visibilityOption, profileVisibility === value && styles.visibilityOptionActive]}
+                onPress={() => setProfileVisibility(value)}
+              >
+                <View style={[styles.visibilityRadio, profileVisibility === value && styles.visibilityRadioActive]} />
+                <View style={styles.visibilityCopy}>
+                  <Text style={styles.visibilityTitle}>{title}</Text>
+                  <Text style={styles.visibilityDescription}>{description}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <TouchableOpacity
@@ -259,6 +282,35 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 18,
   },
+  visibilityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#d9e1f2',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#f6f8fc',
+  },
+  visibilityOptionActive: {
+    borderColor: '#1e3a8a',
+    backgroundColor: '#e8efff',
+  },
+  visibilityRadio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#94a3b8',
+  },
+  visibilityRadioActive: {
+    borderColor: '#1e3a8a',
+    backgroundColor: '#1e3a8a',
+  },
+  visibilityCopy: { flex: 1 },
+  visibilityTitle: { color: '#18212f', fontWeight: '700', fontSize: 14 },
+  visibilityDescription: { color: '#5d6778', fontSize: 12, marginTop: 2, lineHeight: 17 },
   label: {
     fontSize: 13,
     fontWeight: '700',

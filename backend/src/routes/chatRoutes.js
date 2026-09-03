@@ -90,7 +90,8 @@ const ensureTables = async () => {
           'story_mention',
           'favorite_received',
           'chat_message',
-          'report_updated'
+          'report_updated',
+          'institutional_challenge'
         )
       );
 

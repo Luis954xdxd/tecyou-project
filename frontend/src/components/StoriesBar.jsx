@@ -99,14 +99,12 @@ function StoriesBar({
           <span className="story-card-media-fallback">
             {(currentUser?.display_name || currentUser?.fullname || 'U').trim().charAt(0).toUpperCase()}
           </span>
-          {myStoriesGroup?.stories?.at(-1)?.media_url ? (
-            myStoriesGroup.stories.at(-1).media_type === 'video' ? (
-              <video src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} muted onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-            ) : (
-              <img src={resolveImageUrl(myStoriesGroup.stories.at(-1).media_url)} alt="Tu historia" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-            )
-          ) : currentUser?.profile_image_url ? (
-            <img src={resolveImageUrl(currentUser.profile_image_url)} alt="Tu historia" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+          {currentUser?.profile_image_url ? (
+            <img
+              src={resolveImageUrl(currentUser.profile_image_url)}
+              alt="Tu foto de perfil"
+              onError={(event) => { event.currentTarget.style.display = 'none'; }}
+            />
           ) : (
             <span className="own-story-avatar-fallback">
               {(currentUser?.display_name || currentUser?.fullname || 'U').trim().charAt(0).toUpperCase()}

@@ -208,9 +208,362 @@ body.dark .admin-account-chip img {
   border: 2px solid rgba(139, 140, 255, 0.55);
 }
 
+/* Tarjetas y etiquetas con superficies oscuras, sin bloques blancos. */
+.App.dark .admin-metric-icon,
+body.dark .admin-metric-icon {
+  border: 1px solid currentColor;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.025);
+}
+
+.App.dark .admin-metric-icon.blue,
+body.dark .admin-metric-icon.blue {
+  background: rgba(59, 130, 246, 0.14) !important;
+  color: #7db4ff !important;
+}
+
+.App.dark .admin-metric-icon.violet,
+body.dark .admin-metric-icon.violet {
+  background: rgba(139, 92, 246, 0.15) !important;
+  color: #b69cff !important;
+}
+
+.App.dark .admin-metric-icon.amber,
+body.dark .admin-metric-icon.amber {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #f8c45c !important;
+}
+
+.App.dark .admin-metric-icon.red,
+body.dark .admin-metric-icon.red {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #ff8b8b !important;
+}
+
+.App.dark .admin-metric-icon.green,
+body.dark .admin-metric-icon.green {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #72dfa0 !important;
+}
+
+.App.dark .admin-status,
+body.dark .admin-status {
+  border: 1px solid currentColor;
+}
+
+.App.dark .admin-status.active,
+.App.dark .admin-status.resolved,
+body.dark .admin-status.active,
+body.dark .admin-status.resolved {
+  background: rgba(34, 197, 94, 0.13) !important;
+  color: #79e3a4 !important;
+}
+
+.App.dark .admin-status.warned,
+.App.dark .admin-status.pending,
+body.dark .admin-status.warned,
+body.dark .admin-status.pending {
+  background: rgba(245, 158, 11, 0.13) !important;
+  color: #f7c86a !important;
+}
+
+.App.dark .admin-status.suspended,
+body.dark .admin-status.suspended {
+  background: rgba(239, 68, 68, 0.13) !important;
+  color: #ff9292 !important;
+}
+
+.App.dark .admin-status.reviewing,
+body.dark .admin-status.reviewing {
+  background: rgba(59, 130, 246, 0.14) !important;
+  color: #8bbcff !important;
+}
+
+.App.dark .admin-status.disabled,
+.App.dark .admin-status.dismissed,
+body.dark .admin-status.disabled,
+body.dark .admin-status.dismissed {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #c3ccda !important;
+}
+
+.App.dark .admin-recent-user > span:first-child,
+.App.dark .admin-table-user > span,
+body.dark .admin-recent-user > span:first-child,
+body.dark .admin-table-user > span {
+  background: #20314b !important;
+  border: 1px solid #49617f;
+  color: #f1f5fb !important;
+}
+
 @media (max-width: 760px) {
   .admin-users-toolbar {
     grid-template-columns: 1fr;
+  }
+}
+
+.admin-challenge-panel {
+  max-width: 820px;
+}
+
+.admin-challenge-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.admin-challenge-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--admin-text);
+  font-weight: 800;
+}
+
+.admin-challenge-form textarea,
+.admin-challenge-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  padding: 13px 14px;
+  font: inherit;
+}
+
+.admin-challenge-form textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.admin-challenge-form button {
+  justify-self: start;
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 24px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-challenge-form button:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.App.dark .admin-challenge-form textarea,
+.App.dark .admin-challenge-form input,
+body.dark .admin-challenge-form textarea,
+body.dark .admin-challenge-form input {
+  background: #101b2e;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.admin-challenge-panel {
+  overflow: hidden;
+  padding: 0;
+  border-radius: 18px;
+}
+
+.admin-challenge-panel > .admin-section-heading {
+  padding: 25px 28px;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(124, 58, 237, .2), transparent 36%),
+    linear-gradient(135deg, rgba(37, 99, 235, .09), rgba(124, 58, 237, .06));
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-challenge-form {
+  padding: 26px 28px 30px;
+  margin-top: 0;
+}
+
+.admin-challenge-field > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-challenge-field > span small {
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(37, 99, 235, .12);
+  color: #60a5fa;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.admin-challenge-form textarea,
+.admin-challenge-form input[type="number"] {
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.admin-challenge-form textarea:focus,
+.admin-challenge-form input[type="number"]:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, .14);
+}
+
+.admin-challenge-helper {
+  color: var(--admin-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-challenge-message-field textarea {
+  min-height: 125px;
+}
+
+.admin-challenge-grid {
+  display: grid;
+  grid-template-columns: minmax(210px, .7fr) minmax(300px, 1.3fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.admin-challenge-upload {
+  min-height: 116px;
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 14px !important;
+  padding: 20px !important;
+  border: 1.5px dashed #536987;
+  border-radius: 14px;
+  background: rgba(59, 130, 246, .05);
+  cursor: pointer;
+  transition: border-color .2s, background .2s, transform .2s;
+}
+
+.admin-challenge-upload:hover {
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, .1);
+  transform: translateY(-1px);
+}
+
+.admin-challenge-upload input {
+  display: none;
+}
+
+.admin-challenge-upload-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.admin-challenge-upload > span:last-child {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-challenge-upload strong {
+  color: var(--admin-text);
+  font-size: 15px;
+}
+
+.admin-challenge-upload small {
+  color: var(--admin-muted);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.admin-challenge-preview {
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, .22);
+}
+
+.admin-challenge-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-challenge-preview-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-challenge-preview-heading small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--admin-muted);
+}
+
+.admin-challenge-preview-heading button {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(248, 113, 113, .35);
+  border-radius: 9px;
+  background: rgba(239, 68, 68, .1);
+  color: #f87171;
+  font-size: 12px;
+}
+
+.admin-challenge-preview img,
+.admin-challenge-preview video {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  background: #050a14;
+}
+
+.admin-challenge-submit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 4px;
+}
+
+.admin-challenge-submit-row p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-challenge-form .admin-challenge-submit {
+  justify-self: auto;
+  min-width: 190px;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, .25);
+}
+
+@media (max-width: 760px) {
+  .admin-challenge-panel > .admin-section-heading,
+  .admin-challenge-form {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .admin-challenge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-challenge-submit-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-challenge-form .admin-challenge-submit {
+    width: 100%;
   }
 }
 

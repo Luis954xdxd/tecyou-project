@@ -8,6 +8,8 @@ CREATE TABLE users (
     account_status VARCHAR(30) DEFAULT 'active',
     suspended_until TIMESTAMP,
     last_login_at TIMESTAMP,
+    profile_visibility VARCHAR(20) NOT NULL DEFAULT 'public'
+        CHECK (profile_visibility IN ('public', 'private', 'restricted')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -10,6 +10,7 @@ function ProfileDropdown({
   fileInputRef,
   onLogout,
   onGoToProfile,
+  onGoToAdmin,
   darkMode,
   onToggleDark,
   hideAvatarFrames,
@@ -69,6 +70,19 @@ function ProfileDropdown({
           </div>
 
           <div className="nav-dropdown-actions">
+            {user?.system_role === 'super_admin' && (
+              <button
+                className="nav-dropdown-btn"
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  onGoToAdmin();
+                }}
+              >
+                Panel institucional
+              </button>
+            )}
+
             <button
               className="nav-dropdown-btn"
               type="button"

@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:5000';
 
-function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
+function NotificationsPanel({ userId, onOpenProfile, onOpenStory, onOpenGroup, onOpenChat }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -28,6 +28,10 @@ function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
   };
 
   const getNotificationText = (item) => {
+    if (item.type === 'chat_message' && item.title === 'Te agregaron a un grupo') {
+      return (item.actor_name || 'Alguien') + ' te agregó a un grupo';
+    }
+
     if (item.type === 'new_follower') {
       return `${item.actor_name} comenzó a seguirte`;
     }
@@ -58,6 +62,9 @@ function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
     }
     if (item.type === 'report_updated') {
       return item.title || 'Tu reporte fue actualizado por moderacion';
+    }
+    if (item.type === 'institutional_challenge') {
+      return `${item.actor_name || 'Administración'} publicó una nueva actividad`;
     }
 
     return item.title || 'Nueva notificación';
@@ -191,8 +198,27 @@ function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
                     type="button"
                     className="inline-user-link notification-main-link"
                     onClick={async () => {
+                      if (item.type === 'institutional_challenge' && item.reference_id) {
+                        await handleMarkAsRead(item.id);
+                        window.location.assign(`/#institutional-challenge-${item.reference_id}`);
+                        return;
+                      }
+                      if (item.type === 'chat_message' && item.title === 'Nuevo mensaje') {
+                        await handleMarkAsRead(item.id);
+                        if (item.chat_conversation_id && onOpenChat) {
+                          await onOpenChat(item.chat_conversation_id);
+                        }
+                        return;
+                      }
                       await handleMarkAsRead(item.id);
-                      if (item.type === 'story_mention' && item.reference_id && onOpenStory) {
+                      if (
+                        item.type === 'chat_message' &&
+                        item.title === 'Te agregaron a un grupo' &&
+                        item.reference_id &&
+                        onOpenGroup
+                      ) {
+                        await onOpenGroup(item.reference_id);
+                      } else if (item.type === 'story_mention' && item.reference_id && onOpenStory) {
                         onOpenStory(item.reference_id);
                       } else if (item.actor_id) {
                         onOpenProfile(item.actor_id);
@@ -202,7 +228,7 @@ function NotificationsPanel({ userId, onOpenProfile, onOpenStory }) {
                     {getNotificationText(item)}
                   </button>
 
-                  {(item.type === 'recognition_received' || item.type === 'comment_received') &&
+                  {(item.type === 'recognition_received' || item.type === 'comment_received' || item.type === 'institutional_challenge') &&
                     item.content && <small>"{item.content}"</small>}
 
                   <span>{formatDate(item.created_at)}</span>

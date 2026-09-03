@@ -41,6 +41,20 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
+const ensureProfilePrivacyColumn = async () => {
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_visibility VARCHAR(20) NOT NULL DEFAULT 'public'`);
+};
+
+router.use(async (req, res, next) => {
+    try {
+        await ensureProfilePrivacyColumn();
+        next();
+    } catch (error) {
+        console.error('Error preparando privacidad de perfil:', error.message);
+        res.status(500).json({ error: 'No se pudo preparar la privacidad del perfil.' });
+    }
+});
+
 const ensureUserBlocksTable = async () => {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS user_blocks (
@@ -166,6 +180,19 @@ router.get('/profile/:id', async (req, res) => {
                 u.tags,
                 u.birth_date,
                 u.location,
+                u.profile_visibility,
+                (
+                    u.id = $2::int
+                    OR COALESCE(u.profile_visibility, 'public') = 'public'
+                    OR (
+                        u.profile_visibility = 'restricted'
+                        AND EXISTS (
+                            SELECT 1 FROM user_follows connection
+                            WHERE (connection.follower_id = $2::int AND connection.following_id = u.id)
+                               OR (connection.follower_id = u.id AND connection.following_id = $2::int)
+                        )
+                    )
+                ) AS can_view_posts,
                 u.is_verified,
                 u.created_at,
                 afd.code AS equipped_frame_code,
@@ -309,7 +336,11 @@ router.delete('/:id/block', async (req, res) => {
 router.put('/profile/:id', requireSelfParam('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const { display_name, bio, tags, birth_date, location } = req.body;
+        const { display_name, bio, tags, birth_date, location, profile_visibility } = req.body;
+        const allowedVisibility = ['public', 'private', 'restricted'];
+        if (!allowedVisibility.includes(profile_visibility || 'public')) {
+            return res.status(400).json({ error: 'Tipo de perfil no valido.' });
+        }
 
         const cleanedTags = Array.isArray(tags)
             ? tags
@@ -324,8 +355,9 @@ router.put('/profile/:id', requireSelfParam('id'), async (req, res) => {
                  bio = $2,
                  tags = $3,
                  birth_date = $4,
-                 location = $5
-             WHERE id = $6
+                  location = $5,
+                  profile_visibility = $6
+              WHERE id = $7
              RETURNING
                 id,
                 fullname,
@@ -338,6 +370,7 @@ router.put('/profile/:id', requireSelfParam('id'), async (req, res) => {
                 tags,
                 birth_date,
                 location,
+                profile_visibility,
                 is_verified,
                 created_at`,
             [
@@ -346,6 +379,7 @@ router.put('/profile/:id', requireSelfParam('id'), async (req, res) => {
                 cleanedTags,
                 birth_date || null,
                 location || null,
+                profile_visibility || 'public',
                 id
             ]
         );
@@ -660,6 +694,7 @@ router.get('/:id/public', async (req, res) => {
                 u.tags,
                 u.birth_date,
                 u.location,
+                u.profile_visibility,
                 u.is_verified,
                 u.created_at,
                 afd.code AS equipped_frame_code,
@@ -668,6 +703,18 @@ router.get('/:id/public', async (req, res) => {
                     FROM user_follows uf
                     WHERE uf.follower_id = $2 AND uf.following_id = u.id
                 ) AS is_following,
+                (
+                    u.id = $2::int
+                    OR COALESCE(u.profile_visibility, 'public') = 'public'
+                    OR (
+                        u.profile_visibility = 'restricted'
+                        AND EXISTS (
+                            SELECT 1 FROM user_follows connection
+                            WHERE (connection.follower_id = $2::int AND connection.following_id = u.id)
+                               OR (connection.follower_id = u.id AND connection.following_id = $2::int)
+                        )
+                    )
+                ) AS can_view_posts,
                 EXISTS (
                     SELECT 1
                     FROM user_blocks ub
@@ -722,6 +769,14 @@ router.get('/:id/public', async (req, res) => {
             });
         }
 
+        if (!userResult.rows[0].can_view_posts) {
+            return res.json({
+                user: userResult.rows[0],
+                recognitions_received: [],
+                recognitions_sent: [],
+            });
+        }
+
         const recognitionsReceived = await pool.query(
             `SELECT
                 r.id,
@@ -769,6 +824,18 @@ router.get('/:id/public', async (req, res) => {
 router.get('/:id/activity', async (req, res) => {
     try {
         const { id } = req.params;
+        const access = await pool.query(
+            `SELECT 1 FROM users u WHERE u.id = $1 AND (
+                u.id = $2 OR COALESCE(u.profile_visibility, 'public') = 'public'
+                OR (u.profile_visibility = 'restricted' AND EXISTS (
+                    SELECT 1 FROM user_follows connection
+                    WHERE (connection.follower_id = $2 AND connection.following_id = u.id)
+                       OR (connection.follower_id = u.id AND connection.following_id = $2)
+                ))
+            )`,
+            [id, req.authUser.id]
+        );
+        if (access.rows.length === 0) return res.json([]);
 
         const activity = await pool.query(
             `
@@ -857,12 +924,17 @@ router.get('/:id/notifications', requireSelfParam('id'), async (req, res) => {
                 n.title,
                 n.content,
                 n.reference_id,
+                cm.conversation_id AS chat_conversation_id,
                 n.is_read,
                 n.created_at,
                 COALESCE(u.display_name, u.fullname) AS actor_name,
                 u.profile_image_url AS actor_profile_image,
                 afd.code AS actor_frame_code
              FROM notifications n
+             LEFT JOIN chat_messages cm
+               ON n.type = 'chat_message'
+              AND n.title = 'Nuevo mensaje'
+              AND cm.id = n.reference_id
              LEFT JOIN users u
                ON n.actor_id = u.id
              LEFT JOIN user_avatar_frames uaf
