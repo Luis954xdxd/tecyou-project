@@ -1,0 +1,407 @@
+/* Final visual fixes loaded after App.css so these rules win the cascade. */
+
+.story-card .story-avatar-ring {
+  position: absolute !important;
+  top: 12px !important;
+  left: 12px !important;
+  width: 44px !important;
+  height: 44px !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  animation: none !important;
+  isolation: isolate !important;
+}
+
+.story-card .story-avatar-ring::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  border-radius: 999px !important;
+  padding: 3px !important;
+  pointer-events: none !important;
+  background: conic-gradient(from 0deg, #38bdf8, #2563eb, #7c3aed, #a855f7, #38bdf8) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask-composite: exclude !important;
+  animation: tecStoryRingSpin 2.6s linear infinite !important;
+}
+
+.story-card .story-avatar-image,
+.story-card .story-avatar-fallback {
+  position: absolute !important;
+  inset: 4px !important;
+  z-index: 1 !important;
+  width: 36px !important;
+  height: 36px !important;
+  border: 2px solid #0b1220 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+
+.story-card .story-avatar-fallback {
+  place-items: center !important;
+  background: #24324a !important;
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+}
+
+.story-phone-preview img,
+.story-phone-preview video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: var(--story-media-fit, cover) !important;
+  object-position: var(--story-media-position, 50% 50%) !important;
+}
+
+.fb-story-viewer-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  display: block !important;
+  background: #000000 !important;
+}
+
+.fb-story-stage {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: min(430px, calc(100vw - 220px), calc((100dvh - 32px) * 0.5625)) !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 32px) !important;
+  aspect-ratio: 9 / 16 !important;
+  padding: 0 !important;
+  display: block !important;
+  transform: translate(-50%, -50%) !important;
+  background: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62) !important;
+  overflow: visible !important;
+}
+
+.fb-story-progress,
+.fb-story-top-meta,
+.fb-story-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+.fb-story-top-meta {
+  position: absolute !important;
+  top: 15px !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 35 !important;
+  min-height: 58px !important;
+  padding: 8px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.68), transparent) !important;
+  margin: 0 !important;
+  transform: none !important;
+  justify-self: auto !important;
+  align-self: auto !important;
+}
+
+.fb-story-progress {
+  position: absolute !important;
+  top: 7px !important;
+  left: 10px !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 45 !important;
+  width: calc(100% - 20px) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  justify-self: auto !important;
+  align-self: auto !important;
+}
+
+.fb-story-top-meta .fb-story-person-avatar {
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  height: 38px !important;
+}
+
+.fb-story-author-copy {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  display: grid !important;
+  gap: 2px !important;
+  color: #ffffff !important;
+}
+
+.fb-story-author-line {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 8px !important;
+}
+
+.fb-story-author-line strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.fb-story-author-line small {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+  white-space: nowrap !important;
+}
+
+.fb-story-author-copy em {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 12px !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  transform: none !important;
+}
+
+.fb-story-top-meta .fb-story-mentions {
+  display: none !important;
+}
+
+.fb-story-card {
+  position: absolute !important;
+  inset: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  display: block !important;
+  align-self: auto !important;
+  justify-self: auto !important;
+  border-radius: 13px !important;
+  overflow: hidden !important;
+  background: #09090b !important;
+}
+
+.fb-story-card img,
+.fb-story-card video,
+.story-viewer-image,
+.story-viewer-video {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  object-fit: var(--story-media-fit, cover) !important;
+  object-position: var(--story-media-position, 50% 50%) !important;
+  border-radius: 13px !important;
+}
+
+.fb-story-bottom-actions {
+  position: absolute !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 14px !important;
+  transform: translateX(-50%) !important;
+  width: calc(100% - 20px) !important;
+  max-width: none !important;
+  display: grid !important;
+  grid-template-columns: minmax(96px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  z-index: 50 !important;
+}
+
+.fb-story-bottom-actions .story-comment-form {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.fb-story-bottom-actions .story-comment-form input {
+  min-width: 0 !important;
+  width: 100% !important;
+  padding-left: 13px !important;
+  padding-right: 46px !important;
+}
+
+.fb-story-bottom-actions .story-viewer-reactions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  flex-wrap: nowrap !important;
+}
+
+.fb-story-bottom-actions .story-reaction-btn {
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  background: rgba(15, 23, 42, 0.72) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.fb-story-bottom-actions .story-reaction-emoji {
+  font-size: 17px !important;
+}
+
+.fb-story-nav {
+  top: 50% !important;
+  z-index: 55 !important;
+  width: 48px !important;
+  height: 48px !important;
+  transform: translateY(-50%) !important;
+  background: rgba(39, 39, 42, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34) !important;
+}
+
+.fb-story-nav.prev {
+  left: -76px !important;
+}
+
+.fb-story-nav.next {
+  right: -76px !important;
+}
+
+.fb-story-insights {
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 65 !important;
+  width: 340px !important;
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  background: #242526 !important;
+  box-shadow: 18px 0 50px rgba(0, 0, 0, 0.28) !important;
+}
+
+.fb-story-viewer-overlay.has-insights .fb-story-stage {
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.tec-popover-overlay:has(.tec-messenger-panel) {
+  overscroll-behavior: contain !important;
+}
+
+.tec-messenger-panel:not(.expanded) {
+  max-height: calc(100vh - 96px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+.tec-chat-bubble-meta {
+  flex-wrap: wrap !important;
+}
+
+.tec-chat-bubble.mine .tec-chat-bubble-meta {
+  justify-content: flex-end !important;
+}
+
+.tec-chat-bubble.theirs .tec-chat-bubble-meta {
+  justify-content: flex-start !important;
+}
+
+.tec-chat-report-message {
+  opacity: 0.8 !important;
+}
+
+body.comments-modal-open .comments-explicit-close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  z-index: 80 !important;
+  width: 38px !important;
+  height: 38px !important;
+  border: 1px solid rgba(148, 163, 184, 0.24) !important;
+  border-radius: 999px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: rgba(30, 41, 59, 0.94) !important;
+  color: #ffffff !important;
+  font-size: 26px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+body.comments-modal-open .comments-explicit-close:hover {
+  background: #475569 !important;
+}
+
+@media (max-width: 900px) {
+  .fb-story-viewer-overlay {
+    display: block !important;
+  }
+
+  .fb-story-viewer-overlay.has-insights .fb-story-insights {
+    width: 100vw !important;
+  }
+
+  .fb-story-stage {
+    width: min(calc(100vw - 24px), calc((100dvh - 24px) * 0.5625)) !important;
+    min-width: 0 !important;
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  .fb-story-bottom-actions {
+    width: calc(100% - 16px) !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 4px !important;
+  }
+
+  .fb-story-bottom-actions .story-viewer-reactions {
+    display: flex !important;
+    gap: 3px !important;
+  }
+
+  .fb-story-bottom-actions .story-reaction-btn {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+  }
+
+  .fb-story-nav.prev {
+    left: 8px !important;
+  }
+
+  .fb-story-nav.next {
+    right: 8px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .fb-story-bottom-actions {
+    bottom: 8px !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .fb-story-bottom-actions .story-viewer-reactions {
+    justify-content: center !important;
+  }
+}

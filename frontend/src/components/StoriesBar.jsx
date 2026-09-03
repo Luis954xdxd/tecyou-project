@@ -1,6 +1,31 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const API_BASE = 'http://localhost:5000';
+
+function StoryAvatar({ src, name, hasUnseen }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [src]);
+
+  const initial = String(name || 'U').trim().charAt(0).toUpperCase();
+
+  return (
+    <div className="story-avatar-ring" aria-label={hasUnseen ? 'Historia nueva' : 'Historia vista'}>
+      {src && !imageFailed ? (
+        <img
+          src={src}
+          alt={name || 'Usuario'}
+          className="story-avatar-image"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <span className="story-avatar-fallback">{initial}</span>
+      )}
+    </div>
+  );
+}
 
 function StoriesBar({
   groupedStories = [],
@@ -95,7 +120,6 @@ function StoriesBar({
       {/* HISTORIAS ORDENADAS POR LA PUBLICACION MAS RECIENTE */}
       {groupedStories
         .map((group) => {
-          const avatar = resolveImageUrl(group.profile_image_url);
           const isOwnGroup = Number(group.user_id) === Number(currentUser?.id);
           const displayName =
             (isOwnGroup && 'Tu historia') ||
@@ -103,6 +127,11 @@ function StoriesBar({
             group.fullname ||
             'Usuario';
           const coverStory = group.stories?.at(-1);
+          const avatar = resolveImageUrl(
+            coverStory?.profile_image_url ||
+            group.profile_image_url ||
+            (isOwnGroup ? currentUser?.profile_image_url : null)
+          );
           const firstUnseenIndex = group.stories.findIndex((story) => !story.has_viewed);
           const startIndex = firstUnseenIndex >= 0 ? firstUnseenIndex : 0;
           const hasUnseen = !isOwnGroup && firstUnseenIndex >= 0;
@@ -122,24 +151,7 @@ function StoriesBar({
                   <img src={resolveImageUrl(coverStory.media_url)} alt={displayName} onError={(event) => { event.currentTarget.style.display = 'none'; }} />
                 ) : null}
               </div>
-              <div className="story-avatar-ring" aria-label={hasUnseen ? 'Historia nueva' : 'Historia vista'}>
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={displayName}
-                    className="story-avatar-image"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none';
-                      if (event.currentTarget.nextElementSibling) {
-                        event.currentTarget.nextElementSibling.style.display = 'grid';
-                      }
-                    }}
-                  />
-                ) : null}
-                <div className="story-avatar-fallback" style={{ display: avatar ? 'none' : 'grid' }}>
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              </div>
+              <StoryAvatar src={avatar} name={displayName} hasUnseen={hasUnseen} />
 
               <span className="story-name">{displayName}</span>
             </button>

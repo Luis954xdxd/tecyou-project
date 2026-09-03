@@ -356,9 +356,13 @@ function StoryViewer({
 
         <div className="fb-story-top-meta">
           <StoryPersonAvatar src={authorAvatar} name={authorName} />
-          <strong>{authorName}</strong>
-          <small>{formatTimeAgo(currentStory.created_at)}</small>
-          {currentStory.music_name && <em>{'\u266B'} {currentStory.music_name}</em>}
+          <div className="fb-story-author-copy">
+            <div className="fb-story-author-line">
+              <strong>{authorName}</strong>
+              <small>{formatTimeAgo(currentStory.created_at)}</small>
+            </div>
+            {currentStory.music_name && <em>{'\u266B'} {currentStory.music_name}</em>}
+          </div>
           {Array.isArray(currentStory.mentioned_users) && currentStory.mentioned_users.length > 0 && (
             <small className="fb-story-mentions">
               con {currentStory.mentioned_users.map((item) => `@${item.display_name || item.fullname}`).join(', ')}

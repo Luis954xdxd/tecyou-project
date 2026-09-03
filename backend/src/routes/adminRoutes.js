@@ -18,6 +18,15 @@ const ensureAdminSchema = async () => {
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS moderation_status VARCHAR(30) DEFAULT 'visible'`);
   await pool.query(`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS moderation_status VARCHAR(30) DEFAULT 'visible'`);
   await pool.query(`
+    ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+    ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
+      CHECK (type IN (
+        'new_follower', 'recognition_received', 'reaction_received',
+        'comment_received', 'comment_reply_received', 'mention_received',
+        'story_mention', 'favorite_received', 'chat_message', 'report_updated'
+      ))
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS admin_audit_logs (
       id SERIAL PRIMARY KEY,
       actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -69,7 +78,21 @@ router.use(requireSystemRole(...ADMIN_ROLES));
 
 router.get('/overview', async (req, res) => {
   try {
-    const [users, recognitions, reports, suspended, recent, activeUsers, weeklyPosts, resolvedReports, topCategory] = await Promise.all([
+    const [
+      users,
+      recognitions,
+      reports,
+      suspended,
+      recent,
+      activeUsers,
+      weeklyPosts,
+      resolvedReports,
+      topCategory,
+      activeUsersByDay,
+      postsByWeek,
+      reportsByStatus,
+      categories,
+    ] = await Promise.all([
       pool.query(`SELECT COUNT(*)::int AS total FROM users`),
       pool.query(`SELECT COUNT(*)::int AS total FROM recognitions`),
       pool.query(`SELECT COUNT(*)::int AS total FROM content_reports WHERE status = 'pending'`),
@@ -92,6 +115,40 @@ router.get('/overview', async (req, res) => {
         ORDER BY total DESC
         LIMIT 1
       `),
+      pool.query(`
+        SELECT TO_CHAR(day, 'DD Mon') AS label,
+               COUNT(u.id)::int AS total
+        FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') day
+        LEFT JOIN users u ON DATE(u.last_login_at) = DATE(day)
+        GROUP BY day
+        ORDER BY day
+      `),
+      pool.query(`
+        SELECT TO_CHAR(week_start, 'DD Mon') AS label,
+               COUNT(r.id)::int AS total
+        FROM generate_series(
+          date_trunc('week', CURRENT_DATE) - INTERVAL '5 weeks',
+          date_trunc('week', CURRENT_DATE),
+          INTERVAL '1 week'
+        ) week_start
+        LEFT JOIN recognitions r
+          ON date_trunc('week', r.created_at) = week_start
+        GROUP BY week_start
+        ORDER BY week_start
+      `),
+      pool.query(`
+        SELECT COALESCE(status, 'pending') AS label, COUNT(*)::int AS total
+        FROM content_reports
+        GROUP BY COALESCE(status, 'pending')
+        ORDER BY total DESC
+      `),
+      pool.query(`
+        SELECT COALESCE(category, 'Sin categoria') AS label, COUNT(*)::int AS total
+        FROM recognitions
+        GROUP BY COALESCE(category, 'Sin categoria')
+        ORDER BY total DESC
+        LIMIT 8
+      `),
     ]);
 
     res.json({
@@ -106,6 +163,12 @@ router.get('/overview', async (req, res) => {
         top_category: topCategory.rows[0]?.category || 'Sin datos',
       },
       recent_users: recent.rows,
+      charts: {
+        active_users_by_day: activeUsersByDay.rows,
+        posts_by_week: postsByWeek.rows,
+        reports_by_status: reportsByStatus.rows,
+        categories: categories.rows,
+      },
     });
   } catch (error) {
     console.error('Error en resumen administrativo:', error.message);
@@ -146,14 +209,39 @@ router.get('/users', async (req, res) => {
 router.get('/reports', async (req, res) => {
   try {
     const status = String(req.query.status || 'pending');
+    const targetType = String(req.query.target_type || 'all');
+    const reason = String(req.query.reason || 'all');
+    const search = String(req.query.search || '').trim();
+    const from = String(req.query.from || '').trim();
+    const to = String(req.query.to || '').trim();
     const allowedStatuses = ['pending', 'reviewing', 'resolved', 'dismissed', 'all'];
+    const allowedTargets = ['recognition', 'comment', 'profile', 'story', 'chat_message', 'all'];
     const selectedStatus = allowedStatuses.includes(status) ? status : 'pending';
+    const selectedTargetType = allowedTargets.includes(targetType) ? targetType : 'all';
     const values = [];
-    let statusFilter = '';
+    const filters = [];
     if (selectedStatus !== 'all') {
       values.push(selectedStatus);
-      statusFilter = `WHERE cr.status = $${values.length}`;
+      filters.push(`cr.status = $${values.length}`);
     }
+    if (selectedTargetType !== 'all') {
+      values.push(selectedTargetType);
+      filters.push(`cr.target_type = $${values.length}`);
+    }
+    if (reason !== 'all') {
+      values.push(reason);
+      filters.push(`cr.reason = $${values.length}`);
+    }
+    if (from) {
+      values.push(from);
+      filters.push(`cr.created_at >= $${values.length}::date`);
+    }
+    if (to) {
+      values.push(to);
+      filters.push(`cr.created_at < ($${values.length}::date + INTERVAL '1 day')`);
+    }
+    const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+    const searchValue = search ? `%${search}%` : '';
 
     const result = await pool.query(
       `SELECT
@@ -171,7 +259,8 @@ router.get('/reports', async (req, res) => {
            (SELECT json_agg(json_build_object('id', rm.id, 'media_url', rm.media_url, 'media_type', rm.media_type) ORDER BY rm.id)
             FROM recognition_media rm WHERE rm.recognition_id = r.id),
            '[]'::json
-         ) AS media
+         ) AS media,
+         duplicate_reports.total AS target_report_count
        FROM content_reports cr
        LEFT JOIN users reporter ON reporter.id = cr.reporter_user_id
        LEFT JOIN recognitions r ON cr.target_type = 'recognition' AND r.id = cr.target_id
@@ -183,11 +272,36 @@ router.get('/reports', async (req, res) => {
        LEFT JOIN users target_profile ON cr.target_type = 'profile' AND target_profile.id = cr.target_id
        LEFT JOIN chat_messages cm ON cr.target_type = 'chat_message' AND cm.id = cr.target_id
        LEFT JOIN users message_author ON message_author.id = cm.sender_id
-       ${statusFilter}
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS total
+         FROM content_reports cr2
+         WHERE cr2.target_type = cr.target_type
+           AND cr2.target_id = cr.target_id
+       ) duplicate_reports ON TRUE
+       ${whereClause}
+       ${searchValue ? `${whereClause ? 'AND' : 'WHERE'} (
+         reporter.display_name ILIKE $${values.length + 1}
+         OR reporter.fullname ILIKE $${values.length + 1}
+         OR reporter.email ILIKE $${values.length + 1}
+         OR author.display_name ILIKE $${values.length + 1}
+         OR author.fullname ILIKE $${values.length + 1}
+         OR comment_author.display_name ILIKE $${values.length + 1}
+         OR comment_author.fullname ILIKE $${values.length + 1}
+         OR story_author.display_name ILIKE $${values.length + 1}
+         OR story_author.fullname ILIKE $${values.length + 1}
+         OR message_author.display_name ILIKE $${values.length + 1}
+         OR message_author.fullname ILIKE $${values.length + 1}
+         OR target_profile.display_name ILIKE $${values.length + 1}
+         OR target_profile.fullname ILIKE $${values.length + 1}
+         OR r.message ILIKE $${values.length + 1}
+         OR rc.comment ILIKE $${values.length + 1}
+         OR st.caption ILIKE $${values.length + 1}
+         OR cm.content ILIKE $${values.length + 1}
+       )` : ''}
        ORDER BY CASE cr.status WHEN 'pending' THEN 0 WHEN 'reviewing' THEN 1 ELSE 2 END,
                 cr.created_at DESC
        LIMIT 100`,
-      values
+      searchValue ? [...values, searchValue] : values
     );
     res.json({ reports: result.rows });
   } catch (error) {
@@ -252,6 +366,19 @@ router.patch('/reports/:id', async (req, res) => {
        WHERE id = $4 RETURNING *`,
       [nextStatus, req.authUser.id, note, reportId]
     );
+    if (['resolved', 'dismissed'].includes(nextStatus) && report.reporter_user_id) {
+      await client.query(
+        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+         VALUES ($1, $2, 'report_updated', $3, $4, $5)`,
+        [
+          report.reporter_user_id,
+          req.authUser.id,
+          nextStatus === 'resolved' ? 'Tu reporte fue resuelto' : 'Tu reporte fue descartado',
+          note || 'El equipo de moderacion reviso tu reporte.',
+          reportId,
+        ]
+      );
+    }
     await client.query(
       `INSERT INTO admin_audit_logs
          (actor_user_id, action, target_type, target_id, reason, metadata)

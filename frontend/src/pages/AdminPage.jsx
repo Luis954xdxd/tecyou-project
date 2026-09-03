@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowLeft,
   Ban,
+  BarChart3,
   CheckCircle2,
   ClipboardList,
   FileWarning,
@@ -59,6 +60,13 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [reports, setReports] = useState([]);
   const [reportStatus, setReportStatus] = useState('pending');
+  const [reportFilters, setReportFilters] = useState({
+    target_type: 'all',
+    reason: 'all',
+    search: '',
+    from: '',
+    to: '',
+  });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -123,12 +131,12 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
 
   const loadReports = useCallback(async () => {
     try {
-      const response = await api.get('/reports', { params: { status: reportStatus } });
+      const response = await api.get('/reports', { params: { status: reportStatus, ...reportFilters } });
       setReports(response.data.reports || []);
     } catch (requestError) {
       handleApiError(requestError, 'No se pudieron cargar los reportes.');
     }
-  }, [api, handleApiError, reportStatus]);
+  }, [api, handleApiError, reportFilters, reportStatus]);
 
   useEffect(() => {
     const load = async () => {
@@ -211,6 +219,45 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
     false_information: 'Informacion falsa',
     personal_information: 'Informacion personal',
     other: 'Otro motivo',
+  };
+
+  const targetTypeLabels = {
+    all: 'Todos los contenidos',
+    recognition: 'Publicaciones',
+    comment: 'Comentarios',
+    profile: 'Perfiles',
+    story: 'Historias',
+    chat_message: 'Mensajes privados',
+  };
+
+  const renderBarChart = (title, description, data = []) => {
+    const values = Array.isArray(data) ? data : [];
+    const max = Math.max(...values.map((item) => Number(item.total || 0)), 1);
+    return (
+      <article className="admin-chart-card">
+        <div className="admin-chart-heading">
+          <span><BarChart3 size={18} /></span>
+          <div>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </div>
+        </div>
+        <div className="admin-bar-chart">
+          {values.length === 0 ? (
+            <small>Sin datos suficientes.</small>
+          ) : values.map((item) => {
+            const total = Number(item.total || 0);
+            return (
+              <div className="admin-bar-row" key={item.label}>
+                <span>{item.label}</span>
+                <div><i style={{ width: `${Math.max((total / max) * 100, total ? 8 : 0)}%` }} /></div>
+                <strong>{total}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </article>
+    );
   };
 
   if (!ADMIN_ROLES.includes(currentUser?.system_role)) {
@@ -316,6 +363,12 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
                 ))}
               </div>
             </section>
+            <section className="admin-charts-grid">
+              {renderBarChart('Usuarios activos', 'Actividad registrada durante los ultimos 7 dias.', overview?.charts?.active_users_by_day)}
+              {renderBarChart('Publicaciones por semana', 'Reconocimientos creados en las ultimas 6 semanas.', overview?.charts?.posts_by_week)}
+              {renderBarChart('Reportes por estado', 'Distribucion actual de moderacion.', overview?.charts?.reports_by_status)}
+              {renderBarChart('Categorias mas usadas', 'Categorias con mas reconocimientos.', overview?.charts?.categories)}
+            </section>
           </div>
         )}
 
@@ -375,6 +428,41 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
                 <button key={value} className={reportStatus === value ? 'active' : ''} onClick={() => setReportStatus(value)}>{label}</button>
               ))}
             </div>
+            <div className="admin-report-filters">
+              <label>
+                <Search size={17} />
+                <input
+                  value={reportFilters.search}
+                  onChange={(event) => setReportFilters((current) => ({ ...current, search: event.target.value }))}
+                  placeholder="Buscar usuario, contenido o contexto..."
+                />
+              </label>
+              <select
+                value={reportFilters.target_type}
+                onChange={(event) => setReportFilters((current) => ({ ...current, target_type: event.target.value }))}
+              >
+                {Object.entries(targetTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <select
+                value={reportFilters.reason}
+                onChange={(event) => setReportFilters((current) => ({ ...current, reason: event.target.value }))}
+              >
+                <option value="all">Todos los motivos</option>
+                {Object.entries(reasonLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+              <input
+                type="date"
+                value={reportFilters.from}
+                onChange={(event) => setReportFilters((current) => ({ ...current, from: event.target.value }))}
+                aria-label="Fecha inicial"
+              />
+              <input
+                type="date"
+                value={reportFilters.to}
+                onChange={(event) => setReportFilters((current) => ({ ...current, to: event.target.value }))}
+                aria-label="Fecha final"
+              />
+            </div>
             <details className="admin-report-help">
               <summary>Que hace cada opcion de moderacion</summary>
               <div>
@@ -398,6 +486,11 @@ function AdminPage({ currentUser, onBackToFeed, onLogout }) {
                       <time>{formatDate(report.created_at)}</time>
                     </div>
                     <div className="admin-report-reason"><FileWarning size={18} /><div><strong>{reasonLabels[report.reason] || report.reason}</strong><span>Reportado por {report.reporter_name}</span></div></div>
+                    {Number(report.target_report_count || 0) >= 3 && (
+                      <div className="admin-report-alert">
+                        Este contenido acumula {report.target_report_count} reportes. Conviene revisarlo con prioridad.
+                      </div>
+                    )}
                     <div className="admin-reported-content">
                       {mediaSrc && (['video', 'audio'].includes(mediaType) ? mediaType === 'audio' ? <audio src={mediaSrc} controls /> : <video src={mediaSrc} controls /> : <img src={mediaSrc} alt="Contenido reportado" />)}
                       <div><small>{targetLabels[report.target_type] || 'Contenido'} de {report.author_name || 'Usuario desconocido'}</small><strong>{report.content_category || targetLabels[report.target_type] || 'Contenido'}</strong><p>{report.content_text || 'Contenido multimedia sin texto.'}</p></div>

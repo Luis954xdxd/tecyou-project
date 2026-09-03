@@ -235,3 +235,176 @@ body.dark .admin-error-action {
   border-color: rgba(248, 113, 113, 0.32) !important;
   color: #fecaca !important;
 }
+
+/* =========================================================
+   ADMIN INSIGHTS: charts and advanced report filters
+========================================================= */
+
+.admin-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-chart-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.admin-chart-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.admin-chart-heading > span {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #eef2ff;
+  color: #4f46e5;
+  flex: 0 0 auto;
+}
+
+.admin-chart-heading h3 {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 17px;
+}
+
+.admin-chart-heading p {
+  margin: 3px 0 0;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-bar-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-bar-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.9fr) minmax(120px, 1.6fr) 34px;
+  align-items: center;
+  gap: 10px;
+  color: var(--admin-text);
+  font-size: 13px;
+}
+
+.admin-bar-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-bar-row > div {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.admin-bar-row i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #7c3aed);
+}
+
+.admin-bar-row strong {
+  text-align: right;
+  font-size: 13px;
+}
+
+.admin-report-filters {
+  margin: 14px 0 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(170px, 0.8fr) minmax(190px, 1fr) 150px 150px;
+  gap: 10px;
+}
+
+.admin-report-filters label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--admin-surface);
+}
+
+.admin-report-filters input,
+.admin-report-filters select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  padding: 0 12px;
+  outline: none;
+}
+
+.admin-report-filters label input {
+  border: 0;
+  padding: 0;
+}
+
+.admin-report-alert {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.App.dark .admin-chart-card,
+.App.dark .admin-report-filters label,
+.App.dark .admin-report-filters input,
+.App.dark .admin-report-filters select,
+body.dark .admin-chart-card,
+body.dark .admin-report-filters label,
+body.dark .admin-report-filters input,
+body.dark .admin-report-filters select {
+  background: #101b2e !important;
+  border-color: #263650 !important;
+  color: #f8fafc !important;
+}
+
+.App.dark .admin-chart-heading > span,
+body.dark .admin-chart-heading > span {
+  background: rgba(99, 102, 241, 0.18);
+  color: #c4b5fd;
+}
+
+.App.dark .admin-report-alert,
+body.dark .admin-report-alert {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(251, 191, 36, 0.28);
+  color: #fde68a;
+}
+
+@media (max-width: 1120px) {
+  .admin-report-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-charts-grid,
+  .admin-report-filters {
+    grid-template-columns: 1fr;
+  }
+}

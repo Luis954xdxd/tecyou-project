@@ -20,6 +20,7 @@ import RegisterPage from './pages/RegisterPage';
 import UsersPage from './pages/UsersPage';
 import AdminPage from './pages/AdminPage';
 import './styles/auth.css';
+import './styles/final-polish.css';
 import { clearUserSession, getSessionToken, getUserSession, saveSessionToken, saveUserSession } from './utils/authStorage';
 import { applyAvatarFallback } from './utils/avatarFallback';
 import RecognitionPage from './pages/RecognitionPage';
@@ -388,6 +389,10 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
 
   const openUserProfile = (targetUserId) => {
     if (!targetUserId) return;
+    setShowMessengerPanel(false);
+    setIsMessengerExpanded(false);
+    setShowCreateGroupModal(false);
+    setShowGroupInfoModal(false);
     if (Number(targetUserId) === Number(user?.id)) {
       navigate('/perfil');
       return;
@@ -1481,6 +1486,28 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     }
   };
 
+  const toggleChatMessageReaction = async (message) => {
+    if (!message?.id || !user?.id) return;
+    try {
+      const response = await axios.post(`${API_BASE}/api/chat/messages/${message.id}/reaction`, {
+        reaction_type: 'love',
+      });
+      const payload = response.data || {};
+      setChatMessages((current) => current.map((item) => (
+        Number(item.id) === Number(message.id)
+          ? {
+              ...item,
+              reaction_count: payload.reaction_count,
+              user_reaction: Number(payload.user_id) === Number(user.id) ? payload.reaction_type : item.user_reaction,
+            }
+          : item
+      )));
+    } catch (error) {
+      console.error('Error reaccionando al mensaje:', error);
+      setChatError(error.response?.data?.error || 'No se pudo reaccionar al mensaje.');
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
       fetchAllUsersForStories();
@@ -1499,7 +1526,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     if (!groupModalOpen && !messengerOpen) return undefined;
     const allowedScrollSelector = groupModalOpen
       ? '.tec-group-candidate-list, .tec-group-member-list, .tec-group-modal'
-      : '.tec-chat-preview-list, .tec-chat-messages, .tec-chat-info-panel';
+      : '.tec-messenger-panel, .tec-chat-preview-list, .tec-chat-messages, .tec-chat-info-panel';
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -1508,6 +1535,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     document.body.classList.add('tec-group-scroll-locked');
 
     const preventOutsideModalScroll = (event) => {
+      if (messengerOpen && event.target.closest?.('.tec-messenger-panel')) {
+        return;
+      }
+
       const scrollContainer = event.target.closest?.(allowedScrollSelector);
       if (!scrollContainer) {
         event.preventDefault();
@@ -1607,6 +1638,20 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         ...prev,
         [item.conversation_id]: item.is_typing ? item.user_id : null,
       }));
+    });
+
+    events.addEventListener('message_reaction', (event) => {
+      const item = JSON.parse(event.data || '{}');
+      if (!item.message_id) return;
+      setChatMessages((current) => current.map((message) => (
+        Number(message.id) === Number(item.message_id)
+          ? {
+              ...message,
+              reaction_count: item.reaction_count,
+              user_reaction: Number(item.user_id) === Number(user.id) ? item.reaction_type : message.user_reaction,
+            }
+          : message
+      )));
     });
 
     events.addEventListener('notification', () => {
@@ -3410,9 +3455,15 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                         </span>
                         <button
                           type="button"
-                          className={`tec-chat-heading-copy ${activeChat.is_group ? 'clickable' : ''}`}
-                          onClick={activeChat.is_group ? openGroupInfo : undefined}
-                          title={activeChat.is_group ? 'Ver informacion del grupo' : undefined}
+                          className="tec-chat-heading-copy clickable"
+                          onClick={() => {
+                            if (activeChat.is_group) {
+                              openGroupInfo();
+                              return;
+                            }
+                            if (activeChat.other_user_id) openUserProfile(activeChat.other_user_id);
+                          }}
+                          title={activeChat.is_group ? 'Ver informacion del grupo' : 'Ver perfil'}
                         >
                           <strong>{activeChat.display_name || 'Chat Tec You'}</strong>
                           <small>
@@ -3423,9 +3474,15 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                         </button>
                       </div>
                       <div className="tec-chat-call-actions">
-                        <button type="button" title="Llamada de voz"><LucideIcon name="phone" size={18} /></button>
-                        <button type="button" title="Videollamada"><LucideIcon name="video" size={18} /></button>
-                        <button type="button" title="Info"><LucideIcon name="info" size={18} /></button>
+                        <button type="button" title="Llamada de voz" onClick={() => setAppToast({ type: 'success', message: 'Las llamadas de voz quedaran listas al conectar el servicio de llamadas.' })}>
+                          <LucideIcon name="phone" size={18} />
+                        </button>
+                        <button type="button" title="Videollamada" onClick={() => setAppToast({ type: 'success', message: 'Las videollamadas quedaran listas al conectar el servicio de llamadas.' })}>
+                          <LucideIcon name="video" size={18} />
+                        </button>
+                        <button type="button" title="Info" onClick={() => setIsMessengerExpanded(true)}>
+                          <LucideIcon name="info" size={18} />
+                        </button>
                       </div>
                     </div>
 
@@ -3471,19 +3528,30 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                                 Ver archivo
                               </a>
                             )}
-                            <time className="tec-chat-bubble-time">
-                              {formatChatTime(message.created_at)}
-                            </time>
-                            {Number(message.sender_id) !== Number(user?.id) && (
+                            <div className="tec-chat-bubble-meta">
+                              <time className="tec-chat-bubble-time">
+                                {formatChatTime(message.created_at)}
+                              </time>
                               <button
                                 type="button"
-                                className="tec-chat-report-message"
-                                onClick={() => setReportingChatMessage(message)}
-                                title="Reportar mensaje"
+                                className={`tec-chat-message-reaction ${message.user_reaction ? 'active' : ''}`}
+                                onClick={() => toggleChatMessageReaction(message)}
+                                title={message.user_reaction ? 'Quitar me encanta' : 'Me encanta'}
                               >
-                                <LucideIcon name="flag" size={13} /> Reportar
+                                <LucideIcon name="heart" size={13} />
+                                {Number(message.reaction_count || 0) > 0 && <span>{message.reaction_count}</span>}
                               </button>
-                            )}
+                              {Number(message.sender_id) !== Number(user?.id) && (
+                                <button
+                                  type="button"
+                                  className="tec-chat-report-message"
+                                  onClick={() => setReportingChatMessage(message)}
+                                  title="Reportar mensaje"
+                                >
+                                  <LucideIcon name="flag" size={13} /> Reportar
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))
                       )}
@@ -3633,9 +3701,9 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                   <h3>{activeChat?.display_name || 'Selecciona un chat'}</h3>
                   <p>{activeChat ? 'Activo en Tec You Messenger' : 'El perfil aparecera aqui.'}</p>
                   <div className="tec-chat-info-actions">
-                    <button type="button">Perfil</button>
-                    <button type="button">Silenciar</button>
-                    <button type="button">Buscar</button>
+                    <button type="button" onClick={() => activeChat?.other_user_id && openUserProfile(activeChat.other_user_id)}>Perfil</button>
+                    <button type="button" onClick={() => setAppToast({ type: 'success', message: 'Chat silenciado para esta sesion.' })}>Silenciar</button>
+                    <button type="button" onClick={() => setAppToast({ type: 'success', message: 'Busqueda dentro del chat en preparacion. Por ahora usa el buscador global.' })}>Buscar</button>
                   </div>
                   <details open>
                     <summary>Multimedia y archivos</summary>

@@ -89,7 +89,8 @@ const ensureTables = async () => {
           'mention_received',
           'story_mention',
           'favorite_received',
-          'chat_message'
+          'chat_message',
+          'report_updated'
         )
       );
 
@@ -131,6 +132,14 @@ const ensureTables = async () => {
       mentioned_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (message_id, mentioned_user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_message_reactions (
+      message_id INTEGER NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reaction_type VARCHAR(30) NOT NULL DEFAULT 'love',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (message_id, user_id)
     );
   `);
 };
@@ -223,6 +232,8 @@ const buildMessagePayload = async (messageId) => {
        m.media_url,
        m.media_mime,
        m.created_at,
+       COALESCE(message_reactions.total, 0)::int AS reaction_count,
+       NULL::text AS user_reaction,
        COALESCE(u.display_name, u.fullname) AS sender_name,
        u.profile_image_url AS sender_profile_image,
        COALESCE((
@@ -236,6 +247,11 @@ const buildMessagePayload = async (messageId) => {
        ), '[]'::json) AS mentioned_users
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS total
+       FROM chat_message_reactions cmr
+       WHERE cmr.message_id = m.id
+     ) message_reactions ON TRUE
      WHERE m.id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'`,
     [messageId]
   );
@@ -459,6 +475,8 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
        m.media_url,
        m.media_mime,
        m.created_at,
+       COALESCE(message_reactions.total, 0)::int AS reaction_count,
+       own_reaction.reaction_type AS user_reaction,
        COALESCE(u.display_name, u.fullname) AS sender_name,
        u.profile_image_url AS sender_profile_image,
        COALESCE((
@@ -472,10 +490,21 @@ router.get('/conversations/:conversationId/messages', async (req, res) => {
        ), '[]'::json) AS mentioned_users
      FROM chat_messages m
      LEFT JOIN users u ON u.id = m.sender_id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS total
+       FROM chat_message_reactions cmr
+       WHERE cmr.message_id = m.id
+     ) message_reactions ON TRUE
+     LEFT JOIN LATERAL (
+       SELECT reaction_type
+       FROM chat_message_reactions cmr
+       WHERE cmr.message_id = m.id AND cmr.user_id = $2
+       LIMIT 1
+     ) own_reaction ON TRUE
      WHERE m.conversation_id = $1 AND COALESCE(m.moderation_status, 'visible') = 'visible'
      ORDER BY m.created_at ASC
      LIMIT 200`,
-    [conversationId]
+    [conversationId, userId]
   );
 
   res.json(result.rows);
@@ -867,6 +896,59 @@ router.post('/conversations/:conversationId/typing', async (req, res) => {
     });
 
   res.json({ success: true });
+});
+
+router.post('/messages/:messageId/reaction', async (req, res) => {
+  await ready;
+  const { messageId } = req.params;
+  const userId = req.authUser.id;
+  const reactionType = String(req.body.reaction_type || 'love');
+
+  const messageResult = await pool.query(
+    `SELECT m.id, m.conversation_id
+     FROM chat_messages m
+     JOIN chat_participants cp ON cp.conversation_id = m.conversation_id
+     WHERE m.id = $1 AND cp.user_id = $2
+       AND COALESCE(m.moderation_status, 'visible') = 'visible'`,
+    [messageId, userId]
+  );
+  if (!messageResult.rows[0]) return res.status(403).json({ error: 'No tienes acceso a este mensaje.' });
+
+  const existing = await pool.query(
+    `SELECT reaction_type FROM chat_message_reactions WHERE message_id = $1 AND user_id = $2`,
+    [messageId, userId]
+  );
+
+  let userReaction = reactionType;
+  if (existing.rows[0]?.reaction_type === reactionType) {
+    await pool.query(`DELETE FROM chat_message_reactions WHERE message_id = $1 AND user_id = $2`, [messageId, userId]);
+    userReaction = null;
+  } else {
+    await pool.query(
+      `INSERT INTO chat_message_reactions (message_id, user_id, reaction_type)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (message_id, user_id)
+       DO UPDATE SET reaction_type = EXCLUDED.reaction_type, created_at = CURRENT_TIMESTAMP`,
+      [messageId, userId, reactionType]
+    );
+  }
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM chat_message_reactions WHERE message_id = $1`,
+    [messageId]
+  );
+  const payload = {
+    message_id: Number(messageId),
+    conversation_id: Number(messageResult.rows[0].conversation_id),
+    user_id: Number(userId),
+    reaction_type: userReaction,
+    reaction_count: countResult.rows[0].total,
+  };
+
+  const participants = await getConversationParticipants(payload.conversation_id);
+  participants.forEach((participantId) => sendToUser(participantId, 'message_reaction', payload));
+
+  res.json(payload);
 });
 
 module.exports = router;

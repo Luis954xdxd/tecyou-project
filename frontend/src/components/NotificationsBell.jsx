@@ -58,6 +58,9 @@ function NotificationsBell({ userId, onOpenProfile, onOpenStory }) {
     if (item.type === 'story_mention') {
       return `${item.actor_name} te etiquetó en una historia`;
     }
+    if (item.type === 'report_updated') {
+      return item.title || 'Tu reporte fue actualizado por moderacion';
+    }
 
     return item.title || 'Nueva notificación';
   };
