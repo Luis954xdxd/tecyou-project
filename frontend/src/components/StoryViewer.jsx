@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, Flag, Send, Trash2, X } from 'lucide-react';
 import ReportDialog from './ReportDialog';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function StoryPersonAvatar({ src, name }) {
   return (

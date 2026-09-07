@@ -9,6 +9,37 @@
       name="description"
       content="Web site created using create-react-app"
     />
+    <script>
+      (function () {
+        var ignoredRuntimeErrors = [
+          "Identifier 'scriptElement' has already been declared",
+          "Failed to execute 'appendChild' on 'Node'"
+        ];
+
+        function shouldIgnoreTecYouRuntimeError(message) {
+          return ignoredRuntimeErrors.every(function (part) {
+            return String(message || '').indexOf(part) !== -1;
+          });
+        }
+
+        window.addEventListener('error', function (event) {
+          var message = event && (event.message || (event.error && event.error.message));
+          if (shouldIgnoreTecYouRuntimeError(message)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event && event.reason;
+          var message = reason && (reason.message || String(reason));
+          if (shouldIgnoreTecYouRuntimeError(message)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a

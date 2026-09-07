@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import logoTSJ from '../assets/logo-tsj.png';
 import '../styles/auth.css';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 const STUDENT_REGEX = /^za\d+@zapopan\.tecmm\.edu\.mx$/i;
 const TEACHER_REGEX = /^[a-z]+(?:\.[a-z]+)+@zapopan\.tecmm\.edu\.mx$/i;

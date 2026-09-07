@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { applyAvatarFallback } from '../utils/avatarFallback';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 const reactionOptions = [
   { key: 'like', label: 'Me gusta', emoji: '\u{1F44D}' },

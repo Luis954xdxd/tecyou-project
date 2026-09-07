@@ -5,7 +5,7 @@ import { Flag, Heart, Send, Trash2 } from 'lucide-react';
 import ReportDialog from './ReportDialog';
 import { applyAvatarFallback } from '../utils/avatarFallback';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function RecognitionComments({
   recognitionId,

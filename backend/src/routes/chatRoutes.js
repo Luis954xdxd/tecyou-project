@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const pool = require('../db');
+const { ensureUploadDir } = require('../config/storage');
 const {
   broadcast,
   connectUser,
@@ -15,8 +15,7 @@ const { requireSession, bindAuthenticatedActor } = require('../middleware/adminA
 router.use(requireSession);
 router.use(bindAuthenticatedActor('user_id', 'sender_id', 'created_by'));
 
-const uploadDir = path.join(__dirname, '..', 'uploads', 'chat');
-fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = ensureUploadDir('chat');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),

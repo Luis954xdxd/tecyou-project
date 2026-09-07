@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function StoryAvatar({ src, name, hasUnseen }) {
   const [imageFailed, setImageFailed] = useState(false);

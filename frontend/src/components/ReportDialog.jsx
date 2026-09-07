@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Flag, X } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 const reasons = [
   ['harassment', 'Acoso, insultos o amenazas'],
   ['inappropriate', 'Contenido inapropiado'],

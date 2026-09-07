@@ -6,7 +6,7 @@ import goldFrame from '../assets/frames/gold-frame.png';
 import crimsonRubyFrame from '../assets/frames/crimson-ruby-frame.png';
 import diamondFrame from '../assets/frames/diamond-frame.png';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function resolveImageUrl(url) {
   if (!url) return null;

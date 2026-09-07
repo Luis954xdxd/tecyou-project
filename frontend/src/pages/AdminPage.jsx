@@ -23,7 +23,7 @@ import {
 import { getSessionToken } from '../utils/authStorage';
 import '../styles/admin.css';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 const ADMIN_ROLES = ['moderator', 'admin', 'super_admin'];
 
 const roleLabels = {

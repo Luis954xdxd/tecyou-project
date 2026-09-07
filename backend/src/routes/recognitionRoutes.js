@@ -6,7 +6,7 @@ router.use(bindAuthenticatedActor('user_id', 'sender_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { ensureUploadDir } = require('../config/storage');
 const { moderateText } = require('../../moderationService');
 const {
   classifyRecognitionText,
@@ -20,8 +20,7 @@ const {
 // ===============================
 // CONFIGURACIÃƒâ€œN DE UPLOADS
 // ===============================
-const uploadDir = path.join(__dirname, '..', 'uploads', 'recognitions');
-fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = ensureUploadDir('recognitions');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

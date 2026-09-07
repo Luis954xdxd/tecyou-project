@@ -6,10 +6,9 @@ router.use(bindAuthenticatedActor('user_id', 'viewer_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { ensureUploadDir } = require('../config/storage');
 
-const uploadDir = path.join(__dirname, '..', 'uploads', 'stories');
-fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = ensureUploadDir('stories');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

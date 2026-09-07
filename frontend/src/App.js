@@ -36,7 +36,7 @@ import InstitutionalChallenges from './components/InstitutionalChallenges';
 
 import TecAgentChatbot from './components/TecAgentChatbot';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from './config/api';
 
 const existingSessionToken = getSessionToken();
 if (existingSessionToken) {

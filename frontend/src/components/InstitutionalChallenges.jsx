@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Upload, Award } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 const mediaUrl = (value) => value?.startsWith('http') ? value : `${API_BASE}${value || ''}`;
 
 function InstitutionalChallenges({ onCompleted }) {

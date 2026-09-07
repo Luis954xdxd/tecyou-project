@@ -4,7 +4,7 @@ import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
 import RecognitionComments from '../components/RecognitionComments';
 import { renderTextWithHashtags } from '../textFormatters';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function RecognitionPage({
   recognitions,

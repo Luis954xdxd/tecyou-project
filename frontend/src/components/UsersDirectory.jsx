@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import FramedAvatar from './FramedAvatar';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 const CONTACTS_LIMIT = 14;
 
 const formatLastSeen = (lastSeen) => {

@@ -10,14 +10,13 @@ router.use(bindAuthenticatedActor('follower_id', 'blocker_id'));
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { ensureUploadDir } = require('../config/storage');
 const {
     evaluateAndUnlockAchievementsForUser,
 } = require('../services/achievementService');
 
 // Asegurar carpeta de uploads
-const uploadDir = path.join(__dirname, '..', 'uploads', 'profiles');
-fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = ensureUploadDir('profiles');
 
 // Configuración de multer
 const storage = multer.diskStorage({

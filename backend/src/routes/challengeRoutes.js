@@ -1,13 +1,12 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const pool = require('../db');
+const { ensureUploadDir } = require('../config/storage');
 const { requireSession, requireSystemRole } = require('../middleware/adminAuth');
 const router = express.Router();
-const challengeDir = path.join(__dirname, '..', 'uploads', 'challenges');
-const evidenceDir = path.join(__dirname, '..', 'uploads', 'recognitions');
-[challengeDir, evidenceDir].forEach((dir) => fs.mkdirSync(dir, { recursive: true }));
+const challengeDir = ensureUploadDir('challenges');
+const evidenceDir = ensureUploadDir('recognitions');
 const types = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
 const upload = multer({
   storage: multer.diskStorage({

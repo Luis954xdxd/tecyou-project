@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import FramedAvatar from './FramedAvatar';
 
-const API_BASE = 'http://localhost:5000';
+import { API_BASE } from '../config/api';
 
 function PublicProfileModal({ userId, currentUserId, isOpen, onClose, onFollowChanged }) {
   const [profileData, setProfileData] = useState(null);
