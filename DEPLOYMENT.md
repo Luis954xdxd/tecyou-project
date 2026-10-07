@@ -610,6 +610,51 @@ Despues puedes configurar:
 
 Railway puede ser mas simple porque backend y PostgreSQL quedan en el mismo tablero.
 
+### 13.0 Si ya seleccionaste el repositorio y sale error de monorepo
+
+Si Railway muestra un error diciendo que no detecto una aplicacion compilable en la raiz del repositorio, no significa que tu proyecto este mal. Significa que Railway esta mirando esta carpeta:
+
+```text
+tecyou-project/
+```
+
+Pero el backend real esta aqui:
+
+```text
+tecyou-project/backend/
+```
+
+Desde esa pantalla:
+
+1. No borres el proyecto.
+2. En el panel del servicio `Proyecto tecyou`, busca el boton que dice `Establecer el directorio raiz en backend`.
+3. Presionalo.
+4. Arriba a la izquierda aparecera `Aplicar 1 cambio`.
+5. Todavia no presiones deploy si no has creado la base de datos y variables. Puedes hacerlo despues.
+6. Si ya presionaste deploy y fallo, no pasa nada. Corrige el directorio y vuelve a desplegar.
+
+Si no aparece el boton automatico:
+
+1. Entra al servicio `Proyecto tecyou`.
+2. Abre la pestana `Ajustes`.
+3. Busca `Source` o `Root Directory`.
+4. Escribe:
+
+```text
+/backend
+```
+
+5. Guarda.
+6. Vuelve al canvas y aplica los cambios.
+
+Para este servicio backend, la configuracion debe quedar asi:
+
+```text
+Root Directory: /backend
+Build Command: npm install
+Start Command: npm start
+```
+
 ### 13.1 Crear proyecto Railway
 
 1. Entra a https://railway.com.
