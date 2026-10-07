@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const pool = require('../db');
 const { ensureUploadDir } = require('../config/storage');
+const { uploadMediaFile } = require('../config/mediaStorage');
 const { requireSession, requireSystemRole } = require('../middleware/adminAuth');
 const router = express.Router();
 const challengeDir = ensureUploadDir('challenges');
@@ -69,9 +70,10 @@ router.post('/', requireSystemRole('admin','super_admin'), upload.single('challe
     const points = Number(req.body.points);
     if (!content) return res.status(400).json({ error: 'El texto es obligatorio.' });
     if (!Number.isInteger(points) || points < 1 || points > 100000) return res.status(400).json({ error: 'Los puntos deben estar entre 1 y 100000.' });
+    const mediaUrl = req.file ? await uploadMediaFile(req.file, 'challenges') : null;
     const result = await pool.query(`INSERT INTO institutional_challenges
       (creator_id,content,points,media_url,media_type) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [req.authUser.id, content, points, req.file ? `/uploads/challenges/${req.file.filename}` : null, req.file ? kind(req.file) : null]);
+      [req.authUser.id, content, points, mediaUrl, req.file ? kind(req.file) : null]);
     await pool.query(
       `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
        SELECT id, $1, 'institutional_challenge', 'Nueva actividad institucional', $2, $3
@@ -91,7 +93,7 @@ router.post('/:id/complete', upload.single('evidence'), async (req, res) => {
     const found = await client.query('SELECT * FROM institutional_challenges WHERE id=$1 AND is_active=TRUE FOR UPDATE', [req.params.id]);
     if (!found.rows.length) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Publicación no disponible.' }); }
     const item = found.rows[0];
-    const url = `/uploads/recognitions/${req.file.filename}`;
+    const url = await uploadMediaFile(req.file, 'recognitions');
     const rec = await client.query(`INSERT INTO recognitions (sender_id,receiver_id,message,category)
       VALUES ($1,$1,$2,'Colaboración') RETURNING id`, [req.authUser.id, `Cumplí el reto institucional: ${item.content}`]);
     await client.query('INSERT INTO recognition_media (recognition_id,media_url,media_type) VALUES ($1,$2,$3)', [rec.rows[0].id, url, kind(req.file)]);

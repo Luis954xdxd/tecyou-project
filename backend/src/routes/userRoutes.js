@@ -11,6 +11,7 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const { ensureUploadDir } = require('../config/storage');
+const { uploadMediaFile } = require('../config/mediaStorage');
 const {
     evaluateAndUnlockAchievementsForUser,
 } = require('../services/achievementService');
@@ -417,7 +418,7 @@ router.post('/profile/:id/photo', requireSelfParam('id'), upload.single('profile
             return res.status(400).json({ error: 'No se recibió ninguna imagen.' });
         }
 
-        const imagePath = `/uploads/profiles/${req.file.filename}`;
+        const imagePath = await uploadMediaFile(req.file, 'profiles');
 
         const updatedUser = await pool.query(
             `UPDATE users
@@ -474,7 +475,7 @@ router.post('/profile/:id/cover', requireSelfParam('id'), upload.single('coverIm
             return res.status(400).json({ error: 'No se recibió ninguna imagen de portada.' });
         }
 
-        const imagePath = `/uploads/profiles/${req.file.filename}`;
+        const imagePath = await uploadMediaFile(req.file, 'profiles');
 
         const updatedUser = await pool.query(
             `UPDATE users

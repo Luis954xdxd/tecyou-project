@@ -7,6 +7,7 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const { ensureUploadDir } = require('../config/storage');
+const { removeLocalUploadByUrl, uploadMediaFile } = require('../config/mediaStorage');
 const { moderateText } = require('../../moderationService');
 const {
   classifyRecognitionText,
@@ -329,7 +330,7 @@ router.post(
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        const mediaPath = `/uploads/recognitions/${file.filename}`;
+        const mediaPath = await uploadMediaFile(file, 'recognitions');
 
         let mediaType = null;
 
@@ -577,15 +578,7 @@ router.delete('/:id', async (req, res) => {
 
     for (const media of mediaResult.rows) {
       if (!media.media_url) continue;
-
-      const filename = path.basename(media.media_url);
-      const filePath = path.join(uploadDir, filename);
-
-      fs.unlink(filePath, (unlinkError) => {
-        if (unlinkError && unlinkError.code !== 'ENOENT') {
-          console.error('Error eliminando archivo de reconocimiento:', unlinkError.message);
-        }
-      });
+      removeLocalUploadByUrl(media.media_url, uploadDir, 'archivo de reconocimiento');
     }
 
     return res.json({

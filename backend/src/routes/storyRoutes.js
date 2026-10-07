@@ -7,6 +7,7 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const { ensureUploadDir } = require('../config/storage');
+const { removeLocalUploadByUrl, uploadMediaFile } = require('../config/mediaStorage');
 
 const uploadDir = ensureUploadDir('stories');
 
@@ -213,9 +214,9 @@ router.post(
       const finalShowLyrics = show_lyrics === 'false' || show_lyrics === false ? false : true;
       const finalLyricsPositionX = Math.min(Math.max(Number(lyrics_position_x || 50), 8), 92);
       const finalLyricsPositionY = Math.min(Math.max(Number(lyrics_position_y || 76), 18), 88);
-      const mediaUrl = `/uploads/stories/${storyMediaFile.filename}`;
+      const mediaUrl = await uploadMediaFile(storyMediaFile, 'stories');
       const audioUrl = storyAudioFile
-        ? `/uploads/stories/${storyAudioFile.filename}`
+        ? await uploadMediaFile(storyAudioFile, 'stories')
         : music_external_url || null;
 
       const storyResult = await pool.query(
@@ -512,12 +513,7 @@ router.delete('/:id', async (req, res) => {
       .filter((url) => typeof url === 'string' && url.startsWith('/uploads/stories/'));
 
     for (const localUrl of new Set(localUrls)) {
-      const filePath = path.join(uploadDir, path.basename(localUrl));
-      fs.unlink(filePath, (unlinkError) => {
-        if (unlinkError && unlinkError.code !== 'ENOENT') {
-          console.error('Error eliminando archivo de historia:', unlinkError.message);
-        }
-      });
+      removeLocalUploadByUrl(localUrl, uploadDir, 'archivo de historia');
     }
 
     return res.json({ success: true, deleted_story_id: storyId });

@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const pool = require('../db');
 const { ensureUploadDir } = require('../config/storage');
+const { removeLocalUploadByUrl, uploadMediaFile } = require('../config/mediaStorage');
 const {
   broadcast,
   connectUser,
@@ -259,7 +260,7 @@ const buildMessagePayload = async (messageId) => {
 };
 
 const createMessage = async ({ conversationId, senderId, content, file }) => {
-  const mediaUrl = file ? `/uploads/chat/${file.filename}` : null;
+  const mediaUrl = file ? await uploadMediaFile(file, 'chat') : null;
   const messageType = file
     ? file.mimetype.startsWith('image/')
       ? 'image'
@@ -809,7 +810,7 @@ router.post(
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const groupImageUrl = req.file ? `/uploads/chat/${req.file.filename}` : null;
+    const groupImageUrl = req.file ? await uploadMediaFile(req.file, 'chat') : null;
     const created = await client.query(
       `INSERT INTO chat_conversations (is_group, name, created_by, group_image_url)
        VALUES (TRUE, $1, $2, $3)
@@ -847,9 +848,7 @@ router.post(
     return res.status(201).json(response);
   } catch (error) {
     await client.query('ROLLBACK');
-    if (req.file) {
-      fs.unlink(path.join(uploadDir, req.file.filename), () => {});
-    }
+    if (req.file) removeLocalUploadByUrl(`/uploads/chat/${req.file.filename}`, uploadDir, 'imagen de grupo');
     console.error('Error creando grupo:', error);
     return res.status(500).json({ error: 'No se pudo crear el grupo.' });
   } finally {
