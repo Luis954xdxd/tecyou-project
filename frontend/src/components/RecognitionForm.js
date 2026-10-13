@@ -6,14 +6,13 @@ import { API_BASE } from '../config/api';
 
 function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
   const [formData, setFormData] = useState({
-    receiver_control_number: '',
     message: '',
     category: 'Colaboración',
   });
 
   const [searchInput, setSearchInput] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUsers, setSelectedUsers] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sending, setSending] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
@@ -47,19 +46,17 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 
   useEffect(() => {
     if (preselectedUser) {
-      setSelectedUser(preselectedUser);
-      setSearchInput(preselectedUser.display_name || preselectedUser.fullname || '');
+      setSelectedUsers([preselectedUser]);
+      setSearchInput('');
       setSearchResults([]);
-      setFormData((prev) => ({
-        ...prev,
-        receiver_control_number: '',
-      }));
     }
   }, [preselectedUser]);
 
   useEffect(() => {
+    let active = true;
     const delayDebounce = setTimeout(async () => {
-      if (searchInput.trim().length < 2 || selectedUser) {
+      if (searchInput.trim().length < 2) {
+        setSearchingUsers(false);
         setSearchResults([]);
         return;
       }
@@ -68,24 +65,25 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         setSearchingUsers(true);
         const response = await axios.get(
           `${API_BASE}/api/users/search?q=${encodeURIComponent(
-            searchInput
+            searchInput.trim()
           )}&currentUserId=${senderId}`
         );
 
         const filtered = response.data.filter(
-          (user) => Number(user.id) !== Number(senderId)
+          (user) => Number(user.id) !== Number(senderId) &&
+            !selectedUsers.some((selected) => Number(selected.id) === Number(user.id))
         );
 
-        setSearchResults(filtered);
+        if (active) setSearchResults(filtered);
       } catch (error) {
         console.error('Error buscando usuarios:', error);
       } finally {
-        setSearchingUsers(false);
+        if (active) setSearchingUsers(false);
       }
     }, 350);
 
-    return () => clearTimeout(delayDebounce);
-  }, [searchInput, senderId, selectedUser]);
+    return () => { active = false; clearTimeout(delayDebounce); };
+  }, [searchInput, senderId, selectedUsers]);
 
   const handleChange = (e) => {
     setFormFeedback({ type: '', message: '' });
@@ -99,19 +97,15 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 
   const handleSelectUser = (user) => {
     setFormFeedback({ type: '', message: '' });
-    setSelectedUser(user);
-    setSearchInput(user.display_name || user.fullname);
+    setSelectedUsers((prev) => prev.some((selected) => Number(selected.id) === Number(user.id))
+      ? prev : [...prev, user]);
+    setSearchInput('');
     setSearchResults([]);
-    setFormData((prev) => ({
-      ...prev,
-      receiver_control_number: '',
-    }));
   };
 
-  const handleClearSelectedUser = () => {
+  const handleClearSelectedUser = (userId) => {
     setFormFeedback({ type: '', message: '' });
-    setSelectedUser(null);
-    setSearchInput('');
+    setSelectedUsers((prev) => prev.filter((user) => user.id !== userId));
   };
 
   const handleMediaChange = (e) => {
@@ -169,9 +163,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       const response = await axios.post(`${API_BASE}/api/ai/generate-recognition`, {
         baseText,
         recognitionType: formData.category,
-        receiverName: selectedUser
-          ? selectedUser.display_name || selectedUser.fullname || ''
-          : '',
+        receiverName: selectedUsers.map((user) => user.display_name || user.fullname || '').join(', '),
         senderName: '',
       });
 
@@ -261,64 +253,49 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (sending) return;
     setFormFeedback({ type: '', message: '' });
 
-    if (!selectedUser && !formData.receiver_control_number.trim()) {
-      setFormFeedback({
-        type: 'error',
-        message: 'Selecciona un compañero por nombre o ingresa un número de control.',
-      });
+    if (searchInput.trim()) {
+      setFormFeedback({ type: 'error', message: 'Selecciona una persona de los resultados antes de enviar.' });
+      return;
+    }
+    const recipients = selectedUsers.map((user) => ({ user, label: user.display_name || user.fullname }));
+    if (!recipients.length) {
+      setFormFeedback({ type: 'error', message: 'Selecciona al menos un compañero y agrégalo a la lista.' });
       return;
     }
 
+    setSending(true);
     try {
-      setSending(true);
-
       const payload = new FormData();
       payload.append('sender_id', senderId);
-      payload.append('receiver_id', selectedUser ? selectedUser.id : '');
-      payload.append(
-        'receiver_control_number',
-        selectedUser ? '' : formData.receiver_control_number
-      );
+      payload.append('receiver_ids', JSON.stringify(selectedUsers.map((user) => Number(user.id))));
       payload.append('message', formData.message);
       payload.append('category', formData.category);
-
-      selectedMedia.forEach((file) => {
-        payload.append('recognitionMedia', file);
-      });
-
-      const response = await axios.post(`${API_BASE}/api/recognitions/send`, payload, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (onRecognitionSent) {
-        await onRecognitionSent(response.data);
+      selectedMedia.forEach((file) => payload.append('recognitionMedia', file));
+      let response;
+      try {
+        response = await axios.post(API_BASE + '/api/recognitions/send', payload);
+      } catch (error) {
+        setFormFeedback({ type: 'error', message: error.response?.data?.error || 'No se pudo enviar el reconocimiento. Inténtalo de nuevo.' });
+        return;
       }
-
-      setFormData({
-        receiver_control_number: '',
-        message: '',
-        category: 'Colaboración',
-      });
+      setSelectedUsers([]);
       setSearchInput('');
       setSearchResults([]);
-      setSelectedUser(null);
+      setFormData({ message: '', category: 'Colaboración' });
       setSelectedMedia([]);
       setAiClassification(null);
-
-      setFormFeedback({
-        type: 'success',
-        message: 'Se envió el reconocimiento correctamente.',
-      });
-    } catch (error) {
-      console.error('Error al enviar:', error);
-      setFormFeedback({
-        type: 'error',
-        message: error.response?.data?.error || 'Error al enviar. Verifica los datos.',
-      });
+      setFormFeedback({ type: 'success', message: 'Reconocimiento enviado a ' + recipients.length + ' persona(s).' });
+      if (onRecognitionSent) {
+        try {
+          await onRecognitionSent(response.data);
+        } catch (error) {
+          console.error('No se pudo actualizar el muro:', error);
+          setFormFeedback({ type: 'error', message: 'El reconocimiento se envió, pero no se pudo actualizar el muro. Recarga la página para verlo; no necesitas reenviarlo.' });
+        }
+      }
     } finally {
       setSending(false);
     }
@@ -328,7 +305,7 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
     <div className="recognition-form">
       <div className="form-intro-card">
         <p className="section-label">Reconocimiento positivo</p>
-        <h3>Motiva a un compañero</h3>
+        <h3>Motiva a tus compañeros</h3>
         <p className="form-helper-text">
           Comparte un mensaje que haga visible el esfuerzo, talento o impacto positivo
           de alguien dentro de la comunidad TSJ.
@@ -336,26 +313,27 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
       </div>
 
       <form onSubmit={handleSubmit} className="recognition-form-fields">
+        <fieldset disabled={sending} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }} className="recognition-form-fields">
         <div className="input-group-custom">
-          <label>Buscar compañero por nombre</label>
+          <label htmlFor="recognition-name-search">Buscar por nombre o número de control</label>
           <input
             type="text"
             className="form-control"
-            placeholder="Ej. Luis López"
+            id="recognition-name-search"
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
-              if (selectedUser) setSelectedUser(null);
+              setSearchResults([]);
               setFormFeedback({ type: '', message: '' });
             }}
           />
           <small className="field-hint">
-            Escribe al menos 2 letras para buscar por nombre visible, nombre real o correo.
+            Escribe el nombre o número de control y selecciona a la persona. Puedes elegir varios compañeros.
           </small>
 
           {searchingUsers && <div className="user-search-status">Buscando usuarios...</div>}
 
-          {!selectedUser && searchResults.length > 0 && (
+          {searchResults.length > 0 && (
             <div className="user-search-results">
               {searchResults.map((user) => (
                 <button
@@ -394,26 +372,11 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
           )}
         </div>
 
-        <div className="form-divider-text">o también puedes usar número de control</div>
-
-        <div className="input-group-custom">
-          <label>Número de control del compañero</label>
-          <input
-            type="number"
-            name="receiver_control_number"
-            className="form-control"
-            placeholder="Ej. 220113032"
-            value={formData.receiver_control_number}
-            onChange={handleChange}
-            disabled={!!selectedUser}
-          />
-          <small className="field-hint">
-            Ingresa el número de control del estudiante o compañero a reconocer.
-          </small>
-        </div>
-
-        {selectedUser && (
-          <div className="selected-user-card">
+        <div className="recognition-recipient-list" role="list" aria-label="Personas a reconocer">
+          <strong>Personas a reconocer</strong>
+          {selectedUsers.length === 0 && <small className="field-hint">Las personas que selecciones aparecerán aquí.</small>}
+        {selectedUsers.map((selectedUser) => (
+          <div key={selectedUser.id} className="selected-user-card" role="listitem">
             <div className="selected-user-card-left">
               {selectedUser.profile_image_url ? (
                 <img
@@ -442,12 +405,14 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             <button
               type="button"
               className="selected-user-clear"
-              onClick={handleClearSelectedUser}
+              onClick={() => handleClearSelectedUser(selectedUser.id)}
+              aria-label={`Quitar a ${selectedUser.display_name || selectedUser.fullname}`}
             >
               Quitar
             </button>
           </div>
-        )}
+        ))}
+        </div>
 
         <div className="input-group-custom">
           <label>Categoría del logro</label>
@@ -461,6 +426,10 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
             <option value="Académico">Académico</option>
             <option value="Liderazgo">Liderazgo</option>
             <option value="Creatividad">Creatividad</option>
+            <option value="Deportivo">Deportivo</option>
+            <option value="Artístico y cultural">Artístico y cultural</option>
+            <option value="Compromiso social">Compromiso social</option>
+            <option value="Cuidado ambiental">Cuidado ambiental</option>
           </select>
         </div>
 
@@ -593,6 +562,8 @@ function RecognitionForm({ onRecognitionSent, senderId, preselectedUser }) {
         >
           {sending ? 'Enviando...' : 'Enviar reconocimiento'}
         </button>
+
+        </fieldset>
 
         {formFeedback.message && (
           <div

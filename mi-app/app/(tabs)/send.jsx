@@ -25,6 +25,10 @@ const CATEGORIES = [
   { key: 'Académico',    icon: '📚' },
   { key: 'Liderazgo',    icon: '⭐' },
   { key: 'Creatividad',  icon: '💡' },
+  { key: 'Deportivo', icon: '⚽' },
+  { key: 'Artístico y cultural', icon: '🎨' },
+  { key: 'Compromiso social', icon: '🤲' },
+  { key: 'Cuidado ambiental', icon: '🌱' },
 ];
 
 export default function SendScreen() {

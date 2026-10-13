@@ -393,7 +393,7 @@ useEffect(() => {
   const recognitionsReceived = useMemo(
     () =>
       safeRecognitions.filter(
-        (rec) => Number(rec.receiver_id) === Number(profileUserId)
+        (rec) => (rec.receiver_ids || [rec.receiver_id]).some((id) => Number(id) === Number(profileUserId))
       ),
     [safeRecognitions, profileUserId]
   );
@@ -404,7 +404,7 @@ useEffect(() => {
     safeRecognitions.forEach((rec) => {
       const isRelatedToProfile =
         Number(rec.sender_id) === Number(profileUserId) ||
-        Number(rec.receiver_id) === Number(profileUserId);
+        (rec.receiver_ids || [rec.receiver_id]).some((id) => Number(id) === Number(profileUserId));
 
       if (!isRelatedToProfile) return;
 

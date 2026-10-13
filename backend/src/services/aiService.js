@@ -1,6 +1,8 @@
 const OpenAI = require('openai');
 
 const client = new OpenAI({
+  timeout: 20000,
+  maxRetries: 1,
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -116,6 +118,10 @@ Tu tarea es analizar el mensaje y clasificarlo SOLO dentro de estas categorías 
 - Académico
 - Liderazgo
 - Creatividad
+- Deportivo
+- Artístico y cultural
+- Compromiso social
+- Cuidado ambiental
 
 También debes detectar:
 - sentiment: "positivo" o "muy_positivo"
@@ -189,6 +195,10 @@ Devuelve el resultado con esta estructura exacta:
       'Académico',
       'Liderazgo',
       'Creatividad',
+      'Deportivo',
+      'Artístico y cultural',
+      'Compromiso social',
+      'Cuidado ambiental',
     ];
 
     const allowedSentiments = ['positivo', 'muy_positivo'];

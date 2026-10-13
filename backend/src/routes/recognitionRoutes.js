@@ -4,15 +4,17 @@ const { requireSession, bindAuthenticatedActor } = require('../middleware/adminA
 router.use(requireSession);
 router.use(bindAuthenticatedActor('user_id', 'sender_id'));
 const pool = require('../db');
+const { ensureRecognitionRecipientsSchema } = require('../services/recognitionRecipientsSchema');
+router.use(async (req, res, next) => {
+  try { await ensureRecognitionRecipientsSchema(); next(); } catch (error) { next(error); }
+});
 const multer = require('multer');
 const path = require('path');
 const { ensureUploadDir } = require('../config/storage');
 const { removeLocalUploadByUrl, uploadMediaFile } = require('../config/mediaStorage');
 const { moderateText } = require('../../moderationService');
-const {
-  classifyRecognitionText,
-  generateBadgeMetadata,
-} = require('../services/aiService');
+const { ensureEnrichmentSchema, startEnrichmentWorker } = require('../services/recognitionEnrichmentService');
+startEnrichmentWorker();
 
 const {
   evaluateAndUnlockAchievementsForUser,
@@ -120,18 +122,6 @@ const ensureUserBlocksTable = async () => {
     )
   `);
 };
-const withTimeout = (promise, timeoutMs, label) => {
-  let timer;
-
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`${label} tardo demasiado.`));
-    }, timeoutMs);
-  });
-
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-};
-
 // ===============================
 // HELPERS DE MENCIONES
 // ===============================
@@ -205,10 +195,13 @@ router.post(
   upload.array('recognitionMedia', 5),
   bindAuthenticatedActor('user_id', 'sender_id'),
   async (req, res) => {
+  let client;
+  let committed = false;
   try {
     const {
       sender_id,
       receiver_id,
+      receiver_ids,
       receiver_control_number,
       message,
       category,
@@ -244,58 +237,35 @@ router.post(
       finalReceiverId = userLookup.rows[0].id;
     }
 
-    if (!finalReceiverId) {
+    if (!finalReceiverId && !receiver_ids) {
       return res.status(400).json({
         error: 'Debes seleccionar un usuario vÃƒÂ¡lido para enviar el reconocimiento.',
       });
     }
 
-    // ===============================
-    // IA: CLASIFICACIÃƒâ€œN + METADATOS DE INSIGNIA
-    // NOTA: si falla la IA, NO bloqueamos el envÃƒÂ­o
-    // ===============================
-    let aiCategory = null;
-    let aiSentiment = null;
-    let aiIntensity = null;
-    let aiTags = [];
-    let aiBadgeTitle = null;
-    let aiBadgePrompt = null;
-
+    let receiverIds;
     try {
-      const classification = await withTimeout(
-        classifyRecognitionText({ message }),
-        1800,
-        'La clasificacion con IA'
-      );
-
-      aiCategory = classification.category || null;
-      aiSentiment = classification.sentiment || null;
-      aiIntensity = classification.intensity || null;
-      aiTags = Array.isArray(classification.tags) ? classification.tags : [];
-
-      try {
-        const badgeMeta = await withTimeout(
-          generateBadgeMetadata({
-            message,
-            category: aiCategory || category,
-            sentiment: aiSentiment || 'positivo',
-            intensity: aiIntensity || 'media',
-            tags: aiTags,
-          }),
-          1800,
-          'Los metadatos de insignia con IA'
-        );
-
-        aiBadgeTitle = badgeMeta.badgeTitle || null;
-        aiBadgePrompt = badgeMeta.badgePrompt || null;
-      } catch (badgeError) {
-        console.error('Error generando metadatos de insignia:', badgeError.message);
-      }
-    } catch (classificationError) {
-      console.error('Error clasificando reconocimiento con IA:', classificationError.message);
+      const supplied = receiver_ids ? JSON.parse(receiver_ids) : [finalReceiverId];
+      if (!Array.isArray(supplied) || !supplied.length || supplied.length > 50) throw new Error('Invalid recipients');
+      receiverIds = [...new Set(supplied.map(Number))];
+      if (receiverIds.some((id) => !Number.isSafeInteger(id) || id <= 0 || id === Number(sender_id))) throw new Error('Invalid recipients');
+    } catch (error) {
+      return res.status(400).json({ error: 'Selecciona entre 1 y 50 compañeros válidos.' });
     }
+    const validRecipients = await pool.query('SELECT id FROM users WHERE id = ANY($1::int[])', [receiverIds]);
+    if (validRecipients.rows.length !== receiverIds.length) {
+      return res.status(400).json({ error: 'Alguno de los compañeros ya no está disponible.' });
+    }
+    finalReceiverId = receiverIds[0];
 
-    const newRecognition = await pool.query(
+    // ===============================
+    // Persist optional AI work with the publication; it is processed after sending.
+    await ensureEnrichmentSchema();
+    const aiCategory = null, aiSentiment = null, aiIntensity = null;
+    const aiTags = [], aiBadgeTitle = null, aiBadgePrompt = null;
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const newRecognition = await client.query(
       `INSERT INTO recognitions (
         sender_id,
         receiver_id,
@@ -307,9 +277,10 @@ router.post(
         ai_intensity,
         ai_tags,
         ai_badge_title,
-        ai_badge_prompt
+        ai_badge_prompt,
+        receiver_ids
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
         sender_id,
@@ -323,6 +294,7 @@ router.post(
         aiTags.length ? aiTags : null,
         aiBadgeTitle,
         aiBadgePrompt,
+        receiverIds,
       ]
     );
 
@@ -342,7 +314,7 @@ router.post(
 
         if (!mediaType) continue;
 
-        await pool.query(
+        await client.query(
           `INSERT INTO recognition_media (recognition_id, media_url, media_type)
            VALUES ($1, $2, $3)`,
           [recognitionId, mediaPath, mediaType]
@@ -350,50 +322,35 @@ router.post(
       }
     }
 
-    if (Number(sender_id) !== Number(finalReceiverId)) {
-      await pool.query(
-        `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          finalReceiverId,
-          sender_id,
-          'recognition_received',
-          'Recibiste un reconocimiento',
-          message,
-          recognitionId,
-        ]
-      );
-    }
+    await client.query(
+      `INSERT INTO notifications (user_id, actor_id, type, title, content, reference_id)
+       SELECT recipient_id, $2, $3, $4, $5, $6 FROM unnest($1::int[]) AS recipient_id`,
+      [receiverIds, sender_id, 'recognition_received', 'Recibiste un reconocimiento', message, recognitionId]
+    );
 
     // ===============================
     // LOGROS / MARCOS / RECOMPENSAS
     // ===============================
-    let senderProgress = null;
-    let receiverProgress = null;
-
-    try {
-      senderProgress = await evaluateAndUnlockAchievementsForUser(
-        Number(sender_id),
-        {
-          sourceType: 'recognition_sent',
-          sourceId: recognitionId,
-        }
-      );
-    } catch (progressError) {
-      console.error('Error evaluando progreso del remitente:', progressError.message);
-    }
-
-    try {
-      receiverProgress = await evaluateAndUnlockAchievementsForUser(
-        Number(finalReceiverId),
-        {
-          sourceType: 'recognition_received',
-          sourceId: recognitionId,
-        }
-      );
-    } catch (progressError) {
-      console.error('Error evaluando progreso del receptor:', progressError.message);
-    }
+    await client.query('INSERT INTO recognition_enrichment_jobs (recognition_id) VALUES ($1)', [recognitionId]);
+    await client.query('COMMIT');
+    committed = true;
+    client.release();
+    client = null;
+    const actors = [Number(sender_id), ...receiverIds];
+    const progresses = new Array(actors.length);
+    let nextActor = 0;
+    await Promise.all(Array.from({ length: Math.min(4, actors.length) }, async () => {
+      while (nextActor < actors.length) {
+        const index = nextActor++;
+        try {
+          progresses[index] = await evaluateAndUnlockAchievementsForUser(actors[index], {
+            sourceType: index === 0 ? 'recognition_sent' : 'recognition_received', sourceId: recognitionId,
+          });
+        } catch (error) { console.error('Error evaluando progreso:', error.message); }
+      }
+    }));
+    const senderProgress = progresses[0] || null;
+    const receiverProgress = progresses.slice(1).filter(Boolean);
 
     res.json({
       success: true,
@@ -401,12 +358,16 @@ router.post(
       data: newRecognition.rows[0],
       progress : {
         sender : senderProgress,
-        receiver: receiverProgress,
+        receiver: receiverProgress[0] || null,
+        receivers: receiverProgress,
       },
     });
   } catch (err) {
+    if (!committed && client) await client.query('ROLLBACK');
     console.error('Error en /send:', err.message);
     res.status(500).send('Error interno al procesar el reconocimiento.');
+  } finally {
+    client?.release();
   }
   }
 );
@@ -428,6 +389,9 @@ router.get('/feed', async (req, res) => {
     sender_frame.code AS sender_frame_code,
 
     COALESCE(rec.display_name, rec.fullname) AS receiver_name,
+    COALESCE(r.receiver_ids, ARRAY[r.receiver_id]) AS receiver_ids,
+    (SELECT json_agg(json_build_object('id', recipient.id, 'name', COALESCE(recipient.display_name, recipient.fullname)) ORDER BY recipient.id)
+     FROM users recipient WHERE recipient.id = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))) AS receivers,
     rec.fullname AS receiver_fullname,
     rec.profile_image_url AS receiver_profile_image,
     receiver_frame.code AS receiver_frame_code,
@@ -500,7 +464,7 @@ router.get('/feed', async (req, res) => {
     rec.id,
     sender_frame.code,
     receiver_frame.code
-  ORDER BY r.created_at DESC
+  ORDER BY r.id DESC
 `, [viewerId]);
 
     res.json(feed.rows);
@@ -1343,7 +1307,10 @@ router.get('/reposts/:userId', async (req, res) => {
         s.fullname AS sender_fullname,
         s.profile_image_url AS sender_profile_image,
         COALESCE(rec.display_name, rec.fullname) AS receiver_name,
-        rec.fullname AS receiver_fullname,
+        COALESCE(r.receiver_ids, ARRAY[r.receiver_id]) AS receiver_ids,
+    (SELECT json_agg(json_build_object('id', recipient.id, 'name', COALESCE(recipient.display_name, recipient.fullname)) ORDER BY recipient.id)
+     FROM users recipient WHERE recipient.id = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))) AS receivers,
+    rec.fullname AS receiver_fullname,
         rec.profile_image_url AS receiver_profile_image,
         COALESCE(
           json_agg(
@@ -1389,7 +1356,10 @@ router.get('/:id/detail', async (req, res) => {
         s.fullname AS sender_fullname,
         s.profile_image_url AS sender_profile_image,
         COALESCE(rec.display_name, rec.fullname) AS receiver_name,
-        rec.fullname AS receiver_fullname,
+        COALESCE(r.receiver_ids, ARRAY[r.receiver_id]) AS receiver_ids,
+    (SELECT json_agg(json_build_object('id', recipient.id, 'name', COALESCE(recipient.display_name, recipient.fullname)) ORDER BY recipient.id)
+     FROM users recipient WHERE recipient.id = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))) AS receivers,
+    rec.fullname AS receiver_fullname,
         rec.profile_image_url AS receiver_profile_image,
         COALESCE(
           json_agg(

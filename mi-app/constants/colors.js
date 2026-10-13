@@ -41,6 +41,10 @@ export const colors = {
     Académico:    { bg: '#0f2218', text: '#4ade80', dot: '#22c55e' },
     Liderazgo:   { bg: '#2a1f0f', text: '#fbbf24', dot: '#f59e0b' },
     Creatividad:  { bg: '#1e1a38', text: '#c084fc', dot: '#a855f7' },
+    Deportivo: { bg: '#2a1f0f', text: '#fbbf24', dot: '#f59e0b' },
+    'Artístico y cultural': { bg: '#1e1a38', text: '#c084fc', dot: '#a855f7' },
+    'Compromiso social': { bg: '#1a2a3a', text: '#60a5fa', dot: '#3b82f6' },
+    'Cuidado ambiental': { bg: '#0f2218', text: '#4ade80', dot: '#22c55e' },
   },
 
   // Utilidades

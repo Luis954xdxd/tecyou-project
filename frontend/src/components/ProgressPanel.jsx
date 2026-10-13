@@ -255,6 +255,10 @@ function ProgressPanel({
             <div className="progress-category-pill">📚 Académico: {summary?.counts?.category_received?.Académico || 0}</div>
             <div className="progress-category-pill">⭐ Liderazgo: {summary?.counts?.category_received?.Liderazgo || 0}</div>
             <div className="progress-category-pill">💡 Creatividad: {summary?.counts?.category_received?.Creatividad || 0}</div>
+            <div className="progress-category-pill">⚽ Deportivo: {summary?.counts?.category_received?.['Deportivo'] || 0}</div>
+            <div className="progress-category-pill">🎨 Artístico y cultural: {summary?.counts?.category_received?.['Artístico y cultural'] || 0}</div>
+            <div className="progress-category-pill">🤲 Compromiso social: {summary?.counts?.category_received?.['Compromiso social'] || 0}</div>
+            <div className="progress-category-pill">🌱 Cuidado ambiental: {summary?.counts?.category_received?.['Cuidado ambiental'] || 0}</div>
           </div>
         </div>
 

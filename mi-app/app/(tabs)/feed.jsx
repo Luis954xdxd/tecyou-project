@@ -12,7 +12,7 @@ import FAB from '../../components/FAB';
 import { colors } from '../../constants/colors';
 import { fontSize, spacing, radius, fontWeight } from '../../constants/theme';
 
-const CATEGORIES = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad'];
+const CATEGORIES = ['Todas', 'Colaboración', 'Académico', 'Liderazgo', 'Creatividad', 'Deportivo', 'Artístico y cultural', 'Compromiso social', 'Cuidado ambiental'];
 
 export default function FeedScreen() {
   const { recognitions, loading, error, fetchFeed } = useFeed();

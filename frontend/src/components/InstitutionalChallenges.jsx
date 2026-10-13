@@ -1,3 +1,4 @@
+import { mergeFeed } from '../utils/mergeFeed';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Upload, Award } from 'lucide-react';
@@ -5,7 +6,7 @@ import { CheckCircle2, Upload, Award } from 'lucide-react';
 import { API_BASE } from '../config/api';
 const mediaUrl = (value) => value?.startsWith('http') ? value : `${API_BASE}${value || ''}`;
 
-function InstitutionalChallenges({ onCompleted }) {
+function InstitutionalChallenges({ onCompleted, recognitions, renderRecognitionCard, sortBy = 'recent', searchTerm = '', selectedCategory = 'Todas', hashtagFilter = '', emptyState = null }) {
   const [items, setItems] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [savingId, setSavingId] = useState(null);
@@ -74,16 +75,7 @@ function InstitutionalChallenges({ onCompleted }) {
     }
   };
 
-  if (!items.length) return null;
-  return (
-    <section className="institutional-challenges">
-      <div className="institutional-challenges-title">
-        <div><span>Publicaciones institucionales</span><small>Completa actividades y acumula puntos.</small></div>
-        <strong><Award size={17} /> {items[0]?.user_total_points || 0} puntos</strong>
-      </div>
-      {message && <div className="institutional-challenge-message">{message}</div>}
-      <input ref={inputRef} hidden type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" onChange={complete} />
-      {items.map((item) => (
+  const renderChallenge = (item) => (
         <article
           id={`institutional-challenge-${item.id}`}
           className="institutional-challenge-card"
@@ -93,6 +85,11 @@ function InstitutionalChallenges({ onCompleted }) {
             <span>Institucional</span><strong>+{item.points} puntos</strong>
           </div>
           <h3>{item.creator_name}</h3>
+          {item.created_at && (
+            <time dateTime={item.created_at} className="field-hint">
+              {new Date(item.created_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </time>
+          )}
           <p>{item.content}</p>
           {item.media_url && (item.media_type === 'video'
             ? <video src={mediaUrl(item.media_url)} controls preload="metadata" />
@@ -108,8 +105,34 @@ function InstitutionalChallenges({ onCompleted }) {
             <small>Se requiere una imagen o video como evidencia.</small>
           </div>
         </article>
-      ))}
-    </section>
+  );
+  const visibleItems = items.filter((item) => {
+    const query = searchTerm.trim().toLowerCase();
+    return selectedCategory === 'Todas' &&
+      (!query || [item.creator_name, item.content, 'Institucional'].some(value => value?.toLowerCase().includes(query))) &&
+      (!hashtagFilter || item.content?.toLowerCase().includes(hashtagFilter.toLowerCase()));
+  });
+  const integrated = Array.isArray(recognitions);
+  const entries = integrated ? mergeFeed(recognitions, visibleItems, sortBy) : [];
+  if (!integrated && !items.length) return null;
+  return (
+    <>
+      {message && <div className="institutional-challenge-message">{message}</div>}
+      <input ref={inputRef} hidden type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" onChange={complete} />
+      {integrated ? (entries.length ? entries.map(entry => (
+        <React.Fragment key={entry.type + '-' + entry.item.id}>
+          {entry.type === 'recognition' ? renderRecognitionCard(entry.item) : renderChallenge(entry.item)}
+        </React.Fragment>
+      )) : emptyState) : (
+        <section className="institutional-challenges">
+          <div className="institutional-challenges-title">
+            <div><span>Publicaciones institucionales</span><small>Completa actividades y acumula puntos.</small></div>
+            <strong><Award size={17} /> {items[0]?.user_total_points || 0} puntos</strong>
+          </div>
+          {items.map(renderChallenge)}
+        </section>
+      )}
+    </>
   );
 }
 

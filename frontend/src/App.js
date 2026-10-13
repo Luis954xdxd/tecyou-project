@@ -1,3 +1,5 @@
+import { compareRecentRecognitions } from './utils/recognitionOrder';
+import RecognitionRecipients from './components/RecognitionRecipients';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { unstable_batchedUpdates } from 'react-dom';
 import axios from 'axios';
@@ -536,13 +538,12 @@ const [hideAvatarFrames, setHideAvatarFrames] = useState(() => {
       setLoadingFeed(true);
       const response = await axios.get(`${API_BASE}/api/recognitions/feed`, { params: { viewerId: user?.id || null } });
       setRecognitions(response.data);
-      await fetchAllReactionsForFeed(response.data);
-
-      if (user?.id) {
-        await fetchFavorites();
-      }
+      void fetchAllReactionsForFeed(response.data);
+      if (user?.id) void fetchFavorites();
+      return response.data;
     } catch (err) {
       console.error('Error al obtener el feed:', err);
+      return null;
     } finally {
       setLoadingFeed(false);
     }
@@ -1941,6 +1942,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       'Acad\u00e9mico': { icon: '\uD83D\uDCDA', className: 'category-academico' },
       Liderazgo: { icon: '\u2B50', className: 'category-liderazgo' },
       Creatividad: { icon: '\uD83D\uDCA1', className: 'category-creatividad' },
+      'Deportivo': { icon: '⚽', className: 'category-deportivo' },
+      'Artístico y cultural': { icon: '🎨', className: 'category-artistico-cultural' },
+      'Compromiso social': { icon: '🤲', className: 'category-compromiso-social' },
+      'Cuidado ambiental': { icon: '🌱', className: 'category-cuidado-ambiental' },
     };
     return categories[category] || { icon: '\u2728', className: 'category-default' };
   };
@@ -1951,6 +1956,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       'Acad\u00e9mico': 0,
       Liderazgo: 0,
       Creatividad: 0,
+      'Deportivo': 0,
+      'Artístico y cultural': 0,
+      'Compromiso social': 0,
+      'Cuidado ambiental': 0,
     };
 
     recognitions.forEach((rec) => {
@@ -1978,6 +1987,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
       { name: 'Acad\u00e9mico', value: categoryCounts['Acad\u00e9mico'], icon: '\uD83D\uDCDA', className: 'category-academico' },
       { name: 'Liderazgo', value: categoryCounts.Liderazgo, icon: '\u2B50', className: 'category-liderazgo' },
       { name: 'Creatividad', value: categoryCounts.Creatividad, icon: '\uD83D\uDCA1', className: 'category-creatividad' },
+      { name: 'Deportivo', value: categoryCounts['Deportivo'], icon: '⚽', className: 'category-deportivo' },
+      { name: 'Artístico y cultural', value: categoryCounts['Artístico y cultural'], icon: '🎨', className: 'category-artistico-cultural' },
+      { name: 'Compromiso social', value: categoryCounts['Compromiso social'], icon: '🤲', className: 'category-compromiso-social' },
+      { name: 'Cuidado ambiental', value: categoryCounts['Cuidado ambiental'], icon: '🌱', className: 'category-cuidado-ambiental' },
     ],
     [categoryCounts]
   );
@@ -1992,6 +2005,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         query === '' ||
         rec.sender_name?.toLowerCase().includes(query) ||
         rec.receiver_name?.toLowerCase().includes(query) ||
+        rec.receivers?.some((receiver) => receiver.name?.toLowerCase().includes(query)) ||
         rec.message?.toLowerCase().includes(query) ||
         rec.category?.toLowerCase().includes(query);
 
@@ -2016,7 +2030,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
         break;
       case 'recent':
       default:
-        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        sorted.sort(compareRecentRecognitions);
         break;
     }
 
@@ -2042,7 +2056,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     return labels;
   }, [selectedCategory, searchTerm, hashtagFilter, sortBy]);
 
-  const categoryOptions = ['Todas', 'Colaboraci\u00f3n', 'Acad\u00e9mico', 'Liderazgo', 'Creatividad'];
+  const categoryOptions = ['Todas', 'Colaboraci\u00f3n', 'Acad\u00e9mico', 'Liderazgo', 'Creatividad', 'Deportivo', 'Artístico y cultural', 'Compromiso social', 'Cuidado ambiental'];
 
   const recognitionsSentByUser = useMemo(() => {
     if (!user) return 0;
@@ -2051,7 +2065,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
 
   const recognitionsReceivedByUser = useMemo(() => {
     if (!user) return 0;
-    return recognitions.filter((rec) => Number(rec.receiver_id) === Number(user.id)).length;
+    return recognitions.filter((rec) => (rec.receiver_ids || [rec.receiver_id]).some((id) => Number(id) === Number(user.id))).length;
   }, [recognitions, user]);
 
   const getReactionData = (recId) => {
@@ -2082,10 +2096,10 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
     const collected = [];
 
     const senderAchievements = progressPayload?.sender?.newlyUnlockedAchievements || [];
-    const receiverAchievements = progressPayload?.receiver?.newlyUnlockedAchievements || [];
+    const receiverAchievements = (progressPayload?.receivers || [progressPayload?.receiver]).flatMap((progress) => progress?.newlyUnlockedAchievements || []);
 
     const senderFrames = progressPayload?.sender?.newlyUnlockedFrames || [];
-    const receiverFrames = progressPayload?.receiver?.newlyUnlockedFrames || [];
+    const receiverFrames = (progressPayload?.receivers || [progressPayload?.receiver]).flatMap((progress) => progress?.newlyUnlockedFrames || []);
 
     senderAchievements.forEach((achievement) => {
       collected.push({
@@ -2551,11 +2565,26 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
   };
 
   const handleRecognitionSent = async (responsePayload) => {
-    await fetchFeed();
-    const unlockItems = buildUnlockItemsFromProgress(responsePayload?.progress);
+    const refreshedFeed = await fetchFeed();
+    if (!refreshedFeed) {
+      throw new Error('No se pudo actualizar el muro.');
+    }
+    setSelectedCategory('Todas');
+    setSearchTerm('');
+    setHashtagFilter('');
+    setSortBy('recent');
+    navigate('/');
+    const sentId = responsePayload?.data?.id;
+    requestAnimationFrame(() => {
+      recognitionRefs.current[sentId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    const responses = responsePayload?.responses || [responsePayload];
+    const unlockItems = responses.flatMap((response) => buildUnlockItemsFromProgress(response?.progress));
     enqueueUnlockItems(unlockItems);
-    setShowRecognitionComposer(false);
-    setRecognitionPrefillUser(null);
+    if (!responsePayload?.keepComposerOpen) {
+      setShowRecognitionComposer(false);
+      setRecognitionPrefillUser(null);
+    }
   };
 
   const handleDeleteRecognition = async (recognitionId) => {
@@ -2659,13 +2688,7 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                 {rec.sender_name}
               </button>{' '}
               reconoci{'\u00f3'} a{' '}
-              <button
-                type="button"
-                className="inline-user-link"
-                onClick={() => openUserProfile(rec.receiver_id)}
-              >
-                {rec.receiver_name}
-              </button>
+              <RecognitionRecipients recognition={rec} onOpenProfile={openUserProfile} />
             </p>
             <div className="social-post-submeta">
               <span>{formatDate(rec.created_at)}</span>
@@ -3294,21 +3317,17 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
             )}
 
             <div className="feed-container social-feed-list">
-              <InstitutionalChallenges onCompleted={fetchFeed} />
-              {loadingFeed ? (
-                <div className="loading-state">
-                  <div className="loading-spinner"></div>
-                  <p>Cargando reconocimientos...</p>
-                </div>
-              ) : filteredRecognitions.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">{'\u2728'}</div>
-                  <h3>No se encontraron resultados</h3>
-                  <p>Prueba con otra categor{'\u00ed'}a o cambia el texto de b{'\u00fa'}squeda.</p>
-                </div>
-              ) : (
-                filteredRecognitions.map((rec) => renderRecognitionCard(rec))
-              )}
+              {loadingFeed && <div className="loading-state"><div className="loading-spinner"></div><p>Cargando publicaciones...</p></div>}
+              <InstitutionalChallenges
+                onCompleted={fetchFeed}
+                recognitions={loadingFeed ? [] : filteredRecognitions}
+                renderRecognitionCard={renderRecognitionCard}
+                sortBy={sortBy}
+                searchTerm={searchTerm}
+                selectedCategory={selectedCategory}
+                hashtagFilter={hashtagFilter}
+                emptyState={loadingFeed ? null : <div className="empty-state"><div className="empty-icon">{'\u2728'}</div><h3>No se encontraron resultados</h3><p>Prueba con otra categoría o cambia el texto de búsqueda.</p></div>}
+              />
             </div>
           </section>
 
@@ -3643,12 +3662,6 @@ ${recognition.sender_name} reconoci\u00f3 a ${recognition.receiver_name}
                         </button>
                       </div>
                       <div className="tec-chat-call-actions">
-                        <button type="button" title="Llamada de voz" onClick={() => setAppToast({ type: 'success', message: 'Las llamadas de voz quedaran listas al conectar el servicio de llamadas.' })}>
-                          <LucideIcon name="phone" size={18} />
-                        </button>
-                        <button type="button" title="Videollamada" onClick={() => setAppToast({ type: 'success', message: 'Las videollamadas quedaran listas al conectar el servicio de llamadas.' })}>
-                          <LucideIcon name="video" size={18} />
-                        </button>
                         <button type="button" title="Info" onClick={() => setIsMessengerExpanded(true)}>
                           <LucideIcon name="info" size={18} />
                         </button>

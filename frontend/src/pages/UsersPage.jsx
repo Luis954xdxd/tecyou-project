@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import FramedAvatar from '../components/FramedAvatar';
 
@@ -137,11 +138,12 @@ function UsersPage({ currentUserId, onOpenProfile, onUserSelected }) {
       {/* ── Buscador ── */}
       <div className="users-page-search-wrapper">
         <div className="users-page-search-box">
-          <span className="users-page-search-icon">🔍</span>
+          <span className="users-page-search-icon" aria-hidden="true"><Search size={20} strokeWidth={1.8} /></span>
           <input
             ref={searchInputRef}
             type="text"
             className="users-page-search-input"
+            aria-label="Buscar por nombre o número de control"
             placeholder="Buscar por nombre o número de control..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -150,9 +152,10 @@ function UsersPage({ currentUserId, onOpenProfile, onUserSelected }) {
             <button
               type="button"
               className="users-page-search-clear"
-              onClick={() => setSearchTerm('')}
+              aria-label="Limpiar búsqueda"
+              onClick={() => { setSearchTerm(''); searchInputRef.current?.focus(); }}
             >
-              ✕
+              <X size={16} aria-hidden="true" />
             </button>
           )}
         </div>

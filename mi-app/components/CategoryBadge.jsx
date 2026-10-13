@@ -8,6 +8,10 @@ const CATEGORY_ICONS = {
   Académico:    '📚',
   Liderazgo:    '⭐',
   Creatividad:  '💡',
+  'Deportivo': '⚽',
+  'Artístico y cultural': '🎨',
+  'Compromiso social': '🤲',
+  'Cuidado ambiental': '🌱',
 };
 
 /**

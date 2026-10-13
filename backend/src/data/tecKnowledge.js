@@ -52,6 +52,10 @@ Categorías de reconocimientos:
 - Académico
 - Liderazgo
 - Creatividad
+- Deportivo
+- Artístico y cultural
+- Compromiso social
+- Cuidado ambiental
 
 Objetivo de ¡Tec! ¡you!:
 Promover una cultura de gratitud, reconocimiento, colaboración y apoyo dentro de la comunidad TSJ.

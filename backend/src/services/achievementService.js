@@ -1,3 +1,4 @@
+const { ensureRecognitionRecipientsSchema } = require('./recognitionRecipientsSchema');
 const pool = require('../db');
 
 const CATEGORY_BY_CODE = {
@@ -47,13 +48,14 @@ async function getUserStats(userId) {
 
   const user = userResult.rows[0];
 
+  await ensureRecognitionRecipientsSchema();
   const recognitionsSentResult = await pool.query(
     `SELECT COUNT(*)::int AS total FROM recognitions WHERE sender_id = $1`,
     [userId]
   );
 
   const recognitionsReceivedResult = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM recognitions WHERE receiver_id = $1`,
+    `SELECT COUNT(*)::int AS total FROM recognitions WHERE $1 = ANY(COALESCE(receiver_ids, ARRAY[receiver_id]))`,
     [userId]
   );
 
@@ -62,7 +64,7 @@ async function getUserStats(userId) {
     SELECT COUNT(*)::int AS total
     FROM recognition_reactions rr
     INNER JOIN recognitions r ON rr.recognition_id = r.id
-    WHERE r.receiver_id = $1
+    WHERE $1 = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
       AND rr.user_id <> $1
     `,
     [userId]
@@ -73,7 +75,7 @@ async function getUserStats(userId) {
     SELECT COUNT(*)::int AS total
     FROM recognition_comments rc
     INNER JOIN recognitions r ON rc.recognition_id = r.id
-    WHERE r.receiver_id = $1
+    WHERE $1 = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
       AND rc.user_id <> $1
     `,
     [userId]
@@ -93,7 +95,7 @@ async function getUserStats(userId) {
     `
     SELECT category, COUNT(*)::int AS total
     FROM recognitions
-    WHERE receiver_id = $1
+    WHERE $1 = ANY(COALESCE(receiver_ids, ARRAY[receiver_id]))
     GROUP BY category
     `,
     [userId]
@@ -104,6 +106,10 @@ async function getUserStats(userId) {
     Académico: 0,
     Liderazgo: 0,
     Creatividad: 0,
+    'Deportivo': 0,
+    'Artístico y cultural': 0,
+    'Compromiso social': 0,
+    'Cuidado ambiental': 0,
   };
 
   receivedByCategoryResult.rows.forEach((row) => {

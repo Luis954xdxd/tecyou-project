@@ -1,3 +1,4 @@
+import RecognitionRecipients from '../components/RecognitionRecipients';
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import RecognitionVideoPlayer from '../components/RecognitionVideoPlayer';
@@ -109,13 +110,7 @@ function RecognitionPage({
 
         <span> reconoció a </span>
 
-        <button
-          type="button"
-            className="inline-user-link"
-            onClick={() => onOpenProfile?.(recognition.receiver_id)}
-          >
-          {recognition.receiver_name}
-          </button>
+        <RecognitionRecipients recognition={recognition} onOpenProfile={onOpenProfile} />
           </div>
 
         <div className="recognition-page-message">

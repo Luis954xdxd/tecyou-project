@@ -1,5 +1,10 @@
+const { normalizeUserSearch } = require('../services/userSearchNormalization');
 const express = require('express');
 const router = express.Router();
+const { ensureRecognitionRecipientsSchema } = require('../services/recognitionRecipientsSchema');
+router.use(async (req, res, next) => {
+  try { await ensureRecognitionRecipientsSchema(); next(); } catch (error) { next(error); }
+});
 const {
     requireSession,
     requireSelfParam,
@@ -71,7 +76,7 @@ const ensureUserBlocksTable = async () => {
 // BUSCAR USUARIOS
 router.get('/search', async (req, res) => {
     try {
-        const q = (req.query.q || '').trim();
+        const q = normalizeUserSearch(req.query.q);
         const currentUserId = req.authUser.id;
 
         if (!q || q.length < 2) {
@@ -104,9 +109,9 @@ router.get('/search', async (req, res) => {
              LEFT JOIN avatar_frame_definitions afd
                ON afd.id = uaf.frame_id
              WHERE
-                LOWER(COALESCE(u.display_name, u.fullname)) LIKE LOWER($1)
-                OR LOWER(u.fullname) LIKE LOWER($1)
-                OR LOWER(u.email) LIKE LOWER($1)
+                regexp_replace(translate(lower(COALESCE(u.display_name, u.fullname)), 'áàäâéèëêíìïîóòöôúùüûñ', 'aaaaeeeeiiiioooouuuun'), '\\s+', ' ', 'g') LIKE $1
+                OR regexp_replace(translate(lower(u.fullname), 'áàäâéèëêíìïîóòöôúùüûñ', 'aaaaeeeeiiiioooouuuun'), '\\s+', ' ', 'g') LIKE $1
+                OR regexp_replace(translate(lower(u.email), 'áàäâéèëêíìïîóòöôúùüûñ', 'aaaaeeeeiiiioooouuuun'), '\\s+', ' ', 'g') LIKE $1
              ORDER BY COALESCE(u.display_name, u.fullname) ASC
              LIMIT 12`,
             [`%${q}%`, currentUserId]
@@ -745,7 +750,7 @@ router.get('/:id/public', async (req, res) => {
                 (
                     SELECT COUNT(*)
                     FROM recognitions r
-                    WHERE r.receiver_id = u.id
+                    WHERE u.id = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
                 )::int AS recognitions_received
              FROM users u
              LEFT JOIN user_avatar_frames uaf
@@ -787,7 +792,7 @@ router.get('/:id/public', async (req, res) => {
                 s.profile_image_url AS sender_profile_image
              FROM recognitions r
              JOIN users s ON r.sender_id = s.id
-             WHERE r.receiver_id = $1
+             WHERE $1 = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
              ORDER BY r.created_at DESC
              LIMIT 6`,
             [id]
@@ -855,7 +860,7 @@ router.get('/:id/activity', async (req, res) => {
                  AND sender_uaf.is_equipped = TRUE
                 LEFT JOIN avatar_frame_definitions sender_frame
                   ON sender_frame.id = sender_uaf.frame_id
-                WHERE r.receiver_id = $1
+                WHERE $1 = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
 
                 UNION ALL
 
@@ -894,7 +899,7 @@ router.get('/:id/activity', async (req, res) => {
                  AND reactor_uaf.is_equipped = TRUE
                 LEFT JOIN avatar_frame_definitions reactor_frame
                   ON reactor_frame.id = reactor_uaf.frame_id
-                WHERE r.receiver_id = $1
+                WHERE $1 = ANY(COALESCE(r.receiver_ids, ARRAY[r.receiver_id]))
                   AND rr.user_id <> $1
             ) activity_feed
             ORDER BY created_at DESC
